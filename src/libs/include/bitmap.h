@@ -7,7 +7,7 @@
 #include "stdlib.h"
 
 
-#define LOAD_PART   128
+#define LOAD_PART   256
 
 
 typedef struct tagBITMAPFILEHEADER {

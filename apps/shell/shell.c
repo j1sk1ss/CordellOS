@@ -84,7 +84,7 @@ void main(int argc, char* argv[]) {
 
 void shell_start_screen() {
     printf("\n");
-    printf("Cordell Shell [ver. 0.6a | 25.03.2024]\n");
+    printf("Cordell Shell [ver. 0.6b | 25.03.2024]\n");
     printf("Stai entrando nella shell del kernel leggero. Usa [aiuto] per ottenere aiuto.\n\n");
 }
 
@@ -125,7 +125,7 @@ void shell_start_screen() {
         //  DEFAULT SHELL COMMANDS CLEAR, ECHO AND HELP
         //====================
 
-            if (strstr(command_line[0], COMMAND_HELP) == 0) {
+            if (strcmp(command_line[0], COMMAND_HELP) == 0) {
                 printf("\n> Usa [%s] per ottenere aiuto",                                     COMMAND_HELP);
                 printf("\n> Utilizzare [%s] per la pulizia dello schermo",                    COMMAND_CLEAR);
                 printf("\n> Usa [%s] per l'eco",                                              COMMAND_ECHO);
@@ -147,15 +147,15 @@ void shell_start_screen() {
                 printf("\n> Utilizzare [%s] per uscire dal kernel\n",                         COMMAND_EXIT);
             }
 
-            else if (strstr(command_line[0], COMMAND_EXIT)      == 0) exit = 1;
-            else if (strstr(command_line[0], COMMAND_REBOOT)    == 0) machine_restart();
-            else if (strstr(command_line[0], COMMAND_VERSION)   == 0) shell_start_screen();
-            else if (strstr(command_line[0], COMMAND_ECHO)      == 0) printf("\n%s", command_line[1]);
-            else if (strstr(command_line[0], COMMAND_MEM_DATA)  == 0) print_malloc_map();
-            else if (strstr(command_line[0], COMMAND_PAGE_DATA) == 0) print_page_map(command_line[1][0]);
-            else if (strstr(command_line[0], COMMAND_CLEAR)     == 0) clrscr();
+            else if (strcmp(command_line[0], COMMAND_EXIT)      == 0) exit = 1;
+            else if (strcmp(command_line[0], COMMAND_REBOOT)    == 0) machine_restart();
+            else if (strcmp(command_line[0], COMMAND_VERSION)   == 0) shell_start_screen();
+            else if (strcmp(command_line[0], COMMAND_ECHO)      == 0) printf("\n%s", command_line[1]);
+            else if (strcmp(command_line[0], COMMAND_MEM_DATA)  == 0) print_malloc_map();
+            else if (strcmp(command_line[0], COMMAND_PAGE_DATA) == 0) print_page_map(command_line[1][0]);
+            else if (strcmp(command_line[0], COMMAND_CLEAR)     == 0) clrscr();
                 
-            else if (strstr(command_line[0], COMMAND_DISK_DATA) == 0) {
+            else if (strcmp(command_line[0], COMMAND_DISK_DATA) == 0) {
                 uint32_t fs_data[8];
                 get_fs_info(fs_data);
 
@@ -170,18 +170,18 @@ void shell_start_screen() {
                 printf("DIMENSIONE DELLA TABELLA GRASSO: [%i]\n", fs_data[7]);
             }
             
-            else if (strstr(command_line[0], COMMAND_TICKS) == 0) {
+            else if (strcmp(command_line[0], COMMAND_TICKS) == 0) {
                 printf("\nCurrent tick: %i\n", get_tick());
             }
 
-            else if (strstr(command_line[0], COMMAND_TIME) == 0) {
+            else if (strcmp(command_line[0], COMMAND_TIME) == 0) {
                 short time[6];
                 get_datetime(time);
                 printf("\nGIORNO: %i/%i/%i\tTEMPO: %i:%i:%i", time[3], time[4], time[5], 
                                                                 time[2], time[1], time[0]);
             }
 
-            else if (strstr(command_line[0], COMMAND_SET_ENVAR) == 0) {
+            else if (strcmp(command_line[0], COMMAND_SET_ENVAR) == 0) {
                 char* name  = (char*)clralloc(strlen(command_line[1]) + 1);
                 char* value = (char*)clralloc(strlen(command_line[2]) + 1);
 
@@ -195,7 +195,7 @@ void shell_start_screen() {
                 }
             }
 
-            else if (strstr(command_line[0], COMMAND_DEL_ENVAR) == 0) {
+            else if (strcmp(command_line[0], COMMAND_DEL_ENVAR) == 0) {
                 if (envar_exists(command_line[1]) != -1) envar_delete(command_line[1]);
             }
 
@@ -205,9 +205,9 @@ void shell_start_screen() {
         //  FILE SYSTEM COMMANDS
         //====================
 
-            else if (strstr(command_line[0], COMMAND_IN_DIR) == 0) {
+            else if (strcmp(command_line[0], COMMAND_IN_DIR) == 0) {
                 str2uppercase(command_line[1]);
-                if (strstr(command_line[1], COMMAND_OUT_DIR) == 0) {
+                if (strcmp(command_line[1], COMMAND_OUT_DIR) == 0) {
                     char* up_path = FSLIB_change_path(current_path, NULL);
                     if (up_path == NULL) {
                         up_path = malloc(5);
@@ -246,10 +246,10 @@ void shell_start_screen() {
                 }
             }
 
-            else if (strstr(command_line[0], COMMAND_MAKE_FILE) == 0) mkfile(current_path, command_line[1]);
-            else if (strstr(command_line[0], COMMAND_MAKE_DIR) == 0) mkdir(current_path, command_line[1]);
+            else if (strcmp(command_line[0], COMMAND_MAKE_FILE) == 0) mkfile(current_path, command_line[1]);
+            else if (strcmp(command_line[0], COMMAND_MAKE_DIR) == 0) mkdir(current_path, command_line[1]);
 
-            else if (strstr(command_line[0], COMMAND_DELETE_CONTENT) == 0) {
+            else if (strcmp(command_line[0], COMMAND_DELETE_CONTENT) == 0) {
                 char* path = get_path(command_line[1]); 
                 if (cexists(path) == 0) {
                     printf("\nLA CONTENT NON ESISTE");
@@ -257,10 +257,11 @@ void shell_start_screen() {
                     return;
                 }
 
-                rmcontent(path);         
+                rmcontent(path);
+                free(path);       
             }
 
-            else if (strstr(command_line[0], COMMAND_LIST_DIR) == 0) {
+            else if (strcmp(command_line[0], COMMAND_LIST_DIR) == 0) {
                 Directory* directory   = opendir(current_path);
                 Directory* current_dir = directory->subDirectory;
                 File* current_file     = directory->files;
@@ -280,7 +281,7 @@ void shell_start_screen() {
                 FSLIB_unload_directories_system(directory);
             }
 
-            else if (strstr(command_line[0], COMMAND_FILE_VIEW) == 0) {
+            else if (strcmp(command_line[0], COMMAND_FILE_VIEW) == 0) {
                 char* file_path = get_path(command_line[1]);
                 if (cexists(file_path) == 0) {
                     printf("\nLA FILE NON ESISTE");
@@ -307,7 +308,7 @@ void shell_start_screen() {
                 free(file_path);
             }
 
-            else if (strstr(command_line[0], COMMAND_BMP_SHOW) == 0) {
+            else if (strcmp(command_line[0], COMMAND_BMP_SHOW) == 0) {
                 char* file_path = get_path(command_line[1]);
                 if (cexists(file_path) == 0) {
                     printf("\nLA FILE NON ESISTE");
@@ -322,7 +323,7 @@ void shell_start_screen() {
                 free(file_path);
             }
 
-            else if (strstr(command_line[0], COMMAND_FILE_RUN) == 0) {
+            else if (strcmp(command_line[0], COMMAND_FILE_RUN) == 0) {
                 int pos = 2;
                 char* exe_argv[COMMAND_BUFFER];
                 while (command_line[pos] != NULL && pos < COMMAND_BUFFER) {
@@ -340,7 +341,7 @@ void shell_start_screen() {
                 free(file_path);
             }
 
-            else if (strstr(command_line[0], COMMAND_CINFO) == 0) {
+            else if (strcmp(command_line[0], COMMAND_CINFO) == 0) {
                 char* info_file = get_path(command_line[1]);
                 if (cexists(info_file) == 0) {
                     printf("\nLA CONTENT NON ESISTE");
@@ -391,7 +392,7 @@ void shell_start_screen() {
 
 #ifdef NETWORK
 
-            else if (strstr(command_line[0], COMMAND_IPCONFIG) == 0) {
+            else if (strcmp(command_line[0], COMMAND_IPCONFIG) == 0) {
                 uint8_t ip[4]  = { 0x00 };
                 uint8_t mac[6] = { 0xFF };
 
@@ -403,7 +404,7 @@ void shell_start_screen() {
                 printf("\nMAC ATTUALE: [%p:%p:%p:%p:%p:%p]", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
             }
 
-            else if (strstr(command_line[0], COMMAND_SEND_UDP_PACKET) == 0) {
+            else if (strcmp(command_line[0], COMMAND_SEND_UDP_PACKET) == 0) {
                 uint8_t ip[4] = { 0x00, 0x00, 0x00, 0x00 };
                 get_ip(ip);
 
@@ -417,7 +418,7 @@ void shell_start_screen() {
                 send_udp_packet(dst_ip, src_port, dst_port, command_line[7], strlen(command_line[7]));
             }
 
-            else if (strstr(command_line[0], COMMAND_POP_UDP_PACKET) == 0) {
+            else if (strcmp(command_line[0], COMMAND_POP_UDP_PACKET) == 0) {
                 uint8_t buffer[512];
                 pop_received_udp_packet(buffer);
 
@@ -475,8 +476,11 @@ int ulogin(char* login, char* password) {
 
 char* get_path(char* path) {
     if (path[0] == '\\') {
-        memmove(path, path + 1, strlen(path));
-        return path;
+        char* new_path = (char*)clralloc(strlen(path) + 1);
+        strncpy(new_path, path, strlen(path));
+
+        memmove(new_path, new_path + 1, strlen(new_path));
+        return new_path;
     } 
 
     return FSLIB_change_path(current_path, path);

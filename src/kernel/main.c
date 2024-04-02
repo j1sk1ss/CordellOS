@@ -27,6 +27,7 @@
 #include "multiboot.h"
 
 
+// #define USERMODE
 
 #define CONFIG_KSHELL   0
 #define CONFIG_MOUSE    1
