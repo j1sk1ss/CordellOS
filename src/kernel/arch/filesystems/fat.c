@@ -18,6 +18,7 @@
 
 //========================================================================================
 
+
 //========================================================================================
 //   ____   ___   ___ _____   ____  _____ ____ _____ ___  ____  
 //  | __ ) / _ \ / _ \_   _| / ___|| ____/ ___|_   _/ _ \|  _ \ 
@@ -157,6 +158,7 @@
 
 //========================================================================================
 
+
 //========================================================================================
 //  __        ______  ___ _____ _____   _____ _  _____ 
 //  \ \      / /  _ \|_ _|_   _| ____| |  ___/ \|_   _|
@@ -243,6 +245,7 @@
 	}
 
 //========================================================================================
+
 
 //========================================================================================
 //   ____  _____    _    _     _     ___   ____    _  _____ _____ 
@@ -335,6 +338,7 @@
 
 //========================================================================================
 
+
 //========================================================================================
 //    ____ _    _   _ ____ _____ _____ ____   __        ______  ___ _____ _____ 
 //   / ___| |  | | | / ___|_   _| ____|  _ \  \ \      / /  _ \|_ _|_   _| ____|
@@ -369,6 +373,30 @@
 
 
 //========================================================================================
+//    ____ _    _   _ ____ _____ _____ ____     ____ ___  ______   __
+//   / ___| |  | | | / ___|_   _| ____|  _ \   / ___/ _ \|  _ \ \ / /
+//  | |   | |  | | | \___ \ | | |  _| | |_) | | |  | | | | |_) \ V / 
+//  | |___| |__| |_| |___) || | | |___|  _ <  | |__| |_| |  __/ | |  
+//   \____|_____\___/|____/ |_| |_____|_| \_\  \____\___/|_|    |_|  
+//
+//========================================================================================
+// Copy cluster2cluster
+
+	int FAT_cpy_cluster2cluster(unsigned int source, unsigned int destination) {
+		assert(source >= 2 && source < total_clusters);
+		assert(destination >= 2 && destination < total_clusters);
+
+		unsigned int first = (source - 2) * (unsigned short)sectors_per_cluster + first_data_sector;
+		unsigned int second = (destination - 2) * (unsigned short)sectors_per_cluster + first_data_sector;
+		assert(ATA_cpy_sectors2sectors(first, second, sectors_per_cluster) != -1);
+		
+		return 0;
+	}
+
+//========================================================================================
+
+
+//========================================================================================
 //   ____ _    _   _ ____ _____ _____ ____     ___ _____ _   _ _____ ____  
 //  / ___| |  | | | / ___|_   _| ____|  _ \   / _ \_   _| | | | ____|  _ \ 
 // | |   | |  | | | \___ \ | | |  _| | |_) | | | | || | | |_| |  _| | |_) |
@@ -390,7 +418,7 @@
 	}
 
 	// Add allocated cluster to file
-	void FAT_cluster2content(Content* content) {
+	void FAT_add_cluster2content(Content* content) {
 		directory_entry_t content_meta;
 		if (content->directory != NULL) content_meta = content->directory->directory_meta;
 		else if (content->file != NULL) content_meta = content->file->file_meta;
@@ -530,6 +558,7 @@
 
 //========================================================================================
 
+
 //========================================================================================
 //   ____ ___ ____  _____ ____ _____ ___  ______   __  ____  _____    _    ____   ____ _   _ 
 //  |  _ \_ _|  _ \| ____/ ___|_   _/ _ \|  _ \ \ / / / ___|| ____|  / \  |  _ \ / ___| | | |
@@ -599,6 +628,7 @@
 	}
 
 //========================================================================================
+
 
 //========================================================================================
 //   ____ ___ ____  _____ ____ _____ ___  ______   __     _    ____  ____  
@@ -684,6 +714,7 @@
 
 //========================================================================================
 
+
 //========================================================================================
 //   ____ ___ ____  _____ ____ _____ ___  ______   __  _____ ____ ___ _____ 
 //  |  _ \_ _|  _ \| ____/ ___|_   _/ _ \|  _ \ \ / / | ____|  _ \_ _|_   _|
@@ -753,6 +784,7 @@
 
 //========================================================================================
 
+
 //========================================================================================
 //   ____ ___ ____  _____ ____ _____ ___  ______   __  ____  _____ __  __  _____     _______ 
 //  |  _ \_ _|  _ \| ____/ ___|_   _/ _ \|  _ \ \ / / |  _ \| ____|  \/  |/ _ \ \   / / ____|
@@ -813,6 +845,7 @@
 
 //========================================================================================
 
+
 //========================================================================================
 //    ____ ___  _   _ _____ _____ _   _ _____   _______  _____ ____ _____ 
 //   / ___/ _ \| \ | |_   _| ____| \ | |_   _| | ____\ \/ /_ _/ ___|_   _|
@@ -857,6 +890,7 @@
 	}
 
 //========================================================================================
+
 
 //========================================================================================
 //    ____ ___  _   _ _____ _____ _   _ _____    ____ _____ _____ 
@@ -1083,6 +1117,7 @@
 
 //========================================================================================
 
+
 //========================================================================================
 //    ____ ___  _   _ _____ _____ _   _ _____   _____ ____ ___ _____ 
 //   / ___/ _ \| \ | |_   _| ____| \ | |_   _| | ____|  _ \_ _|_   _|
@@ -1131,7 +1166,7 @@
 					return -1;
 				}
 
-				if (dataLeftToWrite > 0) FAT_cluster2content(content);
+				if (dataLeftToWrite > 0) FAT_add_cluster2content(content);
 				else if (dataLeftToWrite <= 0) {
 					unsigned int prevCluster = cluster;
 					unsigned int endCluster  = cluster;
@@ -1215,7 +1250,7 @@
 			uint8_t* new_buffer = buffer + data_position;
 
 			// Allocate cluster
-			FAT_cluster2content(data);
+			FAT_add_cluster2content(data);
 
 			// Write to allocated cluster
 			FAT_write_buffer2content(data, new_buffer, new_offset, new_size);
@@ -1224,83 +1259,95 @@
 
 //========================================================================================
 
+
+//========================================================================================
+//    ____ _   _    _    _   _  ____ _____   __  __ _____ _____  _    
+//   / ___| | | |  / \  | \ | |/ ___| ____| |  \/  | ____|_   _|/ \   
+//  | |   | |_| | / _ \ |  \| | |  _|  _|   | |\/| |  _|   | | / _ \  
+//  | |___|  _  |/ ___ \| |\  | |_| | |___  | |  | | |___  | |/ ___ \ 
+//   \____|_| |_/_/   \_\_| \_|\____|_____| |_|  |_|_____| |_/_/   \_\
+//
+//========================================================================================
 // This function finds content in FAT table and change their name
-int FAT_change_meta(const char* filePath, directory_entry_t* newMeta) {
+	int FAT_change_meta(const char* filePath, directory_entry_t* newMeta) {
 
-	char fileNamePart[256];
-	unsigned short start = 0;
-	unsigned int active_cluster;
-	unsigned int prev_active_cluster;
+		char fileNamePart[256];
+		unsigned short start = 0;
+		unsigned int active_cluster;
+		unsigned int prev_active_cluster;
 
-	//////////////////////
-	//	FAT ACTIVE CLUSTER CHOOSING
+		//////////////////////
+		//	FAT ACTIVE CLUSTER CHOOSING
 
-		if (fat_type == 32) active_cluster = ext_root_cluster;
-		else {
-			kprintf("Function FAT_change_meta: FAT16 and FAT12 are not supported!\n");
-			return -1;
-		}
-
-	//	FAT ACTIVE CLUSTER CHOOSING
-	//////////////////////
-
-	//////////////////////
-	//	FINDING DIR BY PATH
-
-		directory_entry_t file_info; //holds found directory info
-		if (strlen(filePath) == 0) { // Create main dir if it not created (root dir)
-			if (fat_type == 32) {
-				active_cluster 		 = ext_root_cluster;
-				file_info.attributes = FILE_DIRECTORY | FILE_VOLUME_ID;
-				file_info.file_size  = 0;
-				file_info.high_bits  = GET_ENTRY_HIGH_BITS(active_cluster);
-				file_info.low_bits 	 = GET_ENTRY_LOW_BITS(active_cluster);
-			}
+			if (fat_type == 32) active_cluster = ext_root_cluster;
 			else {
 				kprintf("Function FAT_change_meta: FAT16 and FAT12 are not supported!\n");
 				return -1;
 			}
-		}
-		else {
-			for (unsigned int iterator = 0; iterator <= strlen(filePath); iterator++) 
-				if (filePath[iterator] == '\\' || filePath[iterator] == '\0') {
-					prev_active_cluster = active_cluster;
 
-					memset(fileNamePart, '\0', 256);
-					memcpy(fileNamePart, filePath + start, iterator - start);
+		//	FAT ACTIVE CLUSTER CHOOSING
+		//////////////////////
 
-					int retVal = FAT_directory_search(fileNamePart, active_cluster, &file_info, NULL);
-					switch (retVal) {
-						case -2:
-							kprintf("Function FAT_change_meta: No matching directory found. Aborting...\n");
-						return -2;
+		//////////////////////
+		//	FINDING DIR BY PATH
 
-						case -1:
-							kprintf("Function FAT_change_meta: An error occurred in FAT_directory_search. Aborting...\n");
-						return retVal;
-					}
-
-					start = iterator + 1;
-					active_cluster = GET_CLUSTER_FROM_ENTRY(file_info); //prep for next search
+			directory_entry_t file_info; //holds found directory info
+			if (strlen(filePath) == 0) { // Create main dir if it not created (root dir)
+				if (fat_type == 32) {
+					active_cluster 		 = ext_root_cluster;
+					file_info.attributes = FILE_DIRECTORY | FILE_VOLUME_ID;
+					file_info.file_size  = 0;
+					file_info.high_bits  = GET_ENTRY_HIGH_BITS(active_cluster);
+					file_info.low_bits 	 = GET_ENTRY_LOW_BITS(active_cluster);
 				}
-		}
+				else {
+					kprintf("Function FAT_change_meta: FAT16 and FAT12 are not supported!\n");
+					return -1;
+				}
+			}
+			else {
+				for (unsigned int iterator = 0; iterator <= strlen(filePath); iterator++) 
+					if (filePath[iterator] == '\\' || filePath[iterator] == '\0') {
+						prev_active_cluster = active_cluster;
 
-	//	FINDING DIR\FILE BY PATH
-	//////////////////////
+						memset(fileNamePart, '\0', 256);
+						memcpy(fileNamePart, filePath + start, iterator - start);
 
-	//////////////////////
-	// EDIT DATA
+						int retVal = FAT_directory_search(fileNamePart, active_cluster, &file_info, NULL);
+						switch (retVal) {
+							case -2:
+								kprintf("Function FAT_change_meta: No matching directory found. Aborting...\n");
+							return -2;
 
-		if (FAT_directory_edit(prev_active_cluster, &file_info, newMeta) != 0) {
-			kprintf("Function FAT_change_meta: FAT_directory_edit encountered an error. Aborting...\n");
-			return -1;
-		}
-	
-	// EDIT DATA
-	//////////////////////
+							case -1:
+								kprintf("Function FAT_change_meta: An error occurred in FAT_directory_search. Aborting...\n");
+							return retVal;
+						}
 
-	return 0; // directory or file successfully deleted
-}
+						start = iterator + 1;
+						active_cluster = GET_CLUSTER_FROM_ENTRY(file_info); //prep for next search
+					}
+			}
+
+		//	FINDING DIR\FILE BY PATH
+		//////////////////////
+
+		//////////////////////
+		// EDIT DATA
+
+			if (FAT_directory_edit(prev_active_cluster, &file_info, newMeta) != 0) {
+				kprintf("Function FAT_change_meta: FAT_directory_edit encountered an error. Aborting...\n");
+				return -1;
+			}
+		
+		// EDIT DATA
+		//////////////////////
+
+		return 0; // directory or file successfully deleted
+	}
+
+//========================================================================================
+
 
 //========================================================================================
 //    ____ ___  _   _ _____ _____ _   _ _____   ____  _   _ _____ 
@@ -1371,6 +1418,7 @@ int FAT_change_meta(const char* filePath, directory_entry_t* newMeta) {
 
 //========================================================================================
 
+
 //========================================================================================
 //    ____ ___  _   _ _____ _____ _   _ _____   ____  _____ _     _____ _____ _____ 
 //   / ___/ _ \| \ | |_   _| ____| \ | |_   _| |  _ \| ____| |   | ____|_   _| ____|
@@ -1407,7 +1455,7 @@ int FAT_change_meta(const char* filePath, directory_entry_t* newMeta) {
 		// DELETE DATA
 
 			unsigned int data_cluster = GET_CLUSTER_FROM_ENTRY(content_meta);
-			unsigned int prev_cluster = prev_cluster;
+			unsigned int prev_cluster = 0;
 			
 			while (data_cluster < END_CLUSTER_32) {
 				prev_cluster = FAT_read(data_cluster);
@@ -1434,6 +1482,59 @@ int FAT_change_meta(const char* filePath, directory_entry_t* newMeta) {
 	}
 
 //========================================================================================
+
+
+//========================================================================================
+//    ____ ___  _   _ _____ _____ _   _ _____    ____ ___  ______   __
+//   / ___/ _ \| \ | |_   _| ____| \ | |_   _|  / ___/ _ \|  _ \ \ / /
+//  | |  | | | |  \| | | | |  _| |  \| | | |   | |  | | | | |_) \ V / 
+//  | |__| |_| | |\  | | | | |___| |\  | | |   | |__| |_| |  __/ | |  
+//   \____\___/|_| \_| |_| |_____|_| \_| |_|    \____\___/|_|    |_|  
+//
+//========================================================================================
+// This function copy content in FS
+// source - path to copy
+// destination - path, where copy will be placed
+// TODO: recurse for dirs
+
+	void FAT_copy_content(char* source, char* destination) {
+		Content* fatContent = FAT_get_content(source);
+		Content* dstContent = NULL;
+
+		directory_entry_t content_meta;
+		directory_entry_t dst_meta;
+		if (fatContent->directory != NULL) {
+			content_meta = fatContent->directory->directory_meta;
+			dstContent   = FAT_create_content(fatContent->directory->name, TRUE, NULL);
+
+			dst_meta = dstContent->directory->directory_meta;
+		}
+		else if (fatContent->file != NULL) {
+			content_meta = fatContent->file->file_meta;
+			dstContent   = FAT_create_content(fatContent->file->name, FALSE, fatContent->file->extension);
+
+			dst_meta = dstContent->file->file_meta;
+		}
+
+		unsigned int data_cluster = GET_CLUSTER_FROM_ENTRY(content_meta);
+		unsigned int dst_cluster  = GET_CLUSTER_FROM_ENTRY(dst_meta);
+
+		while (data_cluster < END_CLUSTER_32) {
+			FAT_add_cluster2content(dstContent);
+			dst_cluster = FAT_read(dst_cluster);
+
+			FAT_cpy_cluster2cluster(data_cluster, dst_cluster);
+
+			data_cluster = FAT_read(data_cluster);
+		}
+
+		FAT_put_content(destination, dstContent);
+		FSLIB_unload_content_system(fatContent);
+		FSLIB_unload_content_system(dstContent);
+	}
+
+//========================================================================================
+
 
 //========================================================================================
 //    ___ _____ _   _ _____ ____  

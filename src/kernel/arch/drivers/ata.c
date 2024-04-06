@@ -455,6 +455,17 @@ ata_dev_t secondary_slave  = {.slave = 1};
         return 1;
     }
 
+    int ATA_cpy_sectors2sectors(uint32_t source_lba, uint32_t sector_count, uint32_t distenation_lba) {
+        ATA_ata_wait();
+
+        uint8_t* source = ATA_read_sectors(source_lba, sector_count);
+        int result = ATA_write_sectors(distenation_lba, source, sector_count);
+
+        kfree(source);
+
+        return result;
+    }
+
 #pragma endregion
 
 //====================
