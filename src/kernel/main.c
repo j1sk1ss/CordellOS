@@ -105,7 +105,8 @@
 //          20.0) Page directory cloning                          [V]
 //          20.1) User page directory                             [ ]
 //      21) Data append \ modify FAT                              [ ]
-//      22) DOOM?                                                 [?]
+//      22) New kernel panic screen (maybe blue screen?)          [ ]
+//      23) DOOM?                                                 [?]
 //======================================================================================================================================
 
 
