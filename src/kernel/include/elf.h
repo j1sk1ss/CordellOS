@@ -65,7 +65,7 @@ enum {
     // ...
 };
 
-typedef struct {
+typedef struct Elf32_sectionHeader {
 	uint32_t	sh_name;
 	uint32_t	sh_type;
 	uint32_t	sh_flags;
@@ -78,6 +78,15 @@ typedef struct {
 	uint32_t	sh_entsize;
 
 } Elf32_Shdr;
+
+typedef struct {
+    uint32_t st_name;
+    uint32_t st_value;
+    uint32_t st_size;
+    uint8_t  st_info;
+    uint8_t  st_other;
+    uint16_t st_shndx;
+} Elf32_Sym;
 
 typedef struct {
     uint32_t* pages;
@@ -102,9 +111,19 @@ enum ShT_Attributes {
 
 };
 
+typedef struct ELF32_symbols_desctiptor {
+    bool present;
+    uint32_t num_symbols;
+    Elf32_Sym* symbols;
+    char* string_table_addr;
+} ELF32_SymDescriptor;
+
 
 ELF32_program* ELF_read(const char* path, int type);
 void ELF_free_program(ELF32_program* program);
+
+ELF32_SymDescriptor* ELF_load_symbol_table(Elf32_Shdr* symbol_table_section, Elf32_Shdr* string_table_section);
+char* ELF_address2symname(uint32_t address, ELF32_SymDescriptor* descriptor);
 
 
 #endif

@@ -87,3 +87,40 @@ void ELF_free_program(ELF32_program* program) {
     kfree(program->pages);
     kfree(program);
 }
+
+ELF32_SymDescriptor* ELF_load_symbol_table(Elf32_Shdr* symbol_table_section, Elf32_Shdr* string_table_section) {
+    ELF32_SymDescriptor* symbol_table_descriptor = kmalloc(sizeof(ELF32_SymDescriptor));
+
+    if (symbol_table_section == 0) {
+        kfree(symbol_table_descriptor);
+        return NULL;
+    } else {
+        symbol_table_descriptor->present     = true;
+        symbol_table_descriptor->num_symbols = symbol_table_section->sh_size / sizeof(Elf32_Sym);
+        symbol_table_descriptor->symbols     = (Elf32_Sym*)symbol_table_section->sh_addr;
+        symbol_table_descriptor->string_table_addr = (char*)string_table_section->sh_addr;
+        return symbol_table_descriptor;
+    }
+}
+
+char* ELF_address2symname(uint32_t address, ELF32_SymDescriptor* descriptor) {
+    Elf32_Sym* symbol     = 0;
+    uint32_t symbol_value = 0;
+
+    if (descriptor->present) {
+        for (uint32_t i = 0; i < descriptor->num_symbols; i++) {
+            Elf32_Sym * candidate = descriptor->symbols + i;
+            if (candidate->st_value > symbol_value && candidate->st_value <= address) {
+                symbol = candidate;
+                symbol_value = candidate->st_value;
+            }
+        }
+
+        uint32_t string_index = symbol->st_name;
+        char* name = descriptor->string_table_addr + string_index;
+
+        return name;
+    }
+
+    return NULL;
+}

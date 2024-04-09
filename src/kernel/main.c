@@ -24,7 +24,7 @@
 #include "include/vars.h"
 #include "include/elf.h"
 
-#include "multiboot.h"
+#include "multiboot/multiboot.h"
 
 
 // #define USERMODE
@@ -108,6 +108,9 @@
 //      22) New kernel panic screen (maybe blue screen?)          [ ]
 //      23) DOOM?                                                 [?]
 //======================================================================================================================================
+
+
+ELF32_SymDescriptor* kernel_stack_descriptor;
 
 
 #pragma region [Default tasks]

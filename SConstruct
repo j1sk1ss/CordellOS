@@ -32,7 +32,7 @@ VARS.AddVariables(
 
 VARS.Add("tool_chain", 
          help="Path to tool_chain directory.",
-         default="../tool_chain")
+         default="tool_chain")
 
 DEPS = {
     'binutils': '2.37',

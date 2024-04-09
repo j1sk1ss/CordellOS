@@ -21,7 +21,10 @@
  *  IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include "../include/elf.h"
+
 #include <stdint.h>
+#include <string.h>
 
 
 #ifndef MULTIBOOT_HEADER
@@ -177,5 +180,9 @@
     } multiboot_module_t;
 
 #endif /* ! ASM_FILE */
+
+
+struct Elf32_sectionHeader* MB2_get_elf_section(multiboot_info_t* info, char* section);
+
 
 #endif /* ! MULTIBOOT_HEADER */

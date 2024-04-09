@@ -9,7 +9,7 @@
 #include "stdio.h"
 #include "x86.h"
 
-#include "../multiboot.h"
+#include "../multiboot/multiboot.h"
 
 
 #define CHAR_BODY	0x0000000F

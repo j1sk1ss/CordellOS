@@ -128,6 +128,8 @@ typedef struct ata_dev {
 
 
 void ATA_initialize();
+
+struct Registers;
 void ATA_handler(struct Registers* reg);
 void ATA_device_switch(int device);
 
