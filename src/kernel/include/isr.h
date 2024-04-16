@@ -23,6 +23,11 @@ struct Registers {
     uint32_t eip, cs, eflag, esp, ss;                       // pushed auto by cpu
 } __attribute__((packed));
 
+struct stackframe { 
+  struct stackframe* ebp; 
+  uint32_t eip; 
+}; 
+
 typedef void (*ISRHandler)(struct Registers* regs);
 
 

@@ -10,7 +10,7 @@
 #define PAGE_SIZE           4096
 
 
-void tstart(char* name, uint32_t address);
+void tstart(char* name, uint32_t address, uint32_t delay);
 int tpid();
 void tkill();
 

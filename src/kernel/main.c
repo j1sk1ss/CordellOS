@@ -155,8 +155,8 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
         else _screenBuffer = (uint8_t*)(uintptr_t)mb_info->framebuffer_addr;
 
         kprintf("\n\t\t =    CORDELL  KERNEL    =");
-        kprintf("\n\t\t =     [ ver.   17 ]     =");
-        kprintf("\n\t\t =     [ 25.03  24 ]     = \n\n");
+        kprintf("\n\t\t =     [ ver.   18 ]     =");
+        kprintf("\n\t\t =     [ 16.04  24 ]     = \n\n");
         kprintf("\n\t\t = INFORMAZIONI GENERALI = \n\n");
         kprintf("\tMB FLAGS:        [0x%p]\n", mb_info->flags);
         kprintf("\tMEM LOW:         [%uKB] => MEM UP: [%uKB]\n", mb_info->mem_lower, mb_info->mem_upper);
@@ -318,7 +318,7 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
         asm ("mov %%esp, %0" : "=r"(current_esp));
         TSS_set_stack(0x10, current_esp);
 
-        START_PROCESS("idle", (uint32_t)idle, KERNEL);
+        START_PROCESS("idle", (uint32_t)idle, KERNEL, 1);
         if (current_vfs->objexist(CONFIG_PATH) == 1) {
             Content* boot_config = current_vfs->getobj(CONFIG_PATH);
             char* config = current_vfs->read(boot_config);
@@ -360,10 +360,10 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
             //===================
 
             if (config[CONFIG_MOUSE] == CONFIG_ENABLED) show_mouse = 1;
-            if (config[CONFIG_KSHELL] == CONFIG_ENABLED) START_PROCESS("shell", (uint32_t)shell, KERNEL);
+            if (config[CONFIG_KSHELL] == CONFIG_ENABLED) START_PROCESS("shell", (uint32_t)shell, KERNEL, 10);
 
             kfree(config);
-        } else START_PROCESS("shell", (uint32_t)shell, KERNEL);
+        } else START_PROCESS("shell", (uint32_t)shell, KERNEL, 10);
 
         TASK_start_tasking();
     

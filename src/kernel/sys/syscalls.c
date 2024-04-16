@@ -157,7 +157,8 @@ void syscall(struct Registers* regs) {
             else if (regs->eax == SYS_START_PROCESS) {
                 char* process_name = (char*)regs->ebx;
                 uint32_t address   = (uint32_t)regs->ecx;
-                START_PROCESS(process_name, address, USER);
+                uint32_t delay     = (uint32_t)regs->edx;
+                START_PROCESS(process_name, address, USER, delay);
             }
 
             else if (regs->eax == SYS_GET_PID) {

@@ -5,14 +5,15 @@
 // Function start task at address with entered name
 // EBX - name
 // ECX - address 
-void tstart(char* name, uint32_t address) {
+void tstart(char* name, uint32_t address, uint32_t delay) {
     __asm__ volatile(
         "movl $26, %%eax\n"
         "movl %0, %%ebx\n"
         "movl %1, %%ecx\n"
-        "int %2\n"
+        "movl %2, %%edx\n"
+        "int %3\n"
         :
-        : "r"(name), "r"(address), "i"(SYSCALL_INTERRUPT)
+        : "r"(name), "r"(address), "r"(delay), "i"(SYSCALL_INTERRUPT)
         : "eax", "ebx", "ecx"
     );
 }

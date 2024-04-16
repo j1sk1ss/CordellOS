@@ -39,7 +39,7 @@ void __attribute__((cdecl)) i386_isr_handler(struct Registers* regs) {
 
         if (regs->interrupt < SIZE(_exceptions) && _exceptions[regs->interrupt] != NULL) 
             kprintf("UNHANDLED EXCEPTION %d %s\n", regs->interrupt, _exceptions[regs->interrupt]);
-        else  kprintf("UNHANDLED INTERRUPT! INTERRUPT: %d\n", regs->interrupt);
+        else kprintf("UNHANDLED INTERRUPT! INTERRUPT: %d\n", regs->interrupt);
         
         clrscr();
 
@@ -56,7 +56,16 @@ void __attribute__((cdecl)) i386_isr_handler(struct Registers* regs) {
 }
 
 void i386_isr_interrupt_details(uint32_t eip, uint32_t ebp, uint32_t esp) {
-    if (currentDescriptor == NULL) return;
+    if (currentDescriptor == NULL) {
+        struct stackframe* current_stack = (struct stackframe*)ebp;
+        kprintf("Stack trace [Discriptor not presented. Traced only addresses]:\n");
+        for (unsigned int frame = 0; current_stack && frame < 10; ++frame) {
+            kprintf("[0x%p]\n", current_stack->eip);
+            current_stack = current_stack->ebp;
+        }
+    
+        return;
+    }
 
     kprintf("\nStack trace:\n");
     eip -= 4;

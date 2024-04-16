@@ -68,7 +68,7 @@ uint32_t v_addr = 0x00C00000;
 		i386_irq_registerHandler(0, TASK_task_switch);
 	}
 
-	Task* TASK_create_task(char* pname, uint32_t address, int type) {
+	Task* TASK_create_task(char* pname, uint32_t address, int type, int priority) {
 
 		//=============================
 		// Allocate memory for new task
@@ -87,6 +87,9 @@ uint32_t v_addr = 0x00C00000;
 				task->pid   = -1;
 				task->name  = pname;
                 task->page_directory = NULL;
+
+				task->delay     = priority;
+				task->exec_time = 0;
 
 				if (taskManager.tasksCount <= 0) task->pid = 0;
 				for (int pid = 0; pid < taskManager.tasksCount; pid++) {
@@ -241,6 +244,13 @@ uint32_t v_addr = 0x00C00000;
         if (task->cpuState == NULL) return;
 
 		i386_disableInterrupts();
+
+		if (task->exec_time > task->delay) task->exec_time = 0;
+		else {
+			task->exec_time++;
+			i386_enableInterrupts();
+			return;
+		}
 
         // Save current state and current page directory
         memcpy(task->cpuState, regs, sizeof(struct Registers));

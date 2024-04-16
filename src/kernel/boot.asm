@@ -62,6 +62,8 @@ _start:
 
 	cli
  
+	xor ebp, ebp
+
 	extern kernel_main
 	call kernel_main
  
