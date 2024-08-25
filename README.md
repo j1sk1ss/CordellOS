@@ -30,7 +30,7 @@ This container tested in MacOS 10.15, Windows 10 (On win10 can be problems with 
 | [&check;] - complete                   |         |                                                               |
 | **1) Multiboot struct**                |[&check;]|   1) Physical memory manager                                  |
 | **2) Phys and Virt manages**           |[&check;]|   2) Virtual memory manager (paging)                          |
-|    2.0) Make page and phys prints...   |[?]      |   3) Multitasking                                             |
+|    2.0) Make page and phys prints...   |[&check;]|   3) Multitasking                                             |
 | **3) ELF check v_addr**                |[&check;]|   4) Syscalls                                                 |
 |    3.1) Fix global and static vars     |[&check;]|       4.0) Std libs for user programs                         |
 |    3.2) Loading ELF without malloc...  |[&check;]|       4.1) Cordell-ASM compiler                               |
@@ -48,18 +48,18 @@ This container tested in MacOS 10.15, Windows 10 (On win10 can be problems with 
 |    8.0) Std lib for graphics           |[&check;]|       12.3) RLT8139 driver                                    |
 |        8.0.0) Objects                  |[ ]      |                                                               |
 |        8.0.1) Click event              |[ ]      |                                                               |
-|    8.1) Loading BMP without malloc...  |[ ]      |                                                               |
-|    8.1) Syscalls to std libs           |[ ]      |                                                               |
-|        8.1.0) Syscalls for content...  |[ ]      |                                                               |
-|        8.1.1) Syscalls for content...  |[ ]      |                                                               |
-|        8.1.2) Syscalls for kmallocp... |[ ]      |                                                               |
+|    8.1) Loading BMP without malloc...  |[&check;]|                                                               |
+|    8.1) Syscalls to std libs           |[&check;]|                                                               |
+|        8.1.0) Syscalls for content...  |[&check;]|                                                               |
+|        8.1.1) Syscalls for content...  |[&check;]|                                                               |
+|        8.1.2) Syscalls for kmallocp... |[&check;]|                                                               |
 |    8.2) VBE userland                   |[ ]      |                                                               |
 |        8.2.0) VBE file manager         |[?]      |                                                               |
 |        8.2.1) VBE text editor          |[?]      |                                                               |
 | **9) Malloc optimization**             |[ ]      |                                                               |
 | **10) Bugs**                           |[?]      |                                                               |
 |    10.0) Tasking page fault...         |[?]      |                                                               |
-|    10.1) Mouse page fault              |[?]      |                                                               |
+|    10.1) Mouse page fault              |[&check;]|                                                               |
 |    10.2) Tasking with page allocator   |[&check;]|                                                               |
 | **11) Ethernet**                       |[?]      |                                                               |
 |    11.0) ethernet                      |[?]      |                                                               |
@@ -74,8 +74,7 @@ This container tested in MacOS 10.15, Windows 10 (On win10 can be problems with 
 |    11.4) TCP                           |[ ]      |                                                               |
 |    11.5) Host sending to VK/TG etc     |[ ]      |                                                               |
 | **12) KShell to ELF program**          |[&check;]|                                                               |
-|    12.0) KShell save commands...       |[&check;]|                                                               |
-|    12.1) MEM-DATA progs                |[ ]      |                                                               |
+|    12.1) MEM-DATA progs                |[&check;]|                                                               |
 | **13) DOOM?**                          |[ ]      |                                                               |
 
 
