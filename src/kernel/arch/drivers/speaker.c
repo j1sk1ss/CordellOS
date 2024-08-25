@@ -1,6 +1,6 @@
 /*
  * pc_speaker.h: Definitions and functions for emulated (maybe hardware?) pc speaker
- * Code taked from: https://github.com/queso-fuego/amateuros/blob/master/include/sound/pc_speaker.h
+ * Code took from: https://github.com/queso-fuego/amateuros/blob/master/include/sound/pc_speaker.h
  */
 #include "../../include/speaker.h"
 

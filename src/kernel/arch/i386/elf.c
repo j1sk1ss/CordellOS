@@ -1,3 +1,5 @@
+// Thanks to: https://github.com/Jorl17/jOS/blob/master/elf.c#L61
+//            https://github.com/makerimages/SwormOS/tree/master/kernel
 #include "../../include/elf.h"
 
 

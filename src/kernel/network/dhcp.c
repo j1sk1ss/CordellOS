@@ -1,5 +1,5 @@
 // Some data from: https://en.wikipedia.org/wiki/Dynamic_Host_Configuration_Protocol
-//                 https://github.com/szhou42/osdev/blob/master/src/kernel/network/dhcp.c#L9
+// Also thanks to: https://github.com/szhou42/osdev/blob/master/src/kernel/network/dhcp.c#L9
 #include "../include/dhcp.h"
 
 
