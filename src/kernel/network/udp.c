@@ -1,8 +1,8 @@
 #include "../include/udp.h"
 
 
-udp_packet_body packets[PACKET_BUFFER_SIZE];
-int current_packet = 0;
+udp_packet_body udp_packets[PACKET_BUFFER_SIZE];
+int current_udp_packet = 0;
 
 
 uint16_t UDP_calculate_checksum(udp_packet_t* packet) {
@@ -28,37 +28,37 @@ void UDP_handle_packet(udp_packet_t* packet) {
     void* data_ptr    = (void*)packet + sizeof(udp_packet_t);
     uint16_t data_len = length;
 
-    if (current_packet >= PACKET_BUFFER_SIZE) {
-        current_packet = PACKET_BUFFER_SIZE - 1;
+    if (current_udp_packet >= PACKET_BUFFER_SIZE) {
+        current_udp_packet = PACKET_BUFFER_SIZE - 1;
 
-        if (packets[current_packet].data_size != -1) {
-            free(packets[current_packet].data);
-            packets[current_packet].data_size = -1;            
+        if (udp_packets[current_udp_packet].data_size != -1) {
+            free(udp_packets[current_udp_packet].data);
+            udp_packets[current_udp_packet].data_size = -1;            
         }
     }
 
-    packets[current_packet].data = (uint8_t*)clralloc(data_len);
-    memcpy(packets[current_packet++].data, data_ptr, data_len);
-    packets[current_packet].data_size = data_len;
+    udp_packets[current_udp_packet].data = (uint8_t*)clralloc(data_len);
+    memcpy(udp_packets[current_udp_packet++].data, data_ptr, data_len);
+    udp_packets[current_udp_packet].data_size = data_len;
     
     if (NETWORK_DEBUG) kprintf("\nReceived UDP packet, dst_port %d", dst_port);
     if (net2host16(packet->dst_port) == 68) DHCP_handle_packet(data_ptr);
 }
 
 udp_packet_body* UDP_pop_packet() {
-    if (current_packet >= 0) {
-        if (packets[current_packet].data_size == -1) return NULL;
+    if (current_udp_packet >= 0) {
+        if (udp_packets[current_udp_packet].data_size == -1) return NULL;
         
         udp_packet_body* packet = (udp_packet_body*)kmalloc(sizeof(udp_packet_body));
-        packet->data = (uint8_t*)kmalloc(packets[current_packet].data_size);
-        memcpy(packet->data, packets[current_packet].data, packets[current_packet].data_size);
+        packet->data = (uint8_t*)kmalloc(udp_packets[current_udp_packet].data_size);
+        memcpy(packet->data, udp_packets[current_udp_packet].data, udp_packets[current_udp_packet].data_size);
 
-        packet->data_size = packets[current_packet].data_size;
+        packet->data_size = udp_packets[current_udp_packet].data_size;
 
-        kfree(packets[current_packet].data);
-        packets[current_packet].data_size = -1;
+        kfree(udp_packets[current_udp_packet].data);
+        udp_packets[current_udp_packet].data_size = -1;
 
-        if (current_packet > 1) current_packet--;
+        if (current_udp_packet > 1) current_udp_packet--;
         return packet;
     }
 
@@ -67,7 +67,7 @@ udp_packet_body* UDP_pop_packet() {
 
 void UDP_init() {
     for (int i = 0; i < PACKET_BUFFER_SIZE; i++) {
-        packets[i].data      = NULL;
-        packets[i].data_size = -1;
+        udp_packets[i].data      = NULL;
+        udp_packets[i].data_size = -1;
     }
 }

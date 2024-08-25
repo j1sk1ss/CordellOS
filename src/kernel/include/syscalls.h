@@ -84,8 +84,8 @@
 #define SYS_FBUFFER_SWIPE    36
 
 // Networking
-#define SYS_SEND_UDP_PACKET 38
-#define SYS_GET_UDP_PACKETS 39
+#define SYS_SEND_ETH_PACKET 38
+#define SYS_GET_ETH_PACKETS 39
 #define SYS_SET_IP          41
 #define SYS_GET_IP          42
 #define SYS_GET_MAC         43

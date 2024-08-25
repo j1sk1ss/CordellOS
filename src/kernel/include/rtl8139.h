@@ -91,6 +91,10 @@ typedef struct rtl8139_dev {
     int tx_cur;
 } rtl8139_dev_t;
 
+typedef struct ethernet_packet {
+  struct ethernet_frame* packet;
+  int len;
+} ethernet_packet_t;
 
 void rtl8139_send_packet(void* data, uint32_t len);
 void rtl8139_handler(struct Registers* reg);

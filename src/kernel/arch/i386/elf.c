@@ -1,6 +1,48 @@
 #include "../../include/elf.h"
 
 
+static elf_symbols_t kernel_elf_symbols;
+
+
+void ELF_build_symbols_from_multiboot(multiboot_elf_section_header_table_t header) {
+	Elf32_Shdr* sh = (Elf32_Shdr*)(header.addr);
+	uint32_t shstrtab = sh[header.shndx].sh_addr;
+
+	for (uint32_t i = 0; i < header.num; i++) {
+		const char* name = (const char*) (shstrtab + sh[i].sh_name);
+		if (!strcmp(name,".strtab")) {
+			kernel_elf_symbols.strtab = (const char*)sh[i].sh_addr;
+			kernel_elf_symbols.strtab_size = sh[i].sh_size;
+		} else if (!strcmp(name,".symtab")) {
+			kernel_elf_symbols.symtab = (elf_symbol_t*)sh[i].sh_addr;
+			kernel_elf_symbols.symtab_size = sh[i].sh_size;
+		}
+	}
+}
+
+/*
+ * Iterate through all the symbols and look for functions...
+ * Then, as we find functions, check if the symbol is within that
+ * function's range (given by value and size)
+ */
+const char* ELF_lookup_symbol_function(uint32_t addr, elf_symbols_t* elf) {
+    int i;
+    int num_symbols = elf->symtab_size / sizeof(elf_symbol_t);
+
+    for (i = 0; i < num_symbols; i++) {
+        if ((addr >= elf->symtab[i].value) && (addr <= (elf->symtab[i].value + elf->symtab[i].size))) {
+            const char* name = (const char*)((uint32_t)elf->strtab + elf->symtab[i].name_offset_in_strtab);
+            return name;
+        }
+    }
+    
+    return "NOT FOUND";
+}
+
+const char* ELF_lookup_function(uint32_t addr) {
+    return ELF_lookup_symbol_function(addr, &kernel_elf_symbols);
+}
+
 ELF32_program* ELF_read(const char* path, int type) {
     ELF32_program* program = kmalloc(sizeof(ELF32_program));
     Content* content = current_vfs->getobj(path);
@@ -86,41 +128,4 @@ void ELF_free_program(ELF32_program* program) {
 
     kfree(program->pages);
     kfree(program);
-}
-
-ELF32_SymDescriptor* ELF_load_symbol_table(Elf32_Shdr* symbol_table_section, Elf32_Shdr* string_table_section) {
-    ELF32_SymDescriptor* symbol_table_descriptor = kmalloc(sizeof(ELF32_SymDescriptor));
-
-    if (symbol_table_section == 0) {
-        kfree(symbol_table_descriptor);
-        return NULL;
-    } else {
-        symbol_table_descriptor->present     = true;
-        symbol_table_descriptor->num_symbols = symbol_table_section->sh_size / sizeof(Elf32_Sym);
-        symbol_table_descriptor->symbols     = (Elf32_Sym*)symbol_table_section->sh_addr;
-        symbol_table_descriptor->string_table_addr = (char*)string_table_section->sh_addr;
-        return symbol_table_descriptor;
-    }
-}
-
-char* ELF_address2symname(uint32_t address, ELF32_SymDescriptor* descriptor) {
-    Elf32_Sym* symbol     = 0;
-    uint32_t symbol_value = 0;
-
-    if (descriptor->present) {
-        for (uint32_t i = 0; i < descriptor->num_symbols; i++) {
-            Elf32_Sym * candidate = descriptor->symbols + i;
-            if (candidate->st_value > symbol_value && candidate->st_value <= address) {
-                symbol = candidate;
-                symbol_value = candidate->st_value;
-            }
-        }
-
-        uint32_t string_index = symbol->st_name;
-        char* name = descriptor->string_table_addr + string_index;
-
-        return name;
-    }
-
-    return NULL;
 }

@@ -38,7 +38,7 @@ typedef struct ip_packet {
     uint8_t src_ip[4];
     uint8_t dst_ip[4];
     uint8_t data[];
-} __attribute__((packed)) ip_packet_t;
+} __attribute__((packed, aligned(sizeof(uint16_t)))) ip_packet_t;
 
 
 void IP_get_ip_str(uint8_t* ip);

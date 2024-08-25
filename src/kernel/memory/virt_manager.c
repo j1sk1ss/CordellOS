@@ -313,6 +313,8 @@ void copy_dir2dir(page_directory* src, page_directory* dest) {
 }
 
 void page_fault(struct Registers* regs) {
+    kclrscr();
+
 	uint32_t faulting_address;
 	asm ("mov %%cr2, %0" : "=r" (faulting_address));
 
@@ -334,16 +336,19 @@ void page_fault(struct Registers* regs) {
         if (rw) kprintf("READONLY\t");
         else kprintf("WRITEONLY\t");
 
-        if (us)       kprintf("USERMODE\t");
+        if (us) kprintf("USERMODE\t");
         if (reserved) kprintf("RESERVED\t");
-        if (id)       kprintf("INST FETCH\t");
+        if (id) kprintf("INST FETCH\t");
 
     //=======
     // PARAMS
     //=======
 
 	kprintf(") AT 0x%p\n", faulting_address);
-    kprintf("CHECK YOUR CODE BUDDY!\n");
+    kprintf("CHECK YOUR CODE, BUDDY!\n");
+    kprintf("AT THIS FUNCTION:\n");
+
+    i386_isr_interrupt_details(faulting_address, faulting_address, regs->esp);
 
 	kernel_panic("PAGE FAULT");
 }

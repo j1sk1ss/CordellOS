@@ -8,6 +8,7 @@
 #include "isr.h"
 #include "x86.h"
 #include "phys_manager.h"
+#include "elf.h"
 
 
 #define PAGES_PER_TABLE      1024
@@ -32,6 +33,7 @@ typedef uint32_t pt_entry;  // Page table entry
 typedef uint32_t pd_entry;  // Page directory entry
 typedef uint32_t physical_address; 
 typedef uint32_t virtual_address; 
+
 
 typedef enum {
     KERNEL = 0,

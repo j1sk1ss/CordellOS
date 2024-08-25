@@ -17,6 +17,7 @@ i386_switch2user:
     push eax
     iretd
 
+; Create page fault
 user_start:
     add esp, 4
     ret

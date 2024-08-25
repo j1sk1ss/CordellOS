@@ -27,7 +27,8 @@
 #include "multiboot/multiboot.h"
 
 
-// #define USERMODE
+#define USERMODE
+#define DEBUG_MODE
 
 #define CONFIG_KSHELL   0
 #define CONFIG_MOUSE    1
@@ -41,6 +42,10 @@
 
 #define CONFIG_PATH     "boot\\boot.txt"
 #define SHELL_PATH      "home\\shell\\shell.elf"
+
+#ifdef DEBUG_MODE
+    #define NO_MEM_CHECK
+#endif
 
 
 //======================================================================================================================================
@@ -110,9 +115,6 @@
 //======================================================================================================================================
 
 
-ELF32_SymDescriptor* kernel_stack_descriptor;
-
-
 #pragma region [Default tasks]
 
 void shell() {
@@ -154,9 +156,11 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
         if (mb_info->vbe_mode != TEXT_MODE) GFX_init(mb_info);
         else _screenBuffer = (uint8_t*)(uintptr_t)mb_info->framebuffer_addr;
 
+        ELF_build_symbols_from_multiboot(mb_info->u.elf_sec);
+
         kprintf("\n\t\t =    CORDELL  KERNEL    =");
-        kprintf("\n\t\t =     [ ver.   18 ]     =");
-        kprintf("\n\t\t =     [ 16.04  24 ]     = \n\n");
+        kprintf("\n\t\t =     [ ver.   19 ]     =");
+        kprintf("\n\t\t =     [ 25.08  24 ]     = \n\n");
         kprintf("\n\t\t = INFORMAZIONI GENERALI = \n\n");
         kprintf("\tMB FLAGS:        [0x%p]\n", mb_info->flags);
         kprintf("\tMEM LOW:         [%uKB] => MEM UP: [%uKB]\n", mb_info->mem_lower, mb_info->mem_upper);
@@ -204,6 +208,8 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
                             ++ptr;
                         }
 
+#ifndef NO_MEM_CHECK
+
                         ptr = (uint32_t*)(uintptr_t)mmap_entry->addr;
                         while (ptr < end) {
                             if (*ptr != pattern) {
@@ -215,6 +221,9 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
                         }
 
                         kprintf("MEM TEST PASSED!\n");
+
+#endif
+
                         initialize_memory_region(mmap_entry->addr, mmap_entry->len);
                     }
 
@@ -252,7 +261,6 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
                 map_page2kernel((void*)fb_start, (void*)fb_start);
 
             deinitialize_memory_region(gfx_mode.physical_base_pointer, framebuffer_pages * BLOCK_SIZE);
-            // gfx_mode.virtual_second_buffer = (uint32_t)kmalloc(gfx_mode.buffer_size);
 
 #pragma endregion
 
@@ -318,7 +326,12 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
         asm ("mov %%esp, %0" : "=r"(current_esp));
         TSS_set_stack(0x10, current_esp);
 
+#ifdef USERMODE
+        START_PROCESS("idle", (uint32_t)idle, USER, 1);
+#else
         START_PROCESS("idle", (uint32_t)idle, KERNEL, 1);
+#endif
+
         if (current_vfs->objexist(CONFIG_PATH) == 1) {
             Content* boot_config = current_vfs->getobj(CONFIG_PATH);
             char* config = current_vfs->read(boot_config);
@@ -360,7 +373,12 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
             //===================
 
             if (config[CONFIG_MOUSE] == CONFIG_ENABLED) show_mouse = 1;
+
+#ifdef USERMODE
+            if (config[CONFIG_KSHELL] == CONFIG_ENABLED) START_PROCESS("shell", (uint32_t)shell, USER, 10);
+#else
             if (config[CONFIG_KSHELL] == CONFIG_ENABLED) START_PROCESS("shell", (uint32_t)shell, KERNEL, 10);
+#endif
 
             kfree(config);
         } else START_PROCESS("shell", (uint32_t)shell, KERNEL, 10);

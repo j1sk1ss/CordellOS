@@ -448,7 +448,7 @@ void syscall(struct Registers* regs) {
             get_mac_addr(buffer);
         }
 
-        else if (regs->eax == SYS_SEND_UDP_PACKET) {
+        else if (regs->eax == SYS_SEND_ETH_PACKET) {
             uint8_t* dst_ip   = (uint8_t*)regs->ebx;
             uint16_t src_port = (uint16_t)regs->ecx;
             uint16_t dst_port = (uint16_t)regs->edx;
@@ -458,7 +458,7 @@ void syscall(struct Registers* regs) {
             UDP_send_packet(dst_ip, src_port, dst_port, data, len);
         }
 
-        else if (regs->eax == SYS_GET_UDP_PACKETS) {
+        else if (regs->eax == SYS_GET_ETH_PACKETS) {
             uint8_t* data = (uint8_t*)regs->ebx;
             struct UDPpacket* packet = UDP_pop_packet();
             if (packet == NULL) return;

@@ -1,6 +1,10 @@
 #include "../../include/rtl8139.h"
 
 
+int packet_meta[100];
+ethernet_frame_t* ethernet_packets[100];
+int current_ethernet_packet = 0;
+
 pci_dev_t pci_rtl8139_device;
 rtl8139_dev_t rtl8139_device;
 
@@ -10,6 +14,14 @@ uint8_t TSAD_array[4] = { 0x20, 0x24, 0x28, 0x2C };
 uint8_t TSD_array[4]  = { 0x10, 0x14, 0x18, 0x1C };
 
 
+struct ethernet_packet* pop_packet() {
+    struct ethernet_packet* packet = kmalloc(sizeof(ethernet_frame_t) + sizeof(int));
+    packet->packet = ethernet_packets[current_ethernet_packet];
+    packet->len = packet_meta[current_ethernet_packet--];
+
+    return packet;
+}
+
 void receive_packet() {
     uint8_t* rx_buffer     = rtl8139_device.rx_buffer;
     uint16_t* t            = (uint16_t*)(rx_buffer + current_packet_ptr);
@@ -18,7 +30,10 @@ void receive_packet() {
     t = t + 2;
     void* packet = kmalloc(packet_length);
     memcpy(packet, t, packet_length);
+
     ETH_handle_packet((ethernet_frame_t*)packet, packet_length);
+    ethernet_packets[current_ethernet_packet] = (ethernet_frame_t*)packet;
+    packet_meta[current_ethernet_packet++] = packet_length;
 
     current_packet_ptr = (current_packet_ptr + packet_length + 4 + 3) & RX_READ_POINTER_MASK;
     if (current_packet_ptr > RX_BUFFER_SIZE) current_packet_ptr -= RX_BUFFER_SIZE;

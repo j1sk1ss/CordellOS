@@ -56,19 +56,6 @@ void __attribute__((cdecl)) i386_isr_handler(struct Registers* regs) {
 }
 
 void i386_isr_interrupt_details(uint32_t eip, uint32_t ebp, uint32_t esp) {
-    if (currentDescriptor == NULL) {
-        struct stackframe* current_stack = (struct stackframe*)ebp;
-        kprintf("Stack trace [Discriptor not presented. Traced only addresses]:\n");
-        for (unsigned int frame = 0; current_stack && frame < 10; ++frame) {
-            kprintf("[0x%p]\n", current_stack->eip);
-            current_stack = current_stack->ebp;
-        }
-    
-        return;
-    }
-
-    kprintf("\nStack trace:\n");
-    eip -= 4;
     i386_isr_stack_trace_line(eip);
 
     uint32_t stack_highest_address = ((uint32_t)&esp + PAGE_SIZE - 4);
@@ -81,8 +68,8 @@ void i386_isr_interrupt_details(uint32_t eip, uint32_t ebp, uint32_t esp) {
 }
 
 void i386_isr_stack_trace_line(uint32_t eip) {
-  char* symbol_name = ELF_address2symname(eip, currentDescriptor);
-  kprintf("%x : %s\n", eip, symbol_name);
+  const char* symbol_name = ELF_lookup_function((uint32_t)((uint32_t*)eip));
+  kprintf("[0x%x] : %s\n", eip, symbol_name);
 }
 
 void i386_isr_registerHandler(int interrupt, ISRHandler handler) {

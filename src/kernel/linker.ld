@@ -7,10 +7,13 @@ SECTIONS {
     .text BLOCK(4K) : ALIGN(4K) {
         *(.multiboot)
         *(.text)
+        __symbol_start__ = .;
+        *(.dynsm)
     }
 
     .rodata BLOCK(4K) : ALIGN(4K) {
         *(.rodata)
+        *(.shrstrtab)
     }
 
     .data BLOCK(4K) : ALIGN(4K) {
