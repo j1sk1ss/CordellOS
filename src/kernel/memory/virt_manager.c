@@ -196,7 +196,7 @@ bool VMM_init(uint32_t memory_start) {
 
     pd_entry* second_entry = &dir->entries[PD_INDEX(0x00000000)];
     SET_ATTRIBUTE(second_entry, PDE_PRESENT);
-    SET_ATTRIBUTE(second_entry, PDE_READ_WRITE);   
+    SET_ATTRIBUTE(second_entry, PDE_READ_WRITE);
     SET_FRAME(second_entry, (physical_address)table3G); 
 
     if (set_page_directory(dir) == false) return false;
@@ -236,8 +236,8 @@ page_directory* mk_usdir() {
     for (uint32_t i = 0, frame = USER_MEMORY_START; i < USER_PAGES; i++, frame += PAGE_SIZE) {
         pt_entry page = 0;
         SET_ATTRIBUTE(&page, PTE_PRESENT);
-        SET_ATTRIBUTE(&page, PTE_USER);
         SET_ATTRIBUTE(&page, PTE_READ_WRITE);
+        SET_ATTRIBUTE(&page, PTE_USER);
         SET_FRAME(&page, frame);
 
         user_table->entries[PT_INDEX(frame)] = page;
@@ -245,8 +245,8 @@ page_directory* mk_usdir() {
 
     pd_entry* user_entry = &user_page_directory->entries[USER_TABLE_INDEX];
     SET_ATTRIBUTE(user_entry, PDE_PRESENT);
-    SET_ATTRIBUTE(user_entry, PDE_USER);
     SET_ATTRIBUTE(user_entry, PDE_READ_WRITE);
+    SET_ATTRIBUTE(user_entry, PDE_USER);
     SET_FRAME(user_entry, (uint32_t)user_table);
 
     return user_page_directory;
@@ -300,7 +300,6 @@ void copy_dir2dir(page_directory* src, page_directory* dest) {
     for (uint32_t i = 0; i < TABLES_PER_DIRECTORY; i++) {
         if (src->entries[i] & PDE_PRESENT) {
             page_table* new_table = (page_table*)allocate_blocks(1);
-
             if (!new_table) {
                 free_blocks((uint32_t*)dest, 3);
                 return;
@@ -314,6 +313,7 @@ void copy_dir2dir(page_directory* src, page_directory* dest) {
 
 void page_fault(struct Registers* regs) {
     kclrscr();
+    kset_color(BLUE);
 
 	uint32_t faulting_address;
 	asm ("mov %%cr2, %0" : "=r" (faulting_address));
@@ -324,33 +324,33 @@ void page_fault(struct Registers* regs) {
 	int reserved = regs->error & 0x8;		// When set, one or more page directory entries contain reserved bits which are set to 1. This only applies when the PSE or PAE flags in CR4 are set to 1.
 	int id		 = regs->error & 0x10;		// When set, the page fault was caused by an instruction fetch. This only applies when the No-Execute bit is supported and enabled.
 
-	kprintf("\nWHOOOPS..\nPAGE FAULT! (\t");
+	kcprintf(BLUE, "\nWHOOOPS..\nPAGE FAULT! (\t");
 
     //=======
     // PARAMS
     //=======
 
-        if (present) kprintf("NOT PRESENT\t");
-        else kprintf("PAGE PROTECTION\t");
+        if (present) kcprintf(BLUE, "NOT PRESENT\t");
+        else kcprintf(BLUE, "PAGE PROTECTION\t");
         
-        if (rw) kprintf("READONLY\t");
-        else kprintf("WRITEONLY\t");
+        if (rw) kcprintf(BLUE, "READONLY\t");
+        else kcprintf(BLUE, "WRITEONLY\t");
 
-        if (us) kprintf("USERMODE\t");
-        if (reserved) kprintf("RESERVED\t");
-        if (id) kprintf("INST FETCH\t");
+        if (us) kcprintf(BLUE, "USERMODE\t");
+        if (reserved) kcprintf(BLUE, "RESERVED\t");
+        if (id) kcprintf(BLUE, "INST FETCH\t");
 
     //=======
     // PARAMS
     //=======
 
-	kprintf(") AT 0x%p\n", faulting_address);
-    kprintf("CHECK YOUR CODE, BUDDY!\n");
-    kprintf("AT THIS FUNCTION:\n");
+	kcprintf(BLUE,") AT 0x%p\n", faulting_address);
+    kcprintf(BLUE,"CHECK YOUR CODE, BUDDY!\n");
+    kcprintf(BLUE,"\nSTACK TRACE:\n");
 
-    i386_isr_interrupt_details(faulting_address, faulting_address, regs->esp);
+    i386_isr_interrupt_details(faulting_address, regs->ebp, regs->esp);
 
-	kernel_panic("PAGE FAULT");
+	kernel_panic(BLUE, "\nPAGE FAULT");
 }
 
 void print_page_map(char arg) {

@@ -2,6 +2,8 @@
 
 global i386_switch2user
 i386_switch2user:
+    cli
+
     mov ax, 0x23
     mov ds, ax
     mov es, ax
@@ -15,9 +17,9 @@ i386_switch2user:
     push 0x1b
     lea eax, [user_start]
     push eax
+    
     iretd
 
 ; Create page fault
 user_start:
     add esp, 4
-    ret

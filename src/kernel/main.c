@@ -107,11 +107,11 @@
 //      18) User mode switch                                      [?]
 //      19) Keyboard in kernel by syscall that cause mt problems  [V]
 //      20) Tasking problems (again)                              [V]
-//          20.0) Page directory cloning                          [V]
-//          20.1) User page directory                             [ ]
+//          20.0) Page directory cloning                          [?]
+//          20.1) User page directory                             [?]
 //      21) Data append \ modify FAT                              [ ]
-//      22) New kernel panic screen (maybe blue screen?)          [ ]
-//      23) DOOM?                                                 [?]
+//      22) New kernel panic screen (maybe blue screen?)          [V]
+//      23) DOOM?                                                 [ ]
 //======================================================================================================================================
 
 
@@ -120,6 +120,10 @@
 void shell() {
 
 #ifdef USERMODE
+    uint32_t esp;
+    asm("mov %%esp, %0" : "=r"(esp));
+    TSS_set_stack(0x10, esp);
+
     i386_switch2user();
     fexec(SHELL_PATH, 0, NULL);
 #else
@@ -327,7 +331,7 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
         TSS_set_stack(0x10, current_esp);
 
 #ifdef USERMODE
-        START_PROCESS("idle", (uint32_t)idle, USER, 1);
+        START_PROCESS("idle", (uint32_t)idle, KERNEL, 1);
 #else
         START_PROCESS("idle", (uint32_t)idle, KERNEL, 1);
 #endif

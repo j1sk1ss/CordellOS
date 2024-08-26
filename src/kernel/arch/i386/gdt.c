@@ -63,7 +63,6 @@ typedef enum {
     GDT_BASE_HIGH(base)                 \
 }
 
-
 GDTEntry _gtd[] = {
     // Empty discriptor
     GDT_ENTRY(0, 0, 0, 0),

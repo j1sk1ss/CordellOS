@@ -23,7 +23,7 @@
 #define PROCESS_STATE_STRANGE 1
 #define PROCESS_STATE_DEAD    2
 
-#define START_PROCESS(name, address, type, delay)    TASK_add_task(TASK_create_task(name, address, type, delay))
+#define START_PROCESS(name, address, type, ticks2work)    TASK_add_task(TASK_create_task(name, address, type, ticks2work))
 
 
 typedef struct {

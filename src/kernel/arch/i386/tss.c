@@ -18,7 +18,7 @@ void TSS_init(uint32_t idx, uint32_t kss, uint32_t kesp) {
     kernel_tss.gs   = 0x13;
     kernel_tss.ss   = 0x13;
 
-    tss_flush();
+    TSS_flush();
 }
 
 // kss - kernel stack segment

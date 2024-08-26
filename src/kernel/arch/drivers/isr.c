@@ -37,21 +37,23 @@ void __attribute__((cdecl)) i386_isr_handler(struct Registers* regs) {
             return;
         }
 
-        if (regs->interrupt < SIZE(_exceptions) && _exceptions[regs->interrupt] != NULL) 
-            kprintf("UNHANDLED EXCEPTION %d %s\n", regs->interrupt, _exceptions[regs->interrupt]);
-        else kprintf("UNHANDLED INTERRUPT! INTERRUPT: %d\n", regs->interrupt);
-        
         clrscr();
+        kset_color(BLUE);
 
-        kprintf("  eax=%u ebx=%u ecx=%u edx=%u esi=%u edi=%u\n",
+        if (regs->interrupt < SIZE(_exceptions) && _exceptions[regs->interrupt] != NULL) 
+            kcprintf(BLUE, "UNHANDLED EXCEPTION [%d] ['%s']\n", regs->interrupt, _exceptions[regs->interrupt]);
+        else kcprintf(BLUE, "UNHANDLED INTERRUPT! INTERRUPT: %d\n", regs->interrupt);
+        
+        kcprintf(BLUE, "  eax=%u ebx=%u ecx=%u edx=%u esi=%u edi=%u\n",
                 regs->eax, regs->ebx, regs->ecx, regs->edx, regs->esi, regs->edi);
-        kprintf("  esp=%p ebp=%u eip=%p eflags=%u cs=%u ds=%u ss=%u\n",
+        kcprintf(BLUE, "  esp=%p ebp=%u eip=0x%p eflags=%u cs=%u ds=%u ss=%u\n",
                 regs->esp, regs->ebp, regs->eip, regs->eflag, regs->cs, regs->ds, regs->ss);
-        kprintf("  INTERRUPT=%u ERRORCODE=%u\n", regs->interrupt, regs->error);
+        kcprintf(BLUE, "  INTERRUPT=%u ERRORCODE=%u\n", regs->interrupt, regs->error);
 
+        kcprintf(BLUE, "\nSTACK TRACE:\n");
         i386_isr_interrupt_details(regs->eip, regs->ebp, regs->esp);
 
-        kernel_panic("\nKERNEL PANIC\n");
+        kernel_panic(BLUE, "\nKERNEL PANIC");
     }
 }
 
@@ -69,7 +71,7 @@ void i386_isr_interrupt_details(uint32_t eip, uint32_t ebp, uint32_t esp) {
 
 void i386_isr_stack_trace_line(uint32_t eip) {
   const char* symbol_name = ELF_lookup_function((uint32_t)((uint32_t*)eip));
-  kprintf("[0x%x] : %s\n", eip, symbol_name);
+  kcprintf(BLUE, "[0x%x] : %s\n", eip, symbol_name);
 }
 
 void i386_isr_registerHandler(int interrupt, ISRHandler handler) {

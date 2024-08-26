@@ -121,7 +121,6 @@ uint32_t v_addr = 0x00C00000;
 				}
 
                 set_page_directory(task->page_directory);
-                // task->page_directory = current_page_directory;
 				
 				// Allocate page in pd, link it to v_addr
 				type == USER ? umallocp(v_addr) : kmallocp(v_addr);

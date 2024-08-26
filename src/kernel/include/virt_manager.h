@@ -19,6 +19,9 @@
 #define USER_PAGES          64
 #define USER_TABLE_INDEX    1024
 
+#define SET_PGBIT(cr0)      (cr0 = cr0 | 0x80000000)
+#define CLEAR_PSEBIT(cr4)   (cr4 = cr4 & 0xffffffef)
+
 #define PD_INDEX(address)            ((address) >> 22)
 #define PT_INDEX(address)            (((address) >> 12) & 0x3FF) // Max index 1023 = 0x3FF
 #define PAGE_PHYS_ADDRESS(dir_entry) ((*dir_entry) & ~0xFFF)    // Clear lowest 12 bits, only return frame/address

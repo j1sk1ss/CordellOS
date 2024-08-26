@@ -227,7 +227,7 @@ void syscall(struct Registers* regs) {
 
             else if (regs->eax == SYS_KERN_PANIC) {
                 char* message = (char*)regs->ecx;
-                kernel_panic(message);
+                kernel_panic(BLUE, message);
             }
 
         //=======================

@@ -14,6 +14,6 @@ void HAL_initialize() {
     i386_irq_initialize();
     kprintf("IRQ INIZIALIZZATO\n");
 
-    TSS_init(5, 0x10, 0);
+    TSS_init(0x5, 0x10, 0x0);
     kprintf("TSS INIZIALIZZATO\n");
 }

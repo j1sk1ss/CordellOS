@@ -43,6 +43,6 @@ extern tss_entry_t kernel_tss;
 
 void TSS_init(uint32_t idx, uint32_t kss, uint32_t kesp);
 void TSS_set_stack(uint32_t kss, uint32_t kesp);
-void __attribute__((cdecl)) tss_flush();
+void __attribute__((cdecl)) TSS_flush();
 
 #endif

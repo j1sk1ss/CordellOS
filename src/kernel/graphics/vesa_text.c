@@ -67,7 +67,7 @@ void VESA_cputc(char c, uint32_t fcolor, uint32_t bcolor) {
 
         case '\t':
             for (int i = 0; i < _tabSize - ((gfx_mode.x_resolution) / CHAR_X % _tabSize); i++)
-                VESA_putc(' ');
+                VESA_cputc(' ', fcolor, bcolor);
             break;
 
         default:
