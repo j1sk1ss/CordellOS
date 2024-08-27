@@ -16,8 +16,8 @@ VARS.AddVariables(
 
     EnumVariable("arch", 
                  help="Target architecture", 
-                 default="i686",
-                 allowed_values=("i686")),
+                 default="x86_64",
+                 allowed_values=("i686", "x86_64")),
 
     EnumVariable("image_type",
                  help="Type of image",
@@ -32,7 +32,7 @@ VARS.AddVariables(
 
 VARS.Add("tool_chain", 
          help="Path to tool_chain directory.",
-         default="tool_chain")
+         default="/usr/local")
 
 DEPS = {
     'binutils': '2.37',
@@ -86,6 +86,8 @@ HOST_ENVIRONMENT.Replace(ASCOMSTR        = "Assembling [$SOURCE]",
 platform_prefix = ''
 if HOST_ENVIRONMENT['arch'] == 'i686':
     platform_prefix = 'i686-elf-'
+else:
+    platform_prefix = 'x86_64-elf-'
 
 tool_chainDir = Path(HOST_ENVIRONMENT['tool_chain'], remove_suffix(platform_prefix, '-')).resolve()
 tool_chainBin = Path(tool_chainDir, 'bin')

@@ -101,8 +101,8 @@ void cursor_set32(uint32_t x, uint32_t y) {
 // result[1] - y
 void cursor_get(int* result) {
     __asm__ volatile(
-        "movl $21, %%eax\n"
-        "movl %0, %%ecx\n"
+        "mov $21, %%rax\n"
+        "mov %0, %%rcx\n"
         "int %1\n"
         :
         : "r"(result), "i"(SYSCALL_INTERRUPT)

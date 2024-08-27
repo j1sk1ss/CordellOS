@@ -25,6 +25,7 @@
 #include "include/elf.h"
 
 #include "multiboot/multiboot.h"
+#include "multiboot/limine.h"
 
 
 #define USERMODE
@@ -115,6 +116,43 @@
 //======================================================================================================================================
 
 
+#pragma region [Limine stuff]
+
+__attribute__((used, section(".requests")))
+static volatile LIMINE_BASE_REVISION(2);
+
+__attribute__((used, section(".requests")))
+static volatile struct limine_framebuffer_request framebuffer_request = {
+    .id = LIMINE_FRAMEBUFFER_REQUEST,
+    .revision = 0
+};
+
+__attribute__((used, section(".requests")))
+static volatile struct limine_memmap_request memmap_request = {
+    .id = LIMINE_MEMMAP_REQUEST,
+    .revision = 0
+};
+
+__attribute__((used, section(".requests")))
+static volatile struct limine_module_request module_request = {
+    .id = LIMINE_MODULE_REQUEST,
+    .revision = 0
+};
+
+__attribute__((used, section(".requests")))
+static volatile struct limine_kernel_file_request kfile_request = {
+    .id = LIMINE_KERNEL_FILE_REQUEST,
+    .revision = 0
+};
+
+__attribute__((used, section(".requests_start_marker")))
+static volatile LIMINE_REQUESTS_START_MARKER;
+
+__attribute__((used, section(".requests_end_marker")))
+static volatile LIMINE_REQUESTS_END_MARKER;
+
+#pragma endregion
+
 #pragma region [Default tasks]
 
 void shell() {
@@ -140,7 +178,7 @@ void idle() {
 
 
 void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t esp) {
-    
+
     //===================
     // GFX init
     // MB Information
@@ -152,31 +190,38 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
 
 #pragma region [Basic kernel info]
 
-        if (mb_magic != MULTIBOOT2_BOOTLOADER_MAGIC) {
-            kprintf("[%s %i] MB HEADER ERROR (MAGIC IS WRONG [%u]).\n", __FILE__, __LINE__, mb_magic);
+        if (LIMINE_BASE_REVISION_SUPPORTED == false) {
             goto end;
         }
 
-        if (mb_info->vbe_mode != TEXT_MODE) GFX_init(mb_info);
-        else _screenBuffer = (uint8_t*)(uintptr_t)mb_info->framebuffer_addr;
+        if (framebuffer_request.response == NULL || framebuffer_request.response->framebuffer_count < 1) {
+            goto end;
+        }
 
-        ELF_build_symbols_from_multiboot(mb_info->u.elf_sec);
+        struct limine_memmap_response* memmap = memmap_request.response;
+        struct limine_module_response* boot_modules = module_request.response;
+        struct limine_framebuffer* framebuffer = framebuffer_request.response->framebuffers[0];
+        GFX_init(framebuffer);
+
+        // ELF_build_symbols_from_multiboot(mb_info->u.elf_sec);
 
         kprintf("\n\t\t =    CORDELL  KERNEL    =");
-        kprintf("\n\t\t =     [ ver.   19 ]     =");
-        kprintf("\n\t\t =     [ 25.08  24 ]     = \n\n");
+        kprintf("\n\t\t =     [ ver.   20 ]     =");
+        kprintf("\n\t\t =     [ 27.08  24 ]     = \n\n");
         kprintf("\n\t\t = INFORMAZIONI GENERALI = \n\n");
-        kprintf("\tMB FLAGS:        [0x%p]\n", mb_info->flags);
-        kprintf("\tMEM LOW:         [%uKB] => MEM UP: [%uKB]\n", mb_info->mem_lower, mb_info->mem_upper);
-        kprintf("\tBOOT DEVICE:     [0x%p]\n", mb_info->boot_device);
-        kprintf("\tCMD LINE:        [%s]\n", mb_info->cmdline);
-        kprintf("\tVBE MODE:        [%u]\n", mb_info->vbe_mode);
+
+        kprintf("\n\t\t =  INFORMAZIONI MEMORY  = \n\n");
+        kprintf("\tMEM ENTRIES:     [%i]\n", memmap->entry_count);
+
+        for (int i = 0; i < memmap->entry_count; i++)
+            kprintf("\tMEM LOW:         [%uKB] => MEM LEN: [%uKB]\n", memmap->entries[i]->base, memmap->entries[i]->length);
 
         kprintf("\n\n\t\t =       VBE  INFO       = \n\n");
-        kprintf("\tVBE FRAMEBUFFER: [0x%p]\n", mb_info->framebuffer_addr);
-        kprintf("\tVBE Y:           [%upx]\n", mb_info->framebuffer_height);
-        kprintf("\tVBE X:           [%upx]\n", mb_info->framebuffer_width);
-        kprintf("\tVBE BPP:         [%uB]\n", mb_info->framebuffer_bpp);
+        kprintf("\tVBE MODE:        [%u]\n", framebuffer->modes[0]);
+        kprintf("\tVBE FRAMEBUFFER: [0x%p]\n", gfx_mode.physical_base_pointer);
+        kprintf("\tVBE Y:           [%upx]\n", gfx_mode.y_resolution);
+        kprintf("\tVBE X:           [%upx]\n", gfx_mode.x_resolution);
+        kprintf("\tVBE BPP:         [%uB]\n", gfx_mode.bits_per_pixel);
 
 #pragma endregion
 
@@ -188,7 +233,10 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
     
 #pragma region [Memory info & memory testing]
 
-        uint32_t total_memory = mb_info->mem_upper + (mb_info->mem_lower << 10);
+        uint32_t total_memory = 0;
+        for (int i = 0; i < memmap->entry_count; i++)
+            total_memory += memmap->entries[i]->length;
+
         PMM_init(MMAP_LOCATION, total_memory);
 
         //===================
@@ -197,45 +245,43 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
         // - Read dummy data (should be saved and not changed)
         //===================
 
-            if (mb_info->flags & (1 << 1)) {
-                kprintf("\n\n\t\t =     MEMORY   INFO     = \n\n");
-                multiboot_memory_map_t* mmap_entry = (multiboot_memory_map_t*)mb_info->mmap_addr;
-                while ((uint32_t)mmap_entry < mb_info->mmap_addr + mb_info->mmap_length) {
-                    if (mmap_entry->type == MULTIBOOT_MEMORY_AVAILABLE) {
-                        kprintf("\tREGION |  LEN: [%u]  |  ADDR: [0x%p]  |  TYPE: [%u] \t", mmap_entry->len, mmap_entry->addr, mmap_entry->type);
-                        const uint32_t pattern = 0xC08DE77;
+            kprintf("\n\n\t\t =     MEMORY   INFO     = \n\n");
+            for (int i = 0; i < memmap->entry_count; i++) {
+                struct limine_memmap_entry* mmap_entry = memmap->entries[i];
+                if (mmap_entry->type == LIMINE_MEMMAP_USABLE) {
+                    kprintf("\tREGION |  LEN: [%u]  |  ADDR: [0x%p]  |  TYPE: [%u] \t", mmap_entry->length, mmap_entry->base, mmap_entry->type);
+                    const uint32_t pattern = 0xC08DE77;
 
-                        uint32_t* ptr = (uint32_t*)(uintptr_t)mmap_entry->addr;
-                        uint32_t* end = (uint32_t*)(uintptr_t)(mmap_entry->addr + mmap_entry->len);
-                        while (ptr < end) {
-                            *ptr = pattern;
-                            ++ptr;
-                        }
+                    uint32_t* ptr = (uint32_t*)(uintptr_t)mmap_entry->base;
+                    uint32_t* end = (uint32_t*)(uintptr_t)(mmap_entry->base + mmap_entry->length);
+                    while (ptr < end) {
+                        *ptr = pattern;
+                        ++ptr;
+                    }
 
 #ifndef NO_MEM_CHECK
 
-                        ptr = (uint32_t*)(uintptr_t)mmap_entry->addr;
-                        while (ptr < end) {
-                            if (*ptr != pattern) {
-                                kprintf("MEM TEST FAILED AT [0x%p]\n", ptr);
-                                return;
-                            }
-
-                            ++ptr;
+                    ptr = (uint32_t*)(uintptr_t)mmap_entry->base
+                    while (ptr < end) {
+                        if (*ptr != pattern) {
+                            kprintf("MEM TEST FAILED AT [0x%p]\n", ptr);
+                            return;
                         }
 
-                        kprintf("MEM TEST PASSED!\n");
+                        ++ptr;
+                    }
+
+                    kprintf("MEM TEST PASSED!\n");
 
 #endif
 
-                        initialize_memory_region(mmap_entry->addr, mmap_entry->len);
-                    }
-
-                    mmap_entry = (multiboot_memory_map_t*)((uint32_t)mmap_entry + mmap_entry->size + sizeof(mmap_entry->size));
+                    initialize_memory_region(mmap_entry->base, mmap_entry->length);
                 }
 
-                kprintf("\n\n");
+                mmap_entry = (multiboot_memory_map_t*)((uint32_t)mmap_entry + mmap_entry->length + sizeof(mmap_entry->length));
             }
+
+            kprintf("\n\n");
 
         //===================
         // Memory test

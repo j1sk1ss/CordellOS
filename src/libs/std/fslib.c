@@ -134,14 +134,14 @@ char* FSLIB_change_path(const char* currentPath, const char* content) {
 char* fread(const char* path) {
     void* pointed_data;
     __asm__ volatile(
-        "movl $9, %%eax\n"
-        "movl %1, %%ebx\n"
-        "movl $0, %%ecx\n"
+        "mov $9, %%rax\n"
+        "mov %1, %%rbx\n"
+        "mov $0, %%rcx\n"
         "int %2\n"
-        "movl %%eax, %0\n"
+        "mov %%rax, %0\n"
         : "=r"(pointed_data)
-        : "r"((uint32_t)path), "i"(SYSCALL_INTERRUPT)
-        : "eax", "ebx", "ecx", "edx"
+        : "r"((uint64_t)path), "i"(SYSCALL_INTERRUPT)
+        : "rax", "rbx", "rcx", "rdx"
     );
 
     return pointed_data;
@@ -154,14 +154,14 @@ char* fread(const char* path) {
 char* fread_stop(const char* path, char* stop) {
     void* pointed_data;
     __asm__ volatile(
-        "movl $59, %%eax\n"
-        "movl %1, %%ebx\n"
-        "movl %2, %%ecx\n"
+        "mov $59, %%rax\n"
+        "mov %1, %%rbx\n"
+        "mov %2, %%rcx\n"
         "int %3\n"
-        "movl %%eax, %0\n"
+        "mov %%rax, %0\n"
         : "=r"(pointed_data)
-        : "r"((uint32_t)path), "r"(stop), "i"(SYSCALL_INTERRUPT)
-        : "eax", "ebx", "ecx", "edx"
+        : "r"((uint64_t)path), "r"(stop), "i"(SYSCALL_INTERRUPT)
+        : "rax", "rbx", "rcx", "rdx"
     );
 
     return pointed_data;
@@ -175,15 +175,15 @@ char* fread_stop(const char* path, char* stop) {
 // ESI - buffer len / data len
 void fread_off(Content* content, int offset, uint8_t* buffer, int len) {
     __asm__ volatile(
-        "movl $33, %%eax\n"
-        "movl %0, %%ebx\n"
-        "movl %1, %%ecx\n"
-        "movl %2, %%edx\n"
-        "movl %3, %%esi\n"
+        "mov $33, %%rax\n"
+        "mov %0, %%rbx\n"
+        "mov %1, %%rcx\n"
+        "mov %2, %%rdx\n"
+        "mov %3, %%rsi\n"
         "int $0x80\n"
         :
         : "g"(content), "g"(offset), "g"(buffer), "g"(len)
-        : "eax", "ebx", "ecx", "edx", "esi"
+        : "rax", "rbx", "rcx", "rdx", "rsi"
     );
 }
 
@@ -195,16 +195,16 @@ void fread_off(Content* content, int offset, uint8_t* buffer, int len) {
 // ESI - buffer len / data len
 void fread_off_stop(Content* content, int offset, uint8_t* buffer, int len, char* stop) {
     __asm__ volatile(
-        "movl $58, %%eax\n"
-        "movl %0, %%ebx\n"
-        "movl %1, %%ecx\n"
-        "movl %2, %%edx\n"
-        "movl %3, %%esi\n"
-        "movl %4, %%edi\n"
+        "mov $58, %%rax\n"
+        "mov %0, %%rbx\n"
+        "mov %1, %%rcx\n"
+        "mov %2, %%rdx\n"
+        "mov %3, %%rsi\n"
+        "mov %4, %%rdi\n"
         "int $0x80\n"
         :
         : "g"(content), "g"(offset), "g"(buffer), "g"(len), "g"(stop)
-        : "eax", "ebx", "ecx", "edx", "esi", "edi"
+        : "rax", "rbx", "rcx", "rdx", "rsi", "rdi"
     );
 }
 
@@ -214,13 +214,13 @@ void fread_off_stop(Content* content, int offset, uint8_t* buffer, int len, char
 // ECX - data
 void fwrite(const char* path, const char* data) {
     __asm__ volatile(
-        "movl $10, %%eax\n"
-        "movl %0, %%ebx\n"
-        "movl %1, %%ecx\n"
+        "mov $10, %%rax\n"
+        "mov %0, %%rbx\n"
+        "mov %1, %%rcx\n"
         "int $0x80\n"
         :
-        : "r"((uint32_t)path), "r"((uint32_t)data)
-        : "eax", "ebx", "ecx"
+        : "r"((uint64_t)path), "r"((uint64_t)data)
+        : "rax", "rbx", "rcx"
     );
 }
 
@@ -232,15 +232,15 @@ void fwrite(const char* path, const char* data) {
 // ESI - buffer len / data len
 void fwrite_off(Content* content, int offset, uint8_t* buffer, int len) {
     __asm__ volatile(
-        "movl $50, %%eax\n"
-        "movl %0, %%ebx\n"
-        "movl %1, %%ecx\n"
-        "movl %2, %%edx\n"
-        "movl %3, %%esi\n"
+        "mov $50, %%rax\n"
+        "mov %0, %%rbx\n"
+        "mov %1, %%rcx\n"
+        "mov %2, %%rdx\n"
+        "mov %3, %%rsi\n"
         "int $0x80\n"
         :
         : "g"(content), "g"(offset), "g"(buffer), "g"(len)
-        : "eax", "ebx", "ecx", "edx", "esi"
+        : "rax", "rbx", "rcx", "rdx", "rsi"
     );
 }
 
@@ -251,13 +251,13 @@ void fwrite_off(Content* content, int offset, uint8_t* buffer, int len) {
 Directory* opendir(const char* path) {
     Directory* directory;
     __asm__ volatile(
-        "movl $11, %%eax\n"
-        "movl %1, %%ebx\n"
+        "mov $11, %%rax\n"
+        "mov %1, %%rbx\n"
         "int $0x80\n"
-        "movl %%eax, %0\n"
+        "mov %%rax, %0\n"
         : "=r"(directory)
-        : "r"((uint32_t)path)
-        : "eax", "ebx", "ecx"
+        : "r"((uint64_t)path)
+        : "rax", "rbx", "rcx"
     );
 
     return directory;
@@ -270,14 +270,14 @@ Directory* opendir(const char* path) {
 Content* get_content(const char* path) {
     Content* content;
     __asm__ volatile(
-        "movl $30, %%eax\n"
-        "movl %1, %%ebx\n"
-        "movl %2, %%ecx\n"
+        "mov $30, %%rax\n"
+        "mov %1, %%rbx\n"
+        "mov %2, %%rcx\n"
         "int $0x80\n"
-        "movl %%eax, %0\n"
+        "mov %%rax, %0\n"
         : "=r"(content)
-        : "r"((uint32_t)path), "r"(content)
-        : "eax", "ebx", "ecx"
+        : "r"((uint64_t)path), "r"(content)
+        : "rax", "rbx", "rcx"
     );
 
     return content;
@@ -291,13 +291,13 @@ int cexists(const char* path) {
     int result;
 
     __asm__ volatile(
-        "movl $15, %%eax\n"
-        "movl %0, %%ebx\n"
-        "movl %1, %%ecx\n"
+        "mov $15, %%rax\n"
+        "mov %0, %%rbx\n"
+        "mov %1, %%rcx\n"
         "int $0x80\n"
         : 
-        : "r"((uint32_t)path), "r"(&result)
-        : "eax", "ebx"
+        : "r"((uint64_t)path), "r"(&result)
+        : "rax", "rbx"
     );
 
     return result;
@@ -309,13 +309,13 @@ int cexists(const char* path) {
 //  RCX - name (with extention)
 void mkfile(const char* path, const char* name) {
     __asm__ volatile(
-        "movl $16, %%eax\n"
-        "movl %0, %%ebx\n"
-        "movl %1, %%ecx\n"
+        "mov $16, %%rax\n"
+        "mov %0, %%rbx\n"
+        "mov %1, %%rcx\n"
         "int $0x80\n"
         :
-        : "r"((uint32_t)path), "r"((uint32_t)name)
-        : "eax", "ebx", "ecx"
+        : "r"((uint64_t)path), "r"((uint64_t)name)
+        : "rax", "rbx", "rcx"
     );
 }
 
@@ -325,13 +325,13 @@ void mkfile(const char* path, const char* name) {
 //  ECX - name
 void mkdir(const char* path, const char* name) {
     __asm__ volatile(
-        "movl $17, %%eax\n"
-        "movl %0, %%ebx\n"
-        "movl %1, %%ecx\n"
+        "mov $17, %%rax\n"
+        "mov %0, %%rbx\n"
+        "mov %1, %%rcx\n"
         "int $0x80\n"
         :
-        : "r"((uint32_t)path), "r"((uint32_t)name)
-        : "eax", "ebx", "ecx"
+        : "r"((uint64_t)path), "r"((uint64_t)name)
+        : "rax", "rbx", "rcx"
     );
 }
 
@@ -341,12 +341,12 @@ void mkdir(const char* path, const char* name) {
 //  ECX - name (if file - with extention)
 void rmcontent(const char* path) {
     __asm__ volatile(
-        "movl $18, %%eax\n"
-        "movl %0, %%ebx\n"
+        "mov $18, %%rax\n"
+        "mov %0, %%rbx\n"
         "int $0x80\n"
         :
-        : "r"((uint32_t)path)
-        : "eax", "ebx"
+        : "r"((uint64_t)path)
+        : "rax", "rbx"
     );
 }
 
@@ -356,13 +356,13 @@ void rmcontent(const char* path) {
 // ECX - new meta
 void chgcontent(const char* path, directory_entry_t* meta) {
     __asm__ volatile(
-        "movl $25, %%eax\n"
-        "movl %0, %%ebx\n"
-        "movl %1, %%ecx\n"
+        "mov $25, %%rax\n"
+        "mov %0, %%rbx\n"
+        "mov %1, %%rcx\n"
         "int $0x80\n"
         :
-        : "r"((uint32_t)path), "r"((uint32_t)meta)
-        : "eax", "ebx", "ecx"
+        : "r"((uint64_t)path), "r"((uint64_t)meta)
+        : "rax", "rbx", "rcx"
     );
 }
 

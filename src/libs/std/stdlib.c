@@ -7,28 +7,28 @@
 // ECX - address 
 void tstart(char* name, uint32_t address, uint32_t delay) {
     __asm__ volatile(
-        "movl $26, %%eax\n"
-        "movl %0, %%ebx\n"
-        "movl %1, %%ecx\n"
-        "movl %2, %%edx\n"
+        "mov $26, %%rax\n"
+        "mov %0, %%rbx\n"
+        "mov %1, %%rcx\n"
+        "mov %2, %%rdx\n"
         "int %3\n"
         :
-        : "r"(name), "r"(address), "r"(delay), "i"(SYSCALL_INTERRUPT)
-        : "eax", "ebx", "ecx"
+        : "r"(name), "r"((uint64_t)address), "r"((uint64_t)delay), "i"(SYSCALL_INTERRUPT)
+        : "rax", "rbx", "rcx"
     );
 }
 
 //====================================================================
 // Function return PID of current task
 int tpid() {
-    int pid;
+    uint64_t pid;
     __asm__ volatile(
-        "movl $52, %%eax\n"
+        "mov $52, %%rax\n"
         "int $0x80\n"
-        "movl %%eax, %0\n"
+        "mov %%rax, %0\n"
         : "=r" (pid)
         : 
-        : "%eax"
+        : "%rax"
     );
 
     return pid;
@@ -38,11 +38,11 @@ int tpid() {
 // Function kill current task
 void tkill() {
     __asm__ volatile(
-        "movl $27, %%eax\n"
+        "mov $27, %%rax\n"
         "int %0\n"
         :
         : "i"(SYSCALL_INTERRUPT)
-        : "eax"
+        : "rax"
     );
 }
 
@@ -58,12 +58,12 @@ void tkill() {
 //  data[5] - year
 void get_datetime(short* data) {
     __asm__ volatile(
-        "movl $6, %%eax\n"
-        "movl %0, %%ecx\n"
+        "mov $6, %%rax\n"
+        "mov %0, %%rcx\n"
         "int %1\n"
         :
         : "r"(data), "i"(SYSCALL_INTERRUPT)
-        : "eax", "ecx"
+        : "rax", "rcx"
     );
 }
 
@@ -74,13 +74,13 @@ void get_datetime(short* data) {
 void* malloc(uint32_t size) {
     void* allocated_memory;
     __asm__ volatile(
-        "movl $7, %%eax\n"
-        "movl %1, %%ebx\n"
+        "mov $7, %%rax\n"
+        "mov %1, %%rbx\n"
         "int $0x80\n"
-        "movl %%eax, %0\n"
+        "mov %%rax, %0\n"
         : "=r" (allocated_memory)
-        : "r" (size)
-        : "%eax", "%ebx"
+        : "r" ((uint64_t)size)
+        : "%rax", "%rbx"
     );
     
     return allocated_memory;
@@ -93,13 +93,13 @@ void* malloc(uint32_t size) {
 void* mallocp(uint32_t v_addr) {
     void* allocated_v_addr;
     __asm__ volatile(
-        "movl $35, %%eax\n"
-        "movl %1, %%ebx\n"
+        "mov $35, %%rax\n"
+        "mov %1, %%rbx\n"
         "int $0x80\n"
-        "movl %%eax, %0\n"
+        "mov %%rax, %0\n"
         : "=r" (allocated_v_addr)
-        : "r" (v_addr)
-        : "%eax", "%ebx"
+        : "r" ((uint64_t)v_addr)
+        : "%rax", "%rbx"
     );
     
     return allocated_v_addr;
@@ -142,12 +142,12 @@ void* clralloc(size_t size) {
 void free(void* ptr) {
     if (ptr == NULL) return;
     __asm__ volatile(
-        "movl $8, %%eax\n"
-        "movl %0, %%ebx\n"
+        "mov $8, %%rax\n"
+        "mov %0, %%rbx\n"
         "int $0x80\n"
         :
         : "r" (ptr)
-        : "%eax", "%ebx"
+        : "%rax", "%rbx"
     );
 }
 
@@ -157,12 +157,12 @@ void free(void* ptr) {
 void freep(void* ptr) {
     if (ptr == NULL) return;
     __asm__ volatile(
-        "movl $34, %%eax\n"
-        "movl %0, %%ebx\n"
+        "mov $34, %%rax\n"
+        "mov %0, %%rbx\n"
         "int $0x80\n"
         :
         : "r" (ptr)
-        : "%eax", "%ebx"
+        : "%rax", "%rbx"
     );
 }
 
@@ -170,11 +170,11 @@ void freep(void* ptr) {
 // Function restart machine
 void machine_restart() {
     __asm__ volatile(
-        "movl $44, %%eax\n"
+        "mov $44, %%rax\n"
         "int %0\n"
         :
         : "i"(SYSCALL_INTERRUPT)
-        : "%eax"
+        : "%rax"
     );
 }
 
@@ -195,12 +195,12 @@ void switch_disk(int index) {
 // buffer[7] - fat size
 void get_fs_info(uint32_t* buffer) {
      __asm__ volatile(
-        "movl $45, %%eax\n"
-        "movl %0, %%ebx\n"
+        "mov $45, %%rax\n"
+        "mov %0, %%rbx\n"
         "int $0x80\n"
         :
         : "r"(buffer)
-        : "%eax", "%ebx"
+        : "%rax", "%rbx"
     );
 }
 
@@ -210,13 +210,13 @@ void get_fs_info(uint32_t* buffer) {
 // ECX - value
 void envar_add(char* name, char* value) {
      __asm__ volatile(
-        "movl $53, %%eax\n"
-        "movl %0, %%ebx\n"
-        "movl %1, %%ecx\n"
+        "mov $53, %%rax\n"
+        "mov %0, %%rbx\n"
+        "mov %1, %%rcx\n"
         "int $0x80\n"
         :
         : "r"(name), "r"(value)
-        : "%eax", "%ebx", "%ecx"
+        : "%rax", "%rbx", "%rcx"
     );
 }
 
@@ -228,15 +228,15 @@ void envar_add(char* name, char* value) {
 // -1 - nexists
 // != -1 - exists
 int envar_exists(char* name) {
-    int value;
+    uint64_t value;
     __asm__ volatile(
-        "movl $57, %%eax\n"
-        "movl %1, %%ebx\n"
+        "mov $57, %%rax\n"
+        "mov %1, %%rbx\n"
         "int $0x80\n"
-        "movl %%eax, %0\n"
+        "mov %%rax, %0\n"
         : "=r" (value)
         : "r" (name)
-        : "%eax", "%ebx"
+        : "%rax", "%rbx"
     );
     
     return value;
@@ -248,13 +248,13 @@ int envar_exists(char* name) {
 // ECX - value
 void envar_set(char* name, char* value) {
      __asm__ volatile(
-        "movl $54, %%eax\n"
-        "movl %0, %%ebx\n"
-        "movl %1, %%ecx\n"
+        "mov $54, %%rax\n"
+        "mov %0, %%rbx\n"
+        "mov %1, %%rcx\n"
         "int $0x80\n"
         :
         : "r"(name), "r"(value)
-        : "%eax", "%ebx", "%ecx"
+        : "%rax", "%rbx", "%rcx"
     );
 }
 
@@ -264,13 +264,13 @@ void envar_set(char* name, char* value) {
 char* envar_get(char* name) {
     char* value;
     __asm__ volatile(
-        "movl $55, %%eax\n"
-        "movl %1, %%ebx\n"
+        "mov $55, %%rax\n"
+        "mov %1, %%rbx\n"
         "int $0x80\n"
-        "movl %%eax, %0\n"
+        "mov %%rax, %0\n"
         : "=r" (value)
         : "r" (name)
-        : "%eax", "%ebx"
+        : "%rax", "%rbx"
     );
     
     return value;
@@ -281,11 +281,11 @@ char* envar_get(char* name) {
 // EBX - name
 void envar_delete(char* name) {
      __asm__ volatile(
-        "movl $56, %%eax\n"
-        "movl %0, %%ebx\n"
+        "mov $56, %%rax\n"
+        "mov %0, %%rbx\n"
         "int $0x80\n"
         :
         : "r"(name)
-        : "%eax", "%ebx"
+        : "%rax", "%rbx"
     );
 }

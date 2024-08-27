@@ -1,7 +1,7 @@
 import os
 
 from SCons.Environment import Environment
-from build_scripts.utility import glob_recursive, find_index, is_file_name
+from build_scripts.utility import glob_recursive
 
 
 Import('TARGET_ENVIRONMENT')
@@ -9,9 +9,13 @@ TARGET_ENVIRONMENT: Environment
 
 env = TARGET_ENVIRONMENT.Clone()
 env.Append(
+    CCFLAGS=[
+        '-fpic'
+    ],
+
     LINKFLAGS = [
         '-Wl,-T', env.File('linker.ld').srcnode().path,
-        '-Wl,-Map=' + env.File('kernel.map').path,
+        '-Wl,-Map=' + env.File('kernel.map').path
     ],
 
     CPPPATH = [ 
@@ -19,7 +23,7 @@ env.Append(
         env['PROJECTDIR'].Dir('src/libs/include')
     ],
 
-    ASFLAGS = [ '-I', env.Dir('.').srcnode(), '-f', 'elf' ]
+    ASFLAGS = [ '-I', env.Dir('.').srcnode(), '-f', 'elf64' ]
 )
 
 # Add boot.s to the sources

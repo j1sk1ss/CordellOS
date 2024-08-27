@@ -19,21 +19,25 @@ uint32_t v_addr = 0x00C00000;
 		set_page_directory(taskManager.tasks[0]->page_directory);
 
 		// Load stack to esp
-		asm ("mov %%eax, %%esp": :"a"(taskManager.tasks[0]->cpuState->esp));
+		asm ("movl %0, %%esp" : : "r" (taskManager.tasks[0]->cpuState->esp));
 
-		// Set values from stack
-		asm ("pop %gs");
-		asm ("pop %fs");
-		asm ("pop %es");
-		asm ("pop %ds");
-		asm ("pop %ebp");
-		asm ("pop %edi");
-		asm ("pop %esi");
-		asm ("pop %edx");
-		asm ("pop %ecx");
-		asm ("pop %ebx");
-		asm ("pop %eax");
-		
+		// Pop general-purpose registers
+		asm (
+			"pop %%rbp\n\t"
+			"pop %%rdi\n\t"
+			"pop %%rsi\n\t"
+			"pop %%rdx\n\t"
+			"pop %%rcx\n\t"
+			"pop %%rbx\n\t"
+			"pop %%rax\n\t"
+			: /* no output */
+			: /* no input */
+			: "memory"
+		);
+
+		// Note: Skip segment registers if not needed or ensure correct segment registers
+		// are restored if they need to be changed for task switching.
+
 		// Set multitasking on
 		taskManager.currentTask = 0;
 		tasking = true;
@@ -41,8 +45,9 @@ uint32_t v_addr = 0x00C00000;
 		i386_enableInterrupts();
 
 		// Return from interrupt and execute process
-		asm ("iret");		
+		asm ("iretl");  // Use 'iretl' to indicate 32-bit return
 	}
+
 
 	void TASK_stop_tasking() {
 		tasking = false;

@@ -19,7 +19,7 @@ IDTEntry _idt[256];
 IDTDescriptor _IDTDescriptor = { sizeof(_idt) - 1, _idt };
 
 
-void __attribute__((cdecl)) i386_idt_load(IDTDescriptor* idtDescriptor);
+void  i386_idt_load(IDTDescriptor* idtDescriptor);
 
 void i386_idt_setGate(int interrupt, void* base, uint16_t segmentDescriptor, uint8_t flags) {
     _idt[interrupt].BaseLow         = ((uint32_t)base) & 0xFFFF;

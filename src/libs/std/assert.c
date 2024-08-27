@@ -12,8 +12,8 @@ void assert_failed(char* file, int line) {
 
 void panic(char* message) {
     __asm__ volatile(
-        "movl $51, %%eax\n"
-        "movl %0, %%ecx\n"
+        "mov $51, %%rax\n"
+        "mov %0, %%rcx\n"
         "int $0x80\n"
         : 
         : "r" (message)

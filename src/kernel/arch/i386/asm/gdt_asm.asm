@@ -1,40 +1,34 @@
-[bits 32]
-
 global i386_gdt_load
 i386_gdt_load:
-    push ebp                    ; save old frame
-    mov ebp, esp                ; init new call frame
+    ; Save registers
+    push rbx
+    push rbp
+    mov rbp, rsp                ; Set up stack frame
 
-    ; load gdt
-    mov eax, [ebp + 8]
-    lgdt [eax]                  ; Loads the values in the source operand into the global descriptor
-                                ; table register (GDTR) or the interrupt descriptor table register (IDTR).
-                                ; The source operand specifies a 6-byte memory location that contains the
-                                ; base address (a linear address) and the limit (size of table in bytes) of
-                                ; the global descriptor table (GDT) or the interrupt descriptor table (IDT).
-                                ; If operand-size attribute is 32 bits, a 16-bit limit (lower 2 bytes of the
-                                ; 6-byte data operand) and a 32-bit base address (upper 4 bytes of the data operand)
-                                ; are loaded into the register. If the operand-size attribute is 16 bits, a 16-bit
-                                ; limit (lower 2 bytes) and a 24-bit base address (third, fourth, and fifth byte)
-                                ; are loaded. Here, the high-order byte of the operand is not used and the high-order
-                                ; byte of the base address in the GDTR or IDTR is filled with zeros.
+    ; Load GDT
+    mov rax, [rbp + 16]         ; Load GDTR address from the stack
+    lgdt [rax]                  ; Load the GDT
 
-    ; reload code segment
-    mov eax, [ebp + 12]
-    push eax
-    push .reload_cs
-    retf
+    ; Reload code segment
+    mov rax, [rbp + 24]         ; Load code segment selector from the stack
+    push rax
+    push rax                    ; Push the code segment selector
+    push rax                    ; Push return address (just for the example)
+    
+    ; Use a dummy return to simulate a segment switch (in real scenarios, you might want to use `jmp` instead)
+    jmp short .reload_cs
 
 .reload_cs:
-    ; reload data segments
-    mov ax, [ebp + 16]
-
+    ; Reload data segments
+    mov rax, [rbp + 32]         ; Load data segment selector from the stack
     mov ds, ax
     mov es, ax
     mov fs, ax
     mov gs, ax
     mov ss, ax
 
-    mov esp, ebp                ; restore data
-    pop ebp
+    ; Restore stack and registers
+    mov rsp, rbp
+    pop rbp
+    pop rbx
     ret

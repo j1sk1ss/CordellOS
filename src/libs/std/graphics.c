@@ -6,16 +6,16 @@
 // EBX - x
 // ECX - y
 // EDX - pixel data
-void put_pixel(int x, int y, int color) {
+void put_pixel(int64_t x, int64_t y, int64_t color) {
     __asm__ volatile(
-        "movl $28, %%eax\n"
-        "movl %0, %%ebx\n"
-        "movl %1, %%ecx\n"
-        "movl %2, %%edx\n"
+        "mov $28, %%rax\n"
+        "mov %0, %%rbx\n"
+        "mov %1, %%rcx\n"
+        "mov %2, %%rdx\n"
         "int $0x80\n"
         :
         : "r"(x), "r"(y), "r"(color)
-        : "eax", "ebx", "ecx"
+        : "rax", "rbx", "rcx"
     );
 }
 
@@ -24,16 +24,16 @@ void put_pixel(int x, int y, int color) {
 // EBX - x
 // ECX - y
 // EDX - pixel data
-void vput_pixel(int x, int y, int color) {
+void vput_pixel(int64_t x, int64_t y, int64_t color) {
     __asm__ volatile(
-        "movl $37, %%eax\n"
-        "movl %0, %%ebx\n"
-        "movl %1, %%ecx\n"
-        "movl %2, %%edx\n"
+        "mov $37, %%rax\n"
+        "mov %0, %%rbx\n"
+        "mov %1, %%rcx\n"
+        "mov %2, %%rdx\n"
         "int $0x80\n"
         :
         : "r"(x), "r"(y), "r"(color)
-        : "eax", "ebx", "ecx"
+        : "rax", "rbx", "rcx"
     );
 }
 
@@ -42,17 +42,17 @@ void vput_pixel(int x, int y, int color) {
 // EBX - x
 // ECX - y
 // EDX - result
-int get_pixel(int x, int y) {
-    int result;
+int get_pixel(int64_t x, int64_t y) {
+    int64_t result;
     __asm__ volatile(
-        "movl $29, %%eax\n"
-        "movl %0, %%ebx\n"
-        "movl %1, %%ecx\n"
-        "movl %2, %%edx\n"
+        "mov $29, %%rax\n"
+        "mov %0, %%rbx\n"
+        "mov %1, %%rcx\n"
+        "mov %2, %%rdx\n"
         "int $0x80\n"
         :
         : "r"(x), "r"(y), "r"(result)
-        : "eax", "ebx", "ecx"
+        : "rax", "rbx", "rcx"
     );
 
     return result;
@@ -64,14 +64,14 @@ int get_pixel(int x, int y) {
 int get_resolution_x() {
     int result;
     __asm__ volatile(
-        "movl $31, %%eax\n"
-        "movl $0, %%ebx\n"
-        "movl $1, %%ecx\n"
-        "movl %0, %%edx\n"
+        "mov $31, %%rax\n"
+        "mov $0, %%rbx\n"
+        "mov $1, %%rcx\n"
+        "mov %0, %%rdx\n"
         "int $0x80\n"
         :
         : "r"(&result)
-        : "eax", "ebx", "ecx"
+        : "rax", "rbx", "rcx"
     );
 
     return result;
@@ -83,14 +83,14 @@ int get_resolution_x() {
 int get_resolution_y() {
     int result;
     __asm__ volatile(
-        "movl $32, %%eax\n"
-        "movl $0, %%ebx\n"
-        "movl $1, %%ecx\n"
-        "movl %0, %%edx\n"
+        "mov $32, %%rax\n"
+        "mov $0, %%rbx\n"
+        "mov $1, %%rcx\n"
+        "mov %0, %%rdx\n"
         "int $0x80\n"
         :
         : "r"(&result)
-        : "eax", "ebx", "ecx"
+        : "rax", "rbx", "rcx"
     );
 
     return result;
@@ -100,14 +100,14 @@ int get_resolution_y() {
 // Function swipe video buffer with second buffer
 void swipe_buffers() {
     __asm__ volatile(
-        "movl $36, %%eax\n"
-        "movl $0, %%ebx\n"
-        "movl $1, %%ecx\n"
-        "movl $0, %%edx\n"
+        "mov $36, %%rax\n"
+        "mov $0, %%rbx\n"
+        "mov $1, %%rcx\n"
+        "mov $0, %%rdx\n"
         "int $0x80\n"
         :
         :
-        : "eax", "ebx", "ecx"
+        : "rax", "rbx", "rcx"
     );
 }
 

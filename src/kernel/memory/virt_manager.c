@@ -59,7 +59,7 @@ bool set_page_directory(page_directory* pd) {
     }
 
     current_page_directory = pd;
-    asm ("movl %%eax, %%cr3" : : "a"(current_page_directory) );
+    asm ("movq %%cr3,%0" : "=r"(current_page_directory));
 
     return true;
 }
@@ -202,7 +202,7 @@ bool VMM_init(uint32_t memory_start) {
     if (set_page_directory(dir) == false) return false;
     kernel_page_directory = dir;
 
-    asm ("movl %cr0, %eax; orl $0x80000001, %eax; movl %eax, %cr0");
+    // asm ("movl %cr0, %eax; orl $0x80000001, %eax; movl %eax, %cr0");
     i386_isr_registerHandler(14, page_fault);
     return true;
 }
@@ -315,7 +315,7 @@ void page_fault(struct Registers* regs) {
     kclrscr();
     kset_color(BLUE);
 
-	uint32_t faulting_address;
+	uint64_t faulting_address;
 	asm ("mov %%cr2, %0" : "=r" (faulting_address));
 
 	int present	 = !(regs->error & 0x1);	// When set, the page fault was caused by a page-protection violation. When not set, it was caused by a non-present page.

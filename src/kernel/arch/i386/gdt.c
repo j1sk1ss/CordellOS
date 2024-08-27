@@ -93,9 +93,9 @@ GDTEntry _gtd[] = {
 
 GDTDescriptor _GDTDescriptor = { sizeof(_gtd) - 1, (GDTEntry*)&_gtd };
 
-void __attribute__((cdecl)) i386_gdt_load(GDTDescriptor* descriptor, uint16_t codeSegment, uint16_t dataSegment);
+void  i386_gdt_load(GDTDescriptor* descriptor, uint16_t codeSegment, uint16_t dataSegment);
 
-void __attribute__((cdecl)) i386_gdt_initialize() {
+void  i386_gdt_initialize() {
     i386_gdt_load(&_GDTDescriptor, i386_GDT_CODE_SEGMENT, i386_GDT_DATA_SEGMENT);
 }
 

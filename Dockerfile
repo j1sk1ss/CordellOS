@@ -1,21 +1,13 @@
-# We use Fedora 38 image
-FROM fedora:38
+FROM randomdude/gcc-cross-x86_64-elf
 
-# Info labels
-LABEL author=j1sk1ss
-LABEL os=cordellOS
+RUN apt-get update 
+RUN apt-get upgrade -y
+RUN apt-get install -y nasm
+RUN apt-get install -y xorriso
+RUN apt-get install -y grub-pc-bin
+RUN apt-get install -y grub-common
+RUN apt install -y build-essential bison flex libgmp3-dev libmpc-dev libmpfr-dev texinfo wget \
+                   nasm mtools python3 python3-pip python3-parted scons dosfstools libguestfs-tools qemu-system-x86
 
-# Set workdir
-WORKDIR /home
-
-# Install all dependencies
-RUN dnf -y update 
-RUN dnf -y install git nano vim gcc gcc-c++ make bison flex gmp-devel libmpc-devel mpfr-devel texinfo wget \
-                   nasm mtools python3 python3-pip python3-pyparted python3-scons dosfstools guestfs-tools qemu-system-x86 grub-customizer
-RUN mkdir /home/os-dev
-RUN mkdir /home/os-dev/project
-RUN mkdir /home/os-dev/tool_chain
-RUN mknod /dev/loop0 b 7 0
-
-# Copy toolchain
-COPY tool_chain /home/os-dev/tool_chain/
+VOLUME /root/env
+WORKDIR /root/env

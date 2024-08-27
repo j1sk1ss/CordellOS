@@ -30,7 +30,7 @@ void i386_isr_initialize() {
         i386_idt_enableGate(i);
 }
 
-void __attribute__((cdecl)) i386_isr_handler(struct Registers* regs) {
+void  i386_isr_handler(struct Registers* regs) {
     if (regs->interrupt < 256) {
         if (_isrHandlers[regs->interrupt] != NULL) {
             _isrHandlers[regs->interrupt](regs);

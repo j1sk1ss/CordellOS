@@ -9,7 +9,7 @@
 #include "stdio.h"
 #include "x86.h"
 
-#include "../multiboot/multiboot.h"
+#include "../multiboot/limine.h"
 
 
 #define CHAR_BODY	0x0000000F
@@ -65,7 +65,7 @@ typedef struct {
 	uint8_t reserved_field_position;
 	uint8_t direct_color_mode_info;
 
-	uint32_t physical_base_pointer;
+	volatile uint32_t* physical_base_pointer;
 	uint32_t virtual_second_buffer;
 	uint32_t buffer_size;
 	uint32_t reserved2;
@@ -118,7 +118,7 @@ typedef struct point {
 extern vbe_mode_info_t gfx_mode;
 
 
-void GFX_init(struct multiboot_info* mb_info);
+void GFX_init(struct limine_framebuffer* framebuffer);
 
 void GFX_draw_pixel(uint16_t X, uint16_t Y, uint32_t color);
 void GFX_vdraw_pixel(uint16_t X, uint16_t Y, uint32_t color);

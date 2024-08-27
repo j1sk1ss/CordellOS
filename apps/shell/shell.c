@@ -160,8 +160,8 @@ void shell_start_screen() {
                 get_fs_info(fs_data);
 
                 printf("\nUTILITY KERNEL DISCO-DATI VER 0.2c\n");
-                printf("DEV:                             [%s]\n", (char*)fs_data[0]);
-                printf("FS TYPE:                         [%s]\n", (char*)fs_data[1]);
+                printf("DEV:                             [%s]\n", (char*)(uint32_t*)fs_data[0]);
+                printf("FS TYPE:                         [%s]\n", (char*)(uint32_t*)fs_data[1]);
                 printf("FAT TYPE:                        [%i]\n", fs_data[2]);
                 printf("CLUSTER TOTALI x32:              [%i]\n", fs_data[3]);
                 printf("TOTALE SETTORI x32:              [%i]\n", fs_data[4]);

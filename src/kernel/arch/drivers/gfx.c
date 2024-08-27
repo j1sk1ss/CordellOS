@@ -5,21 +5,21 @@ vbe_mode_info_t gfx_mode;
 uint32_t chars[CHARCOUNT * CHARLEN];
 
 
-void GFX_init(struct multiboot_info* mb_info) {
-    gfx_mode.physical_base_pointer = mb_info->framebuffer_addr;
-    gfx_mode.x_resolution          = mb_info->framebuffer_width;
-    gfx_mode.y_resolution          = mb_info->framebuffer_height;
-    gfx_mode.bits_per_pixel        = mb_info->framebuffer_bpp;
-    gfx_mode.pitch                 = mb_info->framebuffer_pitch;
+void GFX_init(struct limine_framebuffer* framebuffer) {
+    gfx_mode.physical_base_pointer = framebuffer->address;
+    gfx_mode.x_resolution          = framebuffer->width;
+    gfx_mode.y_resolution          = framebuffer->height;
+    gfx_mode.bits_per_pixel        = framebuffer->bpp;
+    gfx_mode.pitch                 = framebuffer->pitch;
 
-    gfx_mode.linear_red_mask_size      = mb_info->framebuffer_red_mask_size;
-    gfx_mode.linear_red_field_position = mb_info->framebuffer_red_field_position;
+    gfx_mode.linear_red_mask_size      = framebuffer->red_mask_size;
+    gfx_mode.linear_red_field_position = framebuffer->red_mask_shift;
 
-    gfx_mode.linear_green_mask_size = mb_info->framebuffer_green_mask_size;
-    gfx_mode.linear_green_mask_size = mb_info->framebuffer_green_field_position;
+    gfx_mode.linear_green_mask_size = framebuffer->green_mask_size;
+    gfx_mode.linear_green_mask_size = framebuffer->green_mask_shift;
 
-    gfx_mode.linear_blue_mask_size      = mb_info->framebuffer_blue_mask_size;
-    gfx_mode.linear_blue_field_position = mb_info->framebuffer_blue_field_position;
+    gfx_mode.linear_blue_mask_size      = framebuffer->blue_mask_size;
+    gfx_mode.linear_blue_field_position = framebuffer->blue_mask_shift;
 
     gfx_mode.buffer_size = gfx_mode.y_resolution * gfx_mode.x_resolution * (gfx_mode.bits_per_pixel | 7) >> 3;
     gfx_mode.virtual_second_buffer = 0x5000000;
@@ -91,10 +91,10 @@ void GFX_put_char(int x, int y, int character, uint32_t foreground, uint32_t bac
             uint32_t pixel_color = (chardat[row + i] == CHAR_BODY) ? foreground : background;
             abs_row[i] = pixel_color;
         }
+
         abs_row += step;
     }
 }
-
 
 int GFX_get_char(int x, int y) {
     uint32_t step = gfx_mode.pitch / 4;

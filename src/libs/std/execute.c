@@ -4,13 +4,13 @@
 struct ELF_program* get_entry_point(char* path) {
     struct ELF_program* program_pointer;
     __asm__ volatile(
-        "movl $4, %%eax\n"
-        "movl %1, %%ebx\n"
+        "mov $4, %%rax\n"
+        "mov %1, %%rbx\n"
         "int $0x80\n"
-        "movl %%eax, %0\n"
+        "mov %%rax, %0\n"
         : "=r" (program_pointer)
         : "r" (path)
-        : "%eax", "%ebx"
+        : "%rax", "%rbx"
     );
     
     return program_pointer;

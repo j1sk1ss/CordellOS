@@ -30,14 +30,14 @@ char keyboard_wait() {
 //  EBX - mode
 void input_read(int mode, uint8_t color, char* buffer) {
     __asm__ volatile(
-        "movl $19, %%eax\n"
-        "movl %1, %%ebx\n"
-        "movl %0, %%edx\n"
-        "movl %2, %%ecx\n"
+        "mov $19, %%rax\n"
+        "mov %1, %%rbx\n"
+        "mov %0, %%rdx\n"
+        "mov %2, %%rcx\n"
         "int $0x80\n"
         : 
-        : "r"((int)color), "r"(mode), "m"(buffer)
-        : "eax", "ebx", "ecx", "edx"
+        : "r"((uint64_t)color), "r"((uint64_t)mode), "m"(buffer)
+        : "rax", "rbx", "rcx", "rdx"
     );
 }
 
@@ -51,15 +51,15 @@ void input_read(int mode, uint8_t color, char* buffer) {
 //  ESI - buffer pointer
 void input_read_stop(int mode, uint8_t color, char* stop_list, char* buffer) {
     __asm__ volatile (
-        "movl $46, %%eax\n"
-        "movl %1, %%ebx\n"
-        "movl %0, %%edx\n"
-        "movl %2, %%ecx\n"
-        "movl %3, %%esi\n"
+        "mov $46, %%rax\n"
+        "mov %1, %%rbx\n"
+        "mov %0, %%rdx\n"
+        "mov %2, %%rcx\n"
+        "mov %3, %%rsi\n"
         "int $0x80\n"
         :
         : "m"(color), "m"(mode), "m"(stop_list), "m"(buffer)
-        : "eax", "ebx", "edx", "esi"
+        : "rax", "rbx", "rdx", "rsi"
     );
 }
 
@@ -69,12 +69,12 @@ void input_read_stop(int mode, uint8_t color, char* stop_list, char* buffer) {
 char get_char() {
     char key;
     __asm__ volatile(
-        "movl $5, %%eax\n"
-        "movl %0, %%ecx\n"
+        "mov $5, %%rax\n"
+        "mov %0, %%rcx\n"
         "int %1\n"
         :
         : "r"(&key), "i"(SYSCALL_INTERRUPT)
-        : "eax", "ebx", "ecx", "edx"
+        : "rax", "rbx", "rcx", "rdx"
     );
 
     return key;

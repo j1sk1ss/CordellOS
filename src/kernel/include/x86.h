@@ -6,7 +6,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#define ASMCALL __attribute__((cdecl))
+#define ASMCALL 
 #define asm __asm__ volatile
 #define UNUSED_PORT 0x80
 
@@ -25,14 +25,14 @@ void mem_outw(uint32_t addr, uint16_t value);
 uint8_t mem_inb(uint32_t addr);
 void mem_outb(uint32_t addr, uint8_t value);
 
-void __attribute__((cdecl)) fmemcpy(char* dst, char* src, uint32_t n);
+void  fmemcpy(char* dst, char* src, uint32_t n);
 
-uint8_t __attribute__((cdecl)) i386_enableInterrupts();
-uint8_t __attribute__((cdecl)) i386_disableInterrupts();
+uint8_t  i386_enableInterrupts();
+uint8_t  i386_disableInterrupts();
 
-void __attribute__((cdecl)) i386_switch2user();
-void __attribute__((cdecl)) i386_panic();
-char __attribute__((cdecl)) i386_inputWait();
+void  i386_switch2user();
+void  i386_panic();
+char  i386_inputWait();
 
 void i386_io_wait();
 void i386_reboot();

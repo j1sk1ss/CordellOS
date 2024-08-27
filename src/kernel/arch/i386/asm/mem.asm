@@ -1,63 +1,74 @@
 global fmemcpy
 fmemcpy:
-    pushfd
-    pushad
+    ; Save registers
+    push rbx
+    push rbp
+    push r12
+    push r13
+    push r14
+    push r15
 
-    mov ebx,[esp + 36 + 12]
+    ; Load arguments
+    mov rbx, [rsp + 8*1 + 8]   ; ebx (used as rbx) = length
+    mov rdi, [rsp + 8*2 + 8]   ; edi = destination
+    mov rsi, [rsp + 8*3 + 8]   ; esi = source
 
-    cmp ebx, 0
+    ; Check if length is zero
+    cmp rbx, 0
     jbe end_mcpy
 
-    mov edi, [esp + 36 + 4]
-    mov esi, [esp + 8 + 36]
-
-    cld
-    mov edx, esi
-    neg edx
-    and edx, 15
-    cmp edx, ebx
+    ; Align source address to 16 bytes
+    mov rdx, rsi
+    neg rdx
+    and rdx, 15
+    cmp rdx, rbx
     jle unaligned_copy
-    mov edx, ebx
+    mov rdx, rbx
 
     unaligned_copy:
-        mov ecx, edx
+        mov rcx, rdx
         rep movsb
-        sub ebx, edx
+        sub rbx, rdx
         jz end_mcpy
-        mov ecx, ebx
-        shr ecx, 7
+        mov rcx, rbx
+        shr rcx, 7
         jz mc_fl
 
         loop1:
-            movaps  XMM0, [esi]
-            movaps  XMM1, [esi+10h]
-            movaps  XMM2, [esi+20h]
-            movaps  XMM3, [esi+30h]
-            movaps  XMM4, [esi+40h]
-            movaps  XMM5, [esi+50h]
-            movaps  XMM6, [esi+60h]
-            movaps  XMM7, [esi+70h]
-            movups  [edi], XMM0
-            movups  [edi+10h], XMM1
-            movups  [edi+20h], XMM2
-            movups  [edi+30h], XMM3
-            movups  [edi+40h], XMM4
-            movups  [edi+50h], XMM5
-            movups  [edi+60h], XMM6
-            movups  [edi+70h], XMM7
-            add esi, 80h
-            add edi, 80h
-            dec ecx
+            movaps xmm0, [rsi]
+            movaps xmm1, [rsi + 16]
+            movaps xmm2, [rsi + 32]
+            movaps xmm3, [rsi + 48]
+            movaps xmm4, [rsi + 64]
+            movaps xmm5, [rsi + 80]
+            movaps xmm6, [rsi + 96]
+            movaps xmm7, [rsi + 112]
+            movups [rdi], xmm0
+            movups [rdi + 16], xmm1
+            movups [rdi + 32], xmm2
+            movups [rdi + 48], xmm3
+            movups [rdi + 64], xmm4
+            movups [rdi + 80], xmm5
+            movups [rdi + 96], xmm6
+            movups [rdi + 112], xmm7
+            add rsi, 128
+            add rdi, 128
+            dec rcx
 
         jnz loop1
 
     mc_fl:
-        and ebx, 7fH
+        and rbx, 0x7F
         jz end_mcpy
-        mov ecx, ebx
+        mov rcx, rbx
         rep movsb
-        
-end_mcpy:
-    popad
-    popfd
+
+    end_mcpy:
+    ; Restore registers
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbp
+    pop rbx
     ret

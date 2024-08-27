@@ -69,9 +69,9 @@ void object_move(GUIobject_t* object, int rel_x, int rel_y);
 void display_gui_object(GUIobject_t* object);
 void unload_gui_object(GUIobject_t* object);
 
-void put_pixel(int x, int y, int color);
-void vput_pixel(int x, int y, int color);
-int get_pixel(int x, int y);
+void put_pixel(int64_t x, int64_t y, int64_t color);
+void vput_pixel(int64_t x, int64_t y, int64_t color);
+int get_pixel(int64_t x, int64_t y);
 
 uint32_t blend_colors(uint32_t first_color, uint32_t second_color);
 

@@ -6,12 +6,12 @@
 // EBX - IP pointer
 void set_ip(uint8_t* ip) {
     __asm__ volatile(
-        "movl $41, %%eax\n"
-        "movl %0, %%ebx\n"
+        "mov $41, %%rax\n"
+        "mov %0, %%rbx\n"
         "int $0x80\n"
         :
         : "r" (ip)
-        : "%eax", "%ebx"
+        : "%rax", "%rbx"
     );
 }
 
@@ -20,12 +20,12 @@ void set_ip(uint8_t* ip) {
 // EBX - IP buffer pointer
 void get_ip(uint8_t* buffer) {
     __asm__ volatile(
-        "movl $42, %%eax\n"
-        "movl %0, %%ebx\n"
+        "mov $42, %%rax\n"
+        "mov %0, %%rbx\n"
         "int $0x80\n"
         :
         : "r"(buffer)
-        : "eax", "ebx", "ecx", "edx"
+        : "rax", "rbx", "ecx", "edx"
     );
 }
 
@@ -34,12 +34,12 @@ void get_ip(uint8_t* buffer) {
 // EBX - MAC buffer pointer
 void get_mac(uint8_t* buffer) {
     __asm__ volatile(
-        "movl $43, %%eax\n"
-        "movl %0, %%ebx\n"
+        "mov $43, %%rax\n"
+        "mov %0, %%rbx\n"
         "int $0x80\n"
         :
         : "r"(buffer)
-        : "eax", "ebx", "ecx", "edx"
+        : "rax", "rbx", "ecx", "edx"
     );
 }
 
@@ -52,16 +52,16 @@ void get_mac(uint8_t* buffer) {
 // EDI - Data length
 void send_udp_packet(uint8_t* dst_ip, uint16_t src_port, uint16_t dst_port, void* data, int len) {
     __asm__ volatile(
-        "movl $38, %%eax\n"
-        "movl %0, %%ebx\n"
-        "movl %1, %%ecx\n"
-        "movl %2, %%edx\n"
-        "movl %3, %%esi\n"
-        "movl %4, %%edi\n"
+        "mov $38, %%rax\n"
+        "mov %0, %%rbx\n"
+        "mov %1, %%ecx\n"
+        "mov %2, %%edx\n"
+        "mov %3, %%esi\n"
+        "mov %4, %%edi\n"
         "int $0x80\n"
         :
         : "g"(dst_ip), "g"(src_port), "g"(dst_port), "g"(data), "g"(len)
-        : "eax", "ebx", "ecx", "edx", "esi", "edi"
+        : "rax", "rbx", "ecx", "edx", "esi", "edi"
     );
 }
 
@@ -70,11 +70,11 @@ void send_udp_packet(uint8_t* dst_ip, uint16_t src_port, uint16_t dst_port, void
 // EBX - data pointer
 void pop_received_udp_packet(uint8_t* buffer) {
     __asm__ volatile(
-        "movl $39, %%eax\n"
-        "movl %0, %%ebx\n"
+        "mov $39, %%rax\n"
+        "mov %0, %%rbx\n"
         "int $0x80\n"
         :
         : "r"(buffer)
-        : "eax", "ebx", "ecx", "edx"
+        : "rax", "rbx", "ecx", "edx"
     );
 }
