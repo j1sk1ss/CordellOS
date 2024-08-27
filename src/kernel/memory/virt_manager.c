@@ -59,7 +59,7 @@ bool set_page_directory(page_directory* pd) {
     }
 
     current_page_directory = pd;
-    asm ("movl %%eax, %%cr3" : : "a"(current_page_directory) );
+    asm ("mov %0, %%cr3":: "r"(current_page_directory));
 
     return true;
 }
@@ -156,53 +156,52 @@ void unmap_page_in_dir(void* virt_address, page_directory* dir) {
 }
 
 bool VMM_init(uint32_t memory_start) {
-    page_directory* dir = (page_directory*)allocate_blocks(3);
-    memset(dir, 0, sizeof(page_directory));
-    if (dir == NULL) return false;
-
-    for (int i = 0; i < TABLES_PER_DIRECTORY; i++)
-        dir->entries[i] = 0x02;
-
-    page_table* table = (page_table*)allocate_blocks(1);
-    memset(table, 0, sizeof(page_table));
-    if (table == NULL) return false;
+    page_directory* dir = mk_pdir();
 
     page_table* table3G = (page_table*)allocate_blocks(1);
     memset(table3G, 0, sizeof(page_table));
     if (table3G == NULL) return false;
 
-    for (uint32_t i = 0, frame = 0x0, virt = 0x0; i < PAGES_PER_TABLE; i++, frame += PAGE_SIZE, virt += PAGE_SIZE) {
+    for (uint32_t i = 0, frame = 0x0; i < PAGES_PER_TABLE; i++, frame += PAGE_SIZE) {
         pt_entry page = 0;
         SET_ATTRIBUTE(&page, PTE_PRESENT);
         SET_ATTRIBUTE(&page, PTE_READ_WRITE);
         SET_FRAME(&page, frame);
 
-        table3G->entries[PT_INDEX(virt)] = page;
+        table3G->entries[i] = page;
     }
 
-    for (uint32_t i = 0, frame = memory_start, virt = 0xC0000000; i < PAGES_PER_TABLE; i++, frame += PAGE_SIZE, virt += PAGE_SIZE) {
+    pd_entry* entry = &dir->entries[0];
+    SET_ATTRIBUTE(entry, PDE_PRESENT);
+    SET_ATTRIBUTE(entry, PDE_READ_WRITE);
+    SET_FRAME(entry, (physical_address)table3G); 
+
+    page_table* table = (page_table*)allocate_blocks(1);
+    memset(table, 0, sizeof(page_table));
+    if (table == NULL) return false;
+
+    for (uint32_t i = 0, frame = memory_start; i < PAGES_PER_TABLE; i++, frame += PAGE_SIZE) {
         pt_entry page = 0;
         SET_ATTRIBUTE(&page, PTE_PRESENT);
         SET_ATTRIBUTE(&page, PTE_READ_WRITE);
         SET_FRAME(&page, frame);
 
-        table->entries[PT_INDEX(virt)] = page;
+        table->entries[i] = page;
     }
     
-    pd_entry* entry = &dir->entries[PD_INDEX(0xC0000000)];
+    entry = &dir->entries[PD_INDEX(0xC0000000)];
     SET_ATTRIBUTE(entry, PDE_PRESENT);
     SET_ATTRIBUTE(entry, PDE_READ_WRITE);
     SET_FRAME(entry, (uint32_t)table);
 
-    pd_entry* second_entry = &dir->entries[PD_INDEX(0x00000000)];
-    SET_ATTRIBUTE(second_entry, PDE_PRESENT);
-    SET_ATTRIBUTE(second_entry, PDE_READ_WRITE);
-    SET_FRAME(second_entry, (physical_address)table3G); 
-
     if (set_page_directory(dir) == false) return false;
     kernel_page_directory = dir;
 
-    asm ("movl %cr0, %eax; orl $0x80000001, %eax; movl %eax, %cr0");
+	uint32_t cr0;
+	asm ("mov %%cr0, %0": "=r"(cr0));
+	cr0 |= 0x80000000;
+	asm ("mov %0, %%cr0":: "r"(cr0));
+
     i386_isr_registerHandler(14, page_fault);
     return true;
 }
@@ -328,7 +327,6 @@ void page_fault(struct Registers* regs) {
 
     //=======
     // PARAMS
-    //=======
 
         if (present) kcprintf(BLUE, "NOT PRESENT\t");
         else kcprintf(BLUE, "PAGE PROTECTION\t");
@@ -340,8 +338,7 @@ void page_fault(struct Registers* regs) {
         if (reserved) kcprintf(BLUE, "RESERVED\t");
         if (id) kcprintf(BLUE, "INST FETCH\t");
 
-    //=======
-    // PARAMS
+    //
     //=======
 
 	kcprintf(BLUE,") AT 0x%p\n", faulting_address);

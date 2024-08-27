@@ -24,7 +24,7 @@
 
 #define PD_INDEX(address)            ((address) >> 22)
 #define PT_INDEX(address)            (((address) >> 12) & 0x3FF) // Max index 1023 = 0x3FF
-#define PAGE_PHYS_ADDRESS(dir_entry) ((*dir_entry) & ~0xFFF)    // Clear lowest 12 bits, only return frame/address
+#define PAGE_PHYS_ADDRESS(dir_entry) ((*dir_entry) & ~0xFFF)     // Clear lowest 12 bits, only return frame/address
 #define SET_ATTRIBUTE(entry, attr)   (*entry |= attr)
 #define CLEAR_ATTRIBUTE(entry, attr) (*entry &= ~attr)
 #define TEST_ATTRIBUTE(entry, attr)  (*entry & attr)

@@ -1,6 +1,22 @@
 #include "../../include/gdt.h"
 
 
+#define GDT_LIMIT_LOW(limit)             (limit & 0xFFFF)
+#define GDT_BASE_LOW(base)               (base & 0xFFFF)
+#define GDT_BASE_MIDDLE(base)            ((base >> 16) & 0xFF)
+#define GDT_FLAGS_LIMIT_HI(limit, flags) (((limit >> 16) & 0xF) | (flags & 0xF0))
+#define GDT_BASE_HIGH(base)              ((base >> 24) & 0xFF)
+
+#define GDT_ENTRY(base, limit, access, flags) { \
+    GDT_LIMIT_LOW(limit),               \
+    GDT_BASE_LOW(base),                 \
+    GDT_BASE_MIDDLE(base),              \
+    access,                             \
+    GDT_FLAGS_LIMIT_HI(limit, flags),   \
+    GDT_BASE_HIGH(base)                 \
+}
+
+
 typedef struct {
     uint16_t LimitLow;                      // limit (bits 0 - 15) 
     uint16_t BaseLow;                       // base  (bits 0 - 15)
@@ -48,20 +64,6 @@ typedef enum {
 
 } GDT_FLAGS;
 
-#define GDT_LIMIT_LOW(limit)             (limit & 0xFFFF)
-#define GDT_BASE_LOW(base)               (base & 0xFFFF)
-#define GDT_BASE_MIDDLE(base)            ((base >> 16) & 0xFF)
-#define GDT_FLAGS_LIMIT_HI(limit, flags) (((limit >> 16) & 0xF) | (flags & 0xF0))
-#define GDT_BASE_HIGH(base)              ((base >> 24) & 0xFF)
-
-#define GDT_ENTRY(base, limit, access, flags) { \
-    GDT_LIMIT_LOW(limit),               \
-    GDT_BASE_LOW(base),                 \
-    GDT_BASE_MIDDLE(base),              \
-    access,                             \
-    GDT_FLAGS_LIMIT_HI(limit, flags),   \
-    GDT_BASE_HIGH(base)                 \
-}
 
 GDTEntry _gtd[] = {
     // Empty discriptor
@@ -92,6 +94,7 @@ GDTEntry _gtd[] = {
 };
 
 GDTDescriptor _GDTDescriptor = { sizeof(_gtd) - 1, (GDTEntry*)&_gtd };
+
 
 void __attribute__((cdecl)) i386_gdt_load(GDTDescriptor* descriptor, uint16_t codeSegment, uint16_t dataSegment);
 

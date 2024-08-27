@@ -124,7 +124,7 @@ void shell() {
     asm("mov %%esp, %0" : "=r"(esp));
     TSS_set_stack(0x10, esp);
 
-    i386_switch2user();
+	i386_switch2user();
     fexec(SHELL_PATH, 0, NULL);
 #else
     current_vfs->objexec(SHELL_PATH, 0, NULL, KERNEL);
@@ -247,7 +247,7 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
             kprintf("[%s %i] VMM INIT ERROR!\n",__FILE__ ,__LINE__);
             goto end;
         }
-
+        
 #pragma endregion
 
         //===================
@@ -326,15 +326,7 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
 
         VARS_init(); // Init env vars manager
 
-        uint32_t current_esp;
-        asm ("mov %%esp, %0" : "=r"(current_esp));
-        TSS_set_stack(0x10, current_esp);
-
-#ifdef USERMODE
         START_PROCESS("idle", (uint32_t)idle, KERNEL, 1);
-#else
-        START_PROCESS("idle", (uint32_t)idle, KERNEL, 1);
-#endif
 
         if (current_vfs->objexist(CONFIG_PATH) == 1) {
             Content* boot_config = current_vfs->getobj(CONFIG_PATH);
