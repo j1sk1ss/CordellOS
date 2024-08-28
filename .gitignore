@@ -1,4 +1,4 @@
-build/
+build/CordellOS/
 tool_chain/
 *.err
 bx_enh_dbg.ini
@@ -17,5 +17,6 @@ __pycache__/
 *.yaml
 *.ninja
 *.log
+*.img
 cmake-build-debug/CMakeFiles/3.26.4/CompilerIdC/CMakeCCompilerId.c
 .vscode/settings.json
