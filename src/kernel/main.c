@@ -374,7 +374,7 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
             if (config[CONFIG_KSHELL] == CONFIG_ENABLED) START_PROCESS("shell", (uint32_t)shell, KERNEL, 10);
 #endif
 
-            kfree(config);
+            kfree(kmalloc_list_head, config);
         } else START_PROCESS("shell", (uint32_t)shell, KERNEL, 10);
 
         TASK_start_tasking();

@@ -69,7 +69,7 @@ void FSLIB_unload_content_system(Content* content) {
 // 1 - date
 // 2 - time
 Date* FSLIB_get_date(short data, int type) {
-    Date* date = malloc(sizeof(Date));
+    Date* date = (Date*)malloc(sizeof(Date));
     switch (type) {
         case 1: // date
             date->year   = ((data >> 9) & 0x7F) + 1980;
@@ -132,7 +132,7 @@ char* FSLIB_change_path(const char* currentPath, const char* content) {
 //  ECX - path
 //  EAX - returned data
 char* fread(const char* path) {
-    void* pointed_data;
+    void* pointed_data = NULL;
     __asm__ volatile(
         "movl $9, %%eax\n"
         "movl %1, %%ebx\n"
@@ -152,7 +152,7 @@ char* fread(const char* path) {
 //  ECX - path
 //  EAX - returned data
 char* fread_stop(const char* path, char* stop) {
-    void* pointed_data;
+    void* pointed_data = NULL;
     __asm__ volatile(
         "movl $59, %%eax\n"
         "movl %1, %%ebx\n"
@@ -249,7 +249,7 @@ void fwrite_off(Content* content, int offset, uint8_t* buffer, int len) {
 // EBX - path
 // ECX - pointer to directory
 Directory* opendir(const char* path) {
-    Directory* directory;
+    Directory* directory = NULL;
     __asm__ volatile(
         "movl $11, %%eax\n"
         "movl %1, %%ebx\n"
@@ -268,7 +268,7 @@ Directory* opendir(const char* path) {
 //  EBX - path
 //  ECX - pointer to directory
 Content* get_content(const char* path) {
-    Content* content;
+    Content* content = NULL;
     __asm__ volatile(
         "movl $30, %%eax\n"
         "movl %1, %%ebx\n"
@@ -288,8 +288,7 @@ Content* get_content(const char* path) {
 //  EBX - path
 //  ECX - result (0 - nexists)
 int cexists(const char* path) {
-    int result;
-
+    int result = 0;
     __asm__ volatile(
         "movl $15, %%eax\n"
         "movl %0, %%ebx\n"
