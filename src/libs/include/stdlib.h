@@ -35,4 +35,6 @@ void envar_set(char* name, char* value);
 char* envar_get(char* name);
 void envar_delete(char* name);
 
+void switch2user();
+
 #endif

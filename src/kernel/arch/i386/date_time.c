@@ -5,12 +5,12 @@
 #define CURRENT_YEAR    2024
 #define CURRENT_CENTURY 21
  
-unsigned char datetime_second;
-unsigned char datetime_minute;
-unsigned char datetime_hour;
-unsigned char datetime_day;
-unsigned char datetime_month;
-unsigned int datetime_year;
+unsigned char datetime_second = 0;
+unsigned char datetime_minute = 0;
+unsigned char datetime_hour = 0;
+unsigned char datetime_day = 0;
+unsigned char datetime_month = 0;
+unsigned int datetime_year = 0;
 
  // Set by ACPI table parsing code if possible.
 int century_register = 0x00;

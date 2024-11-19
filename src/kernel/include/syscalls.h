@@ -52,11 +52,12 @@
 #define SYS_GET_VAR     55
 #define SYS_DEL_VAR     56
 #define SYS_EXST_VAR    57
+#define SYS_SWITCH_USER 60 // LAST
 #define SYS_GET_TICKS   3
 
 // FS managment
 #define SYS_READ_FILE          9
-#define SYS_READ_FILE_STP      59 // LAST
+#define SYS_READ_FILE_STP      59
 #define SYS_READ_FILE_OFF      33
 #define SYS_READ_FILE_OFF_STP  58
 #define SYS_WRITE_FILE         10

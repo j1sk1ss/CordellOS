@@ -7,6 +7,7 @@ int current_command = 0;
 
 
 void main(int argc, char* argv[]) {
+    switch2user();
     clrscr();
     shell_start_screen();
 

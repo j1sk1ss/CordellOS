@@ -28,15 +28,15 @@
 
 
 #define USERMODE
-#define DEBUG_MODE
+//#define DEBUG_MODE
 
 #define CONFIG_KSHELL   0
 #define CONFIG_MOUSE    1
 #define CONFIG_NETWORK  2
 #define CONFIG_SPEAKER  3
 
-#define CONFIG_ENABLED  '1'
-#define CONFIG_DISABLED '0'
+#define CONFIG_ENABLED  49
+#define CONFIG_DISABLED 48
 
 #define MMAP_LOCATION   0x30000
 
@@ -123,8 +123,6 @@ void shell() {
     uint32_t esp;
     asm("mov %%esp, %0" : "=r"(esp));
     TSS_set_stack(0x10, esp);
-
-	i386_switch2user();
     fexec(SHELL_PATH, 0, NULL);
 #else
     current_vfs->objexec(SHELL_PATH, 0, NULL, KERNEL);

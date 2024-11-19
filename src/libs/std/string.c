@@ -8,9 +8,7 @@
 
 
 const char* strchr(const char* str, char chr) {
-    if (str == NULL)
-        return NULL;
-
+    if (str == NULL) return NULL;
     while (*str) {
         if (*str == chr)
             return str;
@@ -23,7 +21,6 @@ const char* strchr(const char* str, char chr) {
 
 char* strrchr(const char *s, int c) {
     int i = strlen(s);
-
     while (i >= 0 && s[i] != c) 
         i--;
 
@@ -83,7 +80,6 @@ unsigned strlen(const char* str) {
 
 int strcmp(const char* firstStr, const char* secondStr) {
     if (firstStr == NULL || secondStr == NULL) return -1;
-
     while (*firstStr && *secondStr && *firstStr == *secondStr) {
         ++firstStr;
         ++secondStr;

@@ -133,6 +133,10 @@ void syscall(struct Registers* regs) {
     //  SYSTEM SYSCALLS
     //=======================
 
+        else if (regs->eax == SYS_SWITCH_USER) {
+            i386_switch2user();
+        }
+
         else if (regs->eax == SYS_TIME) {
             datetime_read_rtc();
             short* date_buffer = (short*)regs->ecx;

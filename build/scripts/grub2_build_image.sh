@@ -12,20 +12,20 @@ echo "Partition offset: $OFFSET sectors"
 
 # Step 3: Setup loop devices
 echo "Attaching disk image to partitions"
-sudo losetup /dev/loop0 disk.img
+LOOP_DEVICE=$(sudo losetup -f --show disk.img)
 
 # Step 4: Format the partition
-echo "Formating partitions"
-sudo mkdosfs -F32 -f 2 /dev/loop0
+echo "Formating partitions at $LOOP_DEVICE"
+sudo mkdosfs -F32 -f 2 "$LOOP_DEVICE"
 
 # Step 5: Mount the newly formatted partition
 echo "Mounting and copy files"
-sudo mount /dev/loop0 /mnt
+sudo mount "$LOOP_DEVICE" /mnt
 sudo cp -r ../CordellOS/boot /mnt
 sudo cp -r ../CordellOS/home /mnt
 
 # Step 6: Install GRUB using grub-install
-sudo grub2-install --boot-directory=/mnt/boot --root-directory=/mnt --no-floppy --target=i386-pc --modules="normal part_msdos multiboot" /dev/loop0 --force
+sudo grub2-install --boot-directory=/mnt/boot --root-directory=/mnt --no-floppy --target=i386-pc --modules="normal part_msdos multiboot" "$LOOP_DEVICE" --force
 
 sudo umount /mnt
-sudo losetup -d /dev/loop0
+sudo losetup -d "$LOOP_DEVICE"
