@@ -97,22 +97,13 @@
 		node->pcount -= (size / PAGE_SIZE) + 1;
 	}
 	
-	void* kmallocp(uint32_t v_addr) {
-		pt_entry page  = 0;
-		uint32_t* temp = allocate_page(&page);
-		map_page2kernel((void*)temp, (void*)v_addr);
-		SET_ATTRIBUTE(&page, PTE_READ_WRITE);	
-	}
-
-	void* umallocp(uint32_t v_addr) {
-		pt_entry page  = 0;
-		uint32_t* temp = allocate_page(&page);
-		map_page2user((void*)temp, (void*)v_addr);
-		SET_ATTRIBUTE(&page, PTE_READ_WRITE);	
+	void* kmallocp(uint32_t v_addr, uint8_t type) {
+		if (type == KERNEL) map_page2kernel((void*)allocate_blocks(1), (void*)v_addr);
+		else map_page2user((void*)allocate_blocks(1), (void*)v_addr);
 	}
 
 	// Memory allocation in kernel address space. Usermode will cause error
-	void* kmalloc(const uint32_t size) {
+	void* kmalloc(malloc_block_t* entry, const uint32_t size, uint8_t type) {
 		if (size <= 0) return 0;
 		if (kmalloc_list_head == NULL) kmm_init(size);
 
@@ -150,7 +141,7 @@
 
 					uint32_t virt = malloc_virt_address + total_kmalloc_pages * PAGE_SIZE; // TODO: new pages to new blocks. Don`t mix them to avoid pagedir errors in contswitch
 					for (uint8_t i = 0; i < num_pages; i++) {
-						kmallocp(virt);
+						kmallocp(virt, type);
 
 						virt += PAGE_SIZE;
 						cur->size += PAGE_SIZE;
@@ -174,75 +165,16 @@
 	void* krealloc(void* ptr, size_t size) {
 		void* new_data = NULL;
 		if (size) {
-			if(!ptr) return kmalloc(size);
+			if(!ptr) return kmalloc(kmalloc_list_head, size, KERNEL);
 
-			new_data = kmalloc(size);
+			new_data = kmalloc(kmalloc_list_head, size, KERNEL);
 			if(new_data) {
 				memcpy(new_data, ptr, size);
-				kfree(ptr);
+				kfree(kmalloc_list_head, ptr);
 			}
 		}
 
 		return new_data;
-	}
-
-	void* umalloc(const uint32_t size) {
-		if (size <= 0) return 0;
-		if (umalloc_list_head == NULL) umm_init(size);
-
-		//=============
-		// Find a block
-		//=============
-
-			merge_free_blocks(umalloc_list_head);
-			malloc_block_t* cur = umalloc_list_head;
-			while (cur->next != NULL) {
-				if (cur->free == true) {
-					if (cur->size == size) break;
-					if (cur->size > size + sizeof(malloc_block_t)) break;
-				}
-				
-				cur = cur->next;
-			}
-
-		//=============
-		// Find a block
-		//=============
-		// Work with block
-		//=============
-		
-			if (size == cur->size) cur->free = false;
-			else if (cur->size > size + sizeof(malloc_block_t)) block_split(cur, size);
-			else {
-				//=============
-				// Allocate new page
-				//=============
-				
-					uint8_t num_pages = 1;
-					while (cur->size + num_pages * PAGE_SIZE < size + sizeof(malloc_block_t))
-						num_pages++;
-
-					uint32_t virt = malloc_virt_address + total_umalloc_pages * PAGE_SIZE; // TODO: new pages to new blocks. Don`t mix them to avoid pagedir errors in contswitch
-					for (uint8_t i = 0; i < num_pages; i++) {
-						umallocp(virt);
-
-						virt += PAGE_SIZE;
-						cur->size += PAGE_SIZE;
-						total_umalloc_pages++;
-					}
-
-					block_split(cur, size);
-
-				//=============
-				// Allocate new page
-				//=============
-			}
-		
-		//=============
-		// Work with block
-		//=============
-
-		return (void*)cur + sizeof(malloc_block_t);
 	}
 
 	void merge_free_blocks(malloc_block_t* block) {
@@ -261,30 +193,22 @@
 		}
 	}
 
-	void kfree(void* ptr) {
+	void kfree(malloc_block_t* entry, void* ptr) {
 		if (ptr == NULL) return;
-		for (malloc_block_t* cur = kmalloc_list_head; cur->next; cur = cur->next) 
+		for (malloc_block_t* cur = entry; cur->next; cur = cur->next) 
 			if ((void*)cur + sizeof(malloc_block_t) == ptr && cur->free == false) {
 				cur->free = true;
 				memset(ptr, 0, cur->size);
-				merge_free_blocks(kmalloc_list_head);
+				merge_free_blocks(entry);
 
 				break;
 			}
+
+		cleanup(entry, ptr);
 	}
 
-	void ufree(void* ptr) {
-		if (ptr == NULL) return;
-		for (malloc_block_t* cur = umalloc_list_head; cur->next; cur = cur->next) 
-			if ((void*)cur + sizeof(malloc_block_t) == ptr && cur->free == false) {
-				cur->free = true;
-				memset(ptr, 0, cur->size);
-				merge_free_blocks(umalloc_list_head);
-
-				break;
-			}
-
-		for (malloc_block_t* cur = umalloc_list_head; cur->next; cur = cur->next) {
+	void cleanup(malloc_block_t* entry, void* ptr) {
+		for (malloc_block_t* cur = entry; cur->next; cur = cur->next) {
 			if ((void*)cur + sizeof(malloc_block_t) == ptr && cur->free == false) {
 				uint32_t num_pages = cur->pcount;
 				for (uint32_t i = 0; i < num_pages; i++) {
@@ -297,7 +221,7 @@
 				memset(ptr, 0, cur->size);
 
 				// Merge adjacent free blocks
-				merge_free_blocks(umalloc_list_head);
+				merge_free_blocks(entry);
 				break;
 			}
 		}

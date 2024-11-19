@@ -43,15 +43,13 @@ void kmm_init(const uint32_t bytes);
 void umm_init(const uint32_t bytes);
 
 void block_split(malloc_block_t *node, const uint32_t size);
-void* kmalloc(const uint32_t size);
+void* kmalloc(malloc_block_t* entry, const uint32_t size, uint8_t type);
 void* krealloc(void* ptr, size_t size);
-void* umalloc(const uint32_t size);
-void* kmallocp(uint32_t v_addr);
-void* umallocp(uint32_t v_addr);
+void* kmallocp(uint32_t v_addr, uint8_t type);
 
+void cleanup(malloc_block_t* entry, void* ptr);
 void merge_free_blocks(malloc_block_t* block);
-void kfree(void *ptr);
-void ufree(void* ptr);
+void kfree(malloc_block_t* entry, void* ptr);
 void kfreep(void* v_addr);
 
 #endif

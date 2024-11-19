@@ -72,12 +72,10 @@ bool map_page2kernel(void* phys_address, void* virt_address) {
     page_directory* pd = current_page_directory;
     pd_entry* entry = &pd->entries[PD_INDEX((uint32_t)virt_address)];
 
-    if ((*entry & PTE_PRESENT) != PTE_PRESENT) {
+    if ((*entry & PTE_PRESENT) != PTE_PRESENT && (*entry & PTE_USER) == PTE_USER) {
         page_table* table = (page_table*)allocate_blocks(1);
         if (!table) return false;
-
         memset(table, 0, sizeof(page_table));
-        pd_entry* entry = &pd->entries[PD_INDEX((uint32_t)virt_address)];
 
         SET_ATTRIBUTE(entry, PDE_PRESENT);
         SET_ATTRIBUTE(entry, PDE_READ_WRITE);
@@ -85,10 +83,11 @@ bool map_page2kernel(void* phys_address, void* virt_address) {
     }
 
     page_table* table = (page_table*)PAGE_PHYS_ADDRESS(entry);
-    pt_entry* page    = &table->entries[PT_INDEX((uint32_t)virt_address)];
+    pt_entry* page = &table->entries[PT_INDEX((uint32_t)virt_address)];
 
+    SET_ATTRIBUTE(page, PTE_READ_WRITE);
     SET_ATTRIBUTE(page, PTE_PRESENT);
-    SET_FRAME(page, (uint32_t)phys_address);
+    SET_FRAME(page, (physical_address)phys_address);
 
     return true;
 }
@@ -97,25 +96,24 @@ bool map_page2user(void* phys_address, void* virt_address) {
     page_directory* pd = current_page_directory;
     pd_entry* entry = &pd->entries[PD_INDEX((uint32_t)virt_address)];
 
-    if ((*entry & PTE_PRESENT) != PTE_PRESENT) {
+    if ((*entry & PTE_PRESENT) != PTE_PRESENT || (*entry & PTE_USER) != PTE_USER) {
         page_table* table = (page_table*)allocate_blocks(1);
         if (!table) return false;
-
         memset(table, 0, sizeof(page_table));
-        pd_entry* entry = &pd->entries[PD_INDEX((uint32_t)virt_address)];
 
         SET_ATTRIBUTE(entry, PDE_PRESENT);
-        SET_ATTRIBUTE(entry, PDE_USER);        // Set user mode permissions
-        SET_ATTRIBUTE(entry, PDE_READ_WRITE);  // Adjust permissions as needed
+        SET_ATTRIBUTE(entry, PDE_USER);
+        SET_ATTRIBUTE(entry, PDE_READ_WRITE);
         SET_FRAME(entry, (physical_address)table);
     }
 
     page_table* table = (page_table*)PAGE_PHYS_ADDRESS(entry);
-    pt_entry* page    = &table->entries[PT_INDEX((uint32_t)virt_address)];
+    pt_entry* page = &table->entries[PT_INDEX((uint32_t)virt_address)];
 
     SET_ATTRIBUTE(page, PTE_PRESENT);
-    SET_ATTRIBUTE(page, PTE_USER);            // Set user mode permissions
-    SET_FRAME(page, (uint32_t)phys_address);
+    SET_ATTRIBUTE(page, PTE_USER);
+    SET_ATTRIBUTE(page, PTE_READ_WRITE);
+    SET_FRAME(page, (physical_address)phys_address);
 
     return true;
 }

@@ -188,20 +188,20 @@ void syscall(struct Registers* regs) {
                 if (!kmalloc_list_head)
                     kmm_init(size);
 
-                void* allocated_memory = kmalloc(size);
+                void* allocated_memory = kmalloc(kmalloc_list_head, size, KERNEL);
                 regs->eax = (uint32_t)allocated_memory;
             } 
             
             else if (regs->eax == SYS_PAGE_MALLOC) {
                 uint32_t address = regs->ebx;
-                kmallocp(address);
+                kmallocp(address, KERNEL);
                 regs->eax = address;
             } 
 
             else if (regs->eax == SYS_FREE) {
                 void* ptr_to_free = (void*)regs->ebx;
                 if (ptr_to_free != NULL)
-                    kfree(ptr_to_free);
+                    kfree(kmalloc_list_head, ptr_to_free);
             }
 
 #elif defined(USERMODE)
@@ -211,20 +211,20 @@ void syscall(struct Registers* regs) {
                 if (!kmalloc_list_head)
                     umm_init(size);
 
-                void* allocated_memory = umalloc(size);
+                void* allocated_memory = kmalloc(umalloc_list_head, size, USER);
                 regs->eax = (uint32_t)allocated_memory;
             } 
             
             else if (regs->eax == SYS_PAGE_MALLOC) {
                 uint32_t address = regs->ebx;
-                umallocp(address);
+                kmallocp(address, USER);
                 regs->eax = address;
             } 
 
             else if (regs->eax == SYS_FREE) {
                 void* ptr_to_free = (void*)regs->ebx;
                 if (ptr_to_free != NULL)
-                    ufree(ptr_to_free);
+                    kfree(umalloc_list_head, ptr_to_free);
             }
 
 #endif

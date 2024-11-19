@@ -12,10 +12,11 @@ void ELF_build_symbols_from_multiboot(multiboot_elf_section_header_table_t heade
 
 	for (uint32_t i = 0; i < header.num; i++) {
 		const char* name = (const char*) (shstrtab + sh[i].sh_name);
-		if (!strcmp(name,".strtab")) {
+		if (!strcmp(name, ".strtab")) {
 			kernel_elf_symbols.strtab = (const char*)sh[i].sh_addr;
 			kernel_elf_symbols.strtab_size = sh[i].sh_size;
-		} else if (!strcmp(name,".symtab")) {
+		} 
+        else if (!strcmp(name, ".symtab")) {
 			kernel_elf_symbols.symtab = (elf_symbol_t*)sh[i].sh_addr;
 			kernel_elf_symbols.symtab_size = sh[i].sh_size;
 		}
@@ -28,7 +29,7 @@ void ELF_build_symbols_from_multiboot(multiboot_elf_section_header_table_t heade
  * function's range (given by value and size)
  */
 const char* ELF_lookup_symbol_function(uint32_t addr, elf_symbols_t* elf) {
-    int i;
+    int i = 0;
     int num_symbols = elf->symtab_size / sizeof(elf_symbol_t);
 
     for (i = 0; i < num_symbols; i++) {
