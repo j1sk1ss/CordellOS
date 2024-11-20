@@ -27,7 +27,7 @@
 #include "multiboot/multiboot.h"
 
 
-#define USERMODE
+//#define USERMODE
 //#define DEBUG_MODE
 
 #define CONFIG_KSHELL   0

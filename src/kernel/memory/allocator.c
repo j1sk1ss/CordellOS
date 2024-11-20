@@ -5,18 +5,21 @@
 //	GLOBAL VARS
 //===========================
 
-	malloc_block_t* kmalloc_list_head = NULL;
-	malloc_block_t* umalloc_list_head = NULL;
+	malloc_head_t kernel_malloc = {
+		.list_head = NULL,
+		.phys_address = 0,
+		.total_pages = 0,
+		.virt_address = 0x300000,
+		.map_page = map_page2kernel
+	};
 
-	uint32_t malloc_virt_address  = 0x300000;
-	uint32_t kmalloc_phys_address = 0;
-	uint32_t umalloc_phys_address = 0;
-
-	uint32_t total_kmalloc_pages = 0;
-	uint32_t total_umalloc_pages = 0;
-
-	page_directory* kmalloc_dir	= 0;
-	page_directory* umalloc_dir = 0;
+	malloc_head_t user_malloc = {
+		.list_head = NULL,
+		.phys_address = 0,
+		.total_pages = 0,
+		.virt_address = 0xC00000,
+		.map_page = map_page2user
+	};
 
 //===========================
 //	GLOBAL VARS
@@ -26,52 +29,30 @@
 //	- Create first malloc block
 //===========================
 
-	void kmm_init(const uint32_t bytes) {
-		kmalloc_dir = current_page_directory;
-		total_kmalloc_pages = bytes / PAGE_SIZE;
-		if (bytes % PAGE_SIZE > 0) total_kmalloc_pages++;
+	int _mm_init(const uint32_t bytes, malloc_head_t* head) {
+		head->total_pages = bytes / PAGE_SIZE;
+		if (bytes % PAGE_SIZE > 0) head->total_pages++;
 
-		kmalloc_phys_address = (uint32_t)allocate_blocks(total_kmalloc_pages);
-		kmalloc_list_head    = (malloc_block_t*)malloc_virt_address;
-		assert(kmalloc_phys_address);
+		head->phys_address = (uint32_t)allocate_blocks(head->total_pages);
+		head->list_head = (malloc_block_t*)head->virt_address;
+		assert(head->phys_address);
 
-		for (uint32_t i = 0, virt = malloc_virt_address; i < total_kmalloc_pages; i++, virt += PAGE_SIZE) {
-			map_page2kernel((void*)(kmalloc_phys_address + i * PAGE_SIZE), (void*)virt);
+		for (uint32_t i = 0, virt = head->virt_address; i < head->total_pages; i++, virt += PAGE_SIZE) {
+			head->map_page((void*)(head->phys_address + i * PAGE_SIZE), (void*)virt);
 			pt_entry* page = get_page(virt);
 			SET_ATTRIBUTE(page, PTE_READ_WRITE);
 		}
 
-		if (kmalloc_list_head != NULL) {
-			kmalloc_list_head->v_addr = malloc_virt_address;
-			kmalloc_list_head->pcount = total_kmalloc_pages;
-			kmalloc_list_head->size   = (total_kmalloc_pages * PAGE_SIZE) - sizeof(malloc_block_t);
-			kmalloc_list_head->free   = true;
-			kmalloc_list_head->next   = NULL;
-		}
-	}
-
-	void umm_init(const uint32_t bytes) {
-		umalloc_dir = current_page_directory;
-		total_umalloc_pages = bytes / PAGE_SIZE;
-		if (bytes % PAGE_SIZE > 0) total_umalloc_pages++;
-
-		umalloc_phys_address = (uint32_t)allocate_blocks(total_umalloc_pages);
-		umalloc_list_head    = (malloc_block_t*)malloc_virt_address;
-		assert(umalloc_phys_address);
-
-		for (uint32_t i = 0, virt = malloc_virt_address; i < total_umalloc_pages; i++, virt += PAGE_SIZE) {
-			map_page2user((void*)(umalloc_phys_address + i * PAGE_SIZE), (void*)virt);
-			pt_entry* page = get_page(virt);
-			SET_ATTRIBUTE(page, PTE_READ_WRITE);
+		if (head->list_head != NULL) {
+			head->list_head->v_addr = head->phys_address;
+			head->list_head->pcount = head->total_pages;
+			head->list_head->size   = (head->total_pages * PAGE_SIZE) - sizeof(malloc_block_t);
+			head->list_head->free   = true;
+			head->list_head->next   = NULL;
+			return 1;
 		}
 
-		if (umalloc_list_head != NULL) {
-			umalloc_list_head->v_addr = malloc_virt_address;
-			umalloc_list_head->pcount = total_umalloc_pages;
-			umalloc_list_head->size   = (total_umalloc_pages * PAGE_SIZE) - sizeof(malloc_block_t);
-			umalloc_list_head->free   = true;
-			umalloc_list_head->next   = NULL;
-		}
+		return -1;
 	}
 
 //===========================
@@ -83,7 +64,160 @@
 //	- Merge free blocks for merging blocks in page
 //===========================
 
-	void block_split(malloc_block_t* node, const uint32_t size) {
+	int kmallocp(uint32_t v_addr) {
+		return _kmallocp(v_addr, &kernel_malloc);
+	}
+
+	int umallocp(uint32_t v_addr) {
+		return _kmallocp(v_addr, &user_malloc);
+	}
+
+	// Memory allocation in kernel address space. Usermode will cause error
+	void* kmalloc(const uint32_t size) {
+		return _kmalloc(size, &kernel_malloc);
+	}
+
+	void* umalloc(const uint32_t size) {
+		return _kmalloc(size, &user_malloc);
+	}
+
+	void* krealloc(void* ptr, size_t size) {
+		return _krealloc(ptr, size, &kernel_malloc);
+	}
+
+	void* urealloc(void* ptr, size_t size) {
+		return _krealloc(ptr, size, &user_malloc);
+	}
+
+	int kfree(void* ptr) {
+		return _kfree(ptr, &kernel_malloc);
+	}
+
+	int ufree(void* ptr) {
+		return _kfree(ptr, &user_malloc);
+	}
+
+	void kfreep(void* v_addr) {
+		pt_entry* page = get_page((virtual_address)v_addr);
+		if (PAGE_PHYS_ADDRESS(page) && TEST_ATTRIBUTE(page, PTE_PRESENT)) {
+			free_page(page);
+			unmap_page((uint32_t*)v_addr);
+			flush_tlb_entry((virtual_address)v_addr);
+		}
+	}
+
+	int _kmallocp(uint32_t virt, malloc_head_t* head) {
+		pt_entry page = 0;
+		uint32_t* temp = allocate_page(&page);
+		head->map_page((void*)temp, (void*)virt);
+		SET_ATTRIBUTE(&page, PTE_READ_WRITE);
+		return 1;
+	}
+
+	void* _krealloc(void* ptr, size_t size, malloc_head_t* head) {
+		void* new_data = NULL;
+		if (size) {
+			if(!ptr) return _kmalloc(size, head);
+			new_data = _kmalloc(size, head);
+			if(new_data) {
+				memcpy(new_data, ptr, size);
+				_kfree(ptr, head);
+			}
+		}
+
+		return new_data;
+	}
+
+	void* _kmalloc(size_t size, malloc_head_t* head) {
+		if (size <= 0) return NULL;
+		if (head->list_head == NULL) _mm_init(size, head);
+
+		//=============
+		// Find a block
+		//=============
+
+			_merge_free_blocks(head->list_head);
+			malloc_block_t* cur = head->list_head;
+			while (cur->next != NULL) {
+				if (cur->free == true) {
+					if (cur->size == size) break;
+					if (cur->size > size + sizeof(malloc_block_t)) break;
+				}
+				
+				cur = cur->next;
+			}
+
+		//=============
+		// Find a block
+		//=============
+		// Work with block
+		//=============
+		
+			if (size == cur->size) cur->free = false;
+			else if (cur->size > size + sizeof(malloc_block_t)) _block_split(cur, size);
+			else {
+				//=============
+				// Allocate new page
+				//=============
+				
+					uint8_t num_pages = 1;
+					while (cur->size + num_pages * PAGE_SIZE < size + sizeof(malloc_block_t))
+						num_pages++;
+
+					uint32_t virt = head->virt_address + head->total_pages * PAGE_SIZE; // TODO: new pages to new blocks. Don`t mix them to avoid pagedir errors in contswitch
+					for (uint8_t i = 0; i < num_pages; i++) {
+						_kmallocp(virt, head);
+
+						virt += PAGE_SIZE;
+						cur->size += PAGE_SIZE;
+						head->total_pages++;
+					}
+
+					_block_split(cur, size);
+
+				//=============
+				// Allocate new page
+				//=============
+			}
+		
+		//=============
+		// Work with block
+		//=============
+
+		return (void*)cur + sizeof(malloc_block_t);
+	}
+
+	int _kfree(void* ptr, malloc_head_t* head) {
+		if (!ptr) return -1;
+		for (malloc_block_t* cur = head->list_head; cur->next; cur = cur->next) 
+			if ((void*)cur + sizeof(malloc_block_t) == ptr && cur->free == false) {
+				cur->free = true;
+				memset(ptr, 0, cur->size);
+				_merge_free_blocks(head->list_head);
+
+				break;
+			}
+
+		for (malloc_block_t* cur = head->list_head; cur->next; cur = cur->next) {
+			if ((void*)cur + sizeof(malloc_block_t) == ptr && cur->free == false) {
+				uint32_t num_pages = cur->pcount;
+				for (uint32_t i = 0; i < num_pages; i++) {
+					uint32_t v_addr = cur->v_addr + i * PAGE_SIZE;
+					kfreep((void*)v_addr);
+				}
+
+				// Mark the block as free and clear memory content
+				cur->free = true;
+				memset(ptr, 0, cur->size);
+
+				// Merge adjacent free blocks
+				_merge_free_blocks(head->list_head);
+				break;
+			}
+		}
+	}
+
+	int _block_split(malloc_block_t* node, const uint32_t size) {
 		malloc_block_t* new_node = (malloc_block_t*)((void*)node + size + sizeof(malloc_block_t));
 
 		new_node->size   = node->size - size - sizeof(malloc_block_t);
@@ -95,157 +229,11 @@
 		node->free   = false;
 		node->next   = new_node;
 		node->pcount -= (size / PAGE_SIZE) + 1;
-	}
-	
-	void* kmallocp(uint32_t v_addr) {
-		pt_entry page  = 0;
-		uint32_t* temp = allocate_page(&page);
-		map_page2kernel((void*)temp, (void*)v_addr);
-		SET_ATTRIBUTE(&page, PTE_READ_WRITE);	
+
+		return 1;
 	}
 
-	void* umallocp(uint32_t v_addr) {
-		pt_entry page  = 0;
-		uint32_t* temp = allocate_page(&page);
-		map_page2user((void*)temp, (void*)v_addr);
-		SET_ATTRIBUTE(&page, PTE_READ_WRITE);	
-	}
-
-	// Memory allocation in kernel address space. Usermode will cause error
-	void* kmalloc(const uint32_t size) {
-		if (size <= 0) return 0;
-		if (kmalloc_list_head == NULL) kmm_init(size);
-
-		//=============
-		// Find a block
-		//=============
-
-			merge_free_blocks(kmalloc_list_head);
-			malloc_block_t* cur = kmalloc_list_head;
-			while (cur->next != NULL) {
-				if (cur->free == true) {
-					if (cur->size == size) break;
-					if (cur->size > size + sizeof(malloc_block_t)) break;
-				}
-				
-				cur = cur->next;
-			}
-
-		//=============
-		// Find a block
-		//=============
-		// Work with block
-		//=============
-		
-			if (size == cur->size) cur->free = false;
-			else if (cur->size > size + sizeof(malloc_block_t)) block_split(cur, size);
-			else {
-				//=============
-				// Allocate new page
-				//=============
-				
-					uint8_t num_pages = 1;
-					while (cur->size + num_pages * PAGE_SIZE < size + sizeof(malloc_block_t))
-						num_pages++;
-
-					uint32_t virt = malloc_virt_address + total_kmalloc_pages * PAGE_SIZE; // TODO: new pages to new blocks. Don`t mix them to avoid pagedir errors in contswitch
-					for (uint8_t i = 0; i < num_pages; i++) {
-						kmallocp(virt);
-
-						virt += PAGE_SIZE;
-						cur->size += PAGE_SIZE;
-						total_kmalloc_pages++;
-					}
-
-					block_split(cur, size);
-
-				//=============
-				// Allocate new page
-				//=============
-			}
-		
-		//=============
-		// Work with block
-		//=============
-
-		return (void*)cur + sizeof(malloc_block_t);
-	}
-
-	void* krealloc(void* ptr, size_t size) {
-		void* new_data = NULL;
-		if (size) {
-			if(!ptr) return kmalloc(size);
-
-			new_data = kmalloc(size);
-			if(new_data) {
-				memcpy(new_data, ptr, size);
-				kfree(ptr);
-			}
-		}
-
-		return new_data;
-	}
-
-	void* umalloc(const uint32_t size) {
-		if (size <= 0) return 0;
-		if (umalloc_list_head == NULL) umm_init(size);
-
-		//=============
-		// Find a block
-		//=============
-
-			merge_free_blocks(umalloc_list_head);
-			malloc_block_t* cur = umalloc_list_head;
-			while (cur->next != NULL) {
-				if (cur->free == true) {
-					if (cur->size == size) break;
-					if (cur->size > size + sizeof(malloc_block_t)) break;
-				}
-				
-				cur = cur->next;
-			}
-
-		//=============
-		// Find a block
-		//=============
-		// Work with block
-		//=============
-		
-			if (size == cur->size) cur->free = false;
-			else if (cur->size > size + sizeof(malloc_block_t)) block_split(cur, size);
-			else {
-				//=============
-				// Allocate new page
-				//=============
-				
-					uint8_t num_pages = 1;
-					while (cur->size + num_pages * PAGE_SIZE < size + sizeof(malloc_block_t))
-						num_pages++;
-
-					uint32_t virt = malloc_virt_address + total_umalloc_pages * PAGE_SIZE; // TODO: new pages to new blocks. Don`t mix them to avoid pagedir errors in contswitch
-					for (uint8_t i = 0; i < num_pages; i++) {
-						umallocp(virt);
-
-						virt += PAGE_SIZE;
-						cur->size += PAGE_SIZE;
-						total_umalloc_pages++;
-					}
-
-					block_split(cur, size);
-
-				//=============
-				// Allocate new page
-				//=============
-			}
-		
-		//=============
-		// Work with block
-		//=============
-
-		return (void*)cur + sizeof(malloc_block_t);
-	}
-
-	void merge_free_blocks(malloc_block_t* block) {
+	int _merge_free_blocks(malloc_block_t* block) {
 		malloc_block_t* cur = block;
 		while (cur != NULL && cur->next != NULL) {
 			if (cur->free == true && cur->next->free == true) {
@@ -259,57 +247,8 @@
 
 			cur = cur->next;
 		}
-	}
 
-	void kfree(void* ptr) {
-		if (ptr == NULL) return;
-		for (malloc_block_t* cur = kmalloc_list_head; cur->next; cur = cur->next) 
-			if ((void*)cur + sizeof(malloc_block_t) == ptr && cur->free == false) {
-				cur->free = true;
-				memset(ptr, 0, cur->size);
-				merge_free_blocks(kmalloc_list_head);
-
-				break;
-			}
-	}
-
-	void ufree(void* ptr) {
-		if (ptr == NULL) return;
-		for (malloc_block_t* cur = umalloc_list_head; cur->next; cur = cur->next) 
-			if ((void*)cur + sizeof(malloc_block_t) == ptr && cur->free == false) {
-				cur->free = true;
-				memset(ptr, 0, cur->size);
-				merge_free_blocks(umalloc_list_head);
-
-				break;
-			}
-
-		for (malloc_block_t* cur = umalloc_list_head; cur->next; cur = cur->next) {
-			if ((void*)cur + sizeof(malloc_block_t) == ptr && cur->free == false) {
-				uint32_t num_pages = cur->pcount;
-				for (uint32_t i = 0; i < num_pages; i++) {
-					uint32_t v_addr = cur->v_addr + i * PAGE_SIZE;
-					kfreep((void*)v_addr);
-				}
-
-				// Mark the block as free and clear memory content
-				cur->free = true;
-				memset(ptr, 0, cur->size);
-
-				// Merge adjacent free blocks
-				merge_free_blocks(umalloc_list_head);
-				break;
-			}
-		}
-	}
-
-	void kfreep(void* v_addr) {
-		pt_entry* page = get_page((virtual_address)v_addr);
-		if (PAGE_PHYS_ADDRESS(page) && TEST_ATTRIBUTE(page, PTE_PRESENT)) {
-			free_page(page);
-			unmap_page((uint32_t*)v_addr);
-			flush_tlb_entry((virtual_address)v_addr);
-		}
+		return 1;
 	}
 
 //===========================
@@ -320,8 +259,8 @@
 
 	uint32_t kmalloc_total_free() {
 		uint32_t total_free = 0;
-		if (kmalloc_list_head->free = true) total_free += kmalloc_list_head->size + sizeof(malloc_block_t);
-		for (malloc_block_t* cur = kmalloc_list_head; cur->next; cur = cur->next)
+		if (kernel_malloc.list_head->free = true) total_free += kernel_malloc.list_head->size + sizeof(malloc_block_t);
+		for (malloc_block_t* cur = kernel_malloc.list_head; cur->next; cur = cur->next)
 			if (cur->next != NULL)
 				if (cur->next->free == true) total_free += cur->next->size + sizeof(malloc_block_t);
 		
@@ -329,8 +268,8 @@
 	}
 
 	uint32_t kmalloc_total_avaliable() {
-		uint32_t total_free = kmalloc_list_head->size + sizeof(malloc_block_t);
-		for (malloc_block_t* cur = kmalloc_list_head; cur->next; cur = cur->next)
+		uint32_t total_free = kernel_malloc.list_head->size + sizeof(malloc_block_t);
+		for (malloc_block_t* cur = kernel_malloc.list_head; cur->next; cur = cur->next)
 			if (cur->next != NULL)
 				total_free += cur->next->size + sizeof(malloc_block_t);
 		
@@ -338,8 +277,8 @@
 	}
 
 	uint32_t umalloc_total_avaliable() {
-		uint32_t total_free = umalloc_list_head->size + sizeof(malloc_block_t);
-		for (malloc_block_t* cur = umalloc_list_head; cur->next; cur = cur->next)
+		uint32_t total_free = user_malloc.list_head->size + sizeof(malloc_block_t);
+		for (malloc_block_t* cur = user_malloc.list_head; cur->next; cur = cur->next)
 			if (cur->next != NULL)
 				total_free += cur->next->size + sizeof(malloc_block_t);
 		
@@ -351,11 +290,11 @@
 
 		kprintf(
 			"\n|%i(%c)|",
-			kmalloc_list_head->size + sizeof(malloc_block_t),
-			kmalloc_list_head->free == true ? 'F' : 'O'
+			kernel_malloc.list_head->size + sizeof(malloc_block_t),
+			kernel_malloc.list_head->free == true ? 'F' : 'O'
 		);
 
-		for (malloc_block_t* cur = kmalloc_list_head; cur->next; cur = cur->next)
+		for (malloc_block_t* cur = kernel_malloc.list_head; cur->next; cur = cur->next)
 			if (cur->next != NULL)
 				kprintf(
 					"%i(%c)|",
@@ -369,11 +308,11 @@
 
 		kprintf(
 			"\n|%i(%c)|",
-			umalloc_list_head->size + sizeof(malloc_block_t),
-			umalloc_list_head->free == true ? 'F' : 'O'
+			user_malloc.list_head->size + sizeof(malloc_block_t),
+			user_malloc.list_head->free == true ? 'F' : 'O'
 		);
 
-		for (malloc_block_t* cur = umalloc_list_head; cur->next; cur = cur->next)
+		for (malloc_block_t* cur = user_malloc.list_head; cur->next; cur = cur->next)
 			if (cur->next != NULL)
 				kprintf(
 					"%i(%c)|",

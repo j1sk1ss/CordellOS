@@ -185,9 +185,6 @@ void syscall(struct Registers* regs) {
 
             else if (regs->eax == SYS_MALLOC) {
                 uint32_t size = regs->ebx;
-                if (!kmalloc_list_head)
-                    kmm_init(size);
-
                 void* allocated_memory = kmalloc(size);
                 regs->eax = (uint32_t)allocated_memory;
             } 
@@ -208,9 +205,6 @@ void syscall(struct Registers* regs) {
 
             else if (regs->eax == SYS_MALLOC) {
                 uint32_t size = regs->ebx;
-                if (!kmalloc_list_head)
-                    umm_init(size);
-
                 void* allocated_memory = umalloc(size);
                 regs->eax = (uint32_t)allocated_memory;
             } 
