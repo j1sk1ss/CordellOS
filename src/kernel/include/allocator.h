@@ -49,9 +49,8 @@ int _kfree(void* ptr, malloc_head_t* head);
 int _block_split(malloc_block_t *node, const uint32_t size);
 int _merge_free_blocks(malloc_block_t* block);
 
-uint32_t kmalloc_total_free();
-uint32_t kmalloc_total_avaliable();
-uint32_t umalloc_total_avaliable();
-void print_malloc_map();
+int kprint_kmalloc();
+int kprint_umalloc();
+int _print_malloc(malloc_head_t* head);
 
 #endif

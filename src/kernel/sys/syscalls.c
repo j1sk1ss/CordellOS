@@ -299,7 +299,11 @@ void syscall(struct Registers* regs) {
         
         else if (regs->eax == SYS_OPENDIR) {
             char* path = (char*)regs->ebx;
-            regs->eax  = (uint32_t)current_vfs->dir(GET_CLUSTER_FROM_ENTRY(current_vfs->getobj(path)->directory->directory_meta), (char)0, FALSE);
+            regs->eax  = (uint32_t)current_vfs->dir(
+                GET_CLUSTER_FROM_ENTRY(
+                    current_vfs->getobj(path)->directory->directory_meta, FAT_data.fat_type
+                ), (char)0, FALSE
+            );
         } 
         
         else if (regs->eax == SYS_GET_CONTENT) {
@@ -475,13 +479,13 @@ void syscall(struct Registers* regs) {
             uint32_t* buffer = (uint32_t*)regs->ebx;
 
             buffer[0] = (uint32_t)current_vfs->device->mountpoint;
-            buffer[1] = (uint32_t)current_vfs->name;
-            buffer[2] = (uint32_t)fat_type;
-            buffer[3] = (uint32_t)total_clusters;
-            buffer[4] = (uint32_t)total_sectors;
-            buffer[5] = (uint32_t)bytes_per_sector;
-            buffer[6] = (uint32_t)sectors_per_cluster;
-            buffer[7] = (uint32_t)fat_size;
+            buffer[1] = (uint32_t)current_vfs->name; // TODO: Copy to user space with malloc
+            buffer[2] = (uint32_t)FAT_data.fat_type;
+            buffer[3] = (uint32_t)FAT_data.total_clusters;
+            buffer[4] = (uint32_t)FAT_data.total_sectors;
+            buffer[5] = (uint32_t)FAT_data.bytes_per_sector;
+            buffer[6] = (uint32_t)FAT_data.sectors_per_cluster;
+            buffer[7] = (uint32_t)FAT_data.fat_size;
         }
 
     //=======================
@@ -491,7 +495,11 @@ void syscall(struct Registers* regs) {
     //=======================
 
         else if (regs->eax == SYS_MALLOC_MAP) {
-            print_malloc_map();
+            #ifdef USERMODE
+                kprint_umalloc();
+            #else
+                kprint_kmalloc();
+            #endif
         }
 
     //=======================

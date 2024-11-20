@@ -26,7 +26,6 @@ void IP_get(uint8_t* buffer) {
 uint16_t IP_calculate_checksum(ip_packet_t* packet) {
     int array_size  = sizeof(ip_packet_t) / 2;
     uint16_t* array = (uint16_t*)(uintptr_t)packet;
-    uint8_t* array2 = (uint8_t*)packet;
     uint32_t sum    = 0;
     for (int i = 0; i < array_size; i++) 
         sum += flip_endian16(array[i]);
@@ -95,8 +94,6 @@ void IP_handle_packet(ip_packet_t* packet) {
     
     if (packet->version == IP_IPV4) {
         void* data_ptr = (void*)packet + packet->ihl * 4;
-        int data_len   = net2host16(packet->length) - sizeof(ip_packet_t);
-
         if (NETWORK_DEBUG) {
             kprintf("\nIP packet src: ");
             IP_get_ip_str(packet->src_ip);

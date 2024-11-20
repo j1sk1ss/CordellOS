@@ -9,8 +9,8 @@ uint8_t broadcast_mac_address[6] = { 0xFF };
 
 
 void ARP_handle_packet(arp_packet_t* arp_packet, int len) {
-    char dst_hardware_addr[6];
-    char dst_protocol_addr[4];
+    char dst_hardware_addr[6] = { 0 };
+    char dst_protocol_addr[4] = { 0 };
 
     // Save some packet field
     memcpy(dst_hardware_addr, arp_packet->src_hardware_addr, 6);
@@ -44,7 +44,7 @@ void ARP_handle_packet(arp_packet_t* arp_packet, int len) {
             arp_packet->protocol          = host2net16(ETHERNET_TYPE_IP);
 
             // Now send it with ethernet
-            ETH_send_packet(dst_hardware_addr, (uint8_t*)arp_packet, sizeof(arp_packet_t), ETHERNET_TYPE_ARP);
+            ETH_send_packet((uint8_t*)dst_hardware_addr, (uint8_t*)arp_packet, sizeof(arp_packet_t), ETHERNET_TYPE_ARP);
         }
     }
 

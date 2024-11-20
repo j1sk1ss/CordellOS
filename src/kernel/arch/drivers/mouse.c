@@ -16,8 +16,17 @@ int show_mouse = 0;
 
 void i386_mouse_wait(uint8_t a_type) {
 	uint32_t timeout = 100000;
-	if (!a_type) while (--timeout) if ((i386_inb(MOUSE_STATUS) & MOUSE_BBIT) == 1) return;
-    else while (--timeout) if (!((i386_inb(MOUSE_STATUS) & MOUSE_ABIT))) return;
+	if (!a_type) { 
+        while (--timeout) { 
+            if ((i386_inb(MOUSE_STATUS) & MOUSE_BBIT) == 1) 
+                return; 
+        } 
+    }
+    else { 
+        while (--timeout) { 
+            if (!((i386_inb(MOUSE_STATUS) & MOUSE_ABIT))) return; 
+        } 
+    }
 }
 
 void i386_mouse_write(uint8_t write) {

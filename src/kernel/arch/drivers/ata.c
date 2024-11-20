@@ -103,7 +103,7 @@ ata_dev_t secondary_slave  = {.slave = 1};
             pci_write(ata_device, PCI_COMMAND, pci_command_reg);
         }
 
-        kprintf("DRIVE [%i] FOUND\n");
+        kprintf("DRIVE [%i] FOUND\n", dev->data);
     }
 
     void ATA_device_init(ata_dev_t* dev, int primary) {
@@ -457,12 +457,9 @@ ata_dev_t secondary_slave  = {.slave = 1};
 
     int ATA_cpy_sectors2sectors(uint32_t source_lba, uint32_t sector_count, uint32_t distenation_lba) {
         ATA_ata_wait();
-
         uint8_t* source = ATA_read_sectors(source_lba, sector_count);
         int result = ATA_write_sectors(distenation_lba, source, sector_count);
-
         kfree(source);
-
         return result;
     }
 
@@ -478,21 +475,18 @@ ata_dev_t secondary_slave  = {.slave = 1};
 
     // Function that add data to sector
     void ATA_append_sector(uint32_t lba, uint8_t* data, uint32_t len, uint32_t offset) {
-        uint8_t buffer[SECTOR_SIZE] = { '\0' };
+        uint8_t buffer[SECTOR_SIZE] = { 0 };
         uint8_t* sector_data = ATA_read_sector(lba);
+        memcpy(buffer, sector_data, SECTOR_SIZE);
+        kfree(sector_data);
         
-        uint8_t* buffer_pointer = buffer;
-        memcpy(buffer_pointer + offset, data, len);
-
+        memcpy(buffer + offset, data, len);
         ATA_write_sector(lba, buffer);
     }
 
     // Function that clear sector
     int ATA_clear_sector(uint32_t lba) {
-        char buffer[SECTOR_SIZE];  // Assuming 512-byte sectors
-        memset(buffer, 0, sizeof(buffer));
-
-        // Write the buffer to the specified sector
+        uint8_t buffer[SECTOR_SIZE] = { 0 };
         if (ATA_write_sector(lba, buffer) == -1) {
             kprintf("\nPulizia del settore non completata!");
             return -1;
@@ -524,7 +518,7 @@ ata_dev_t secondary_slave  = {.slave = 1};
     // Function that find first empty sector
     uint32_t ATA_find_empty_sector(uint32_t offset) {
         for (uint32_t lba = offset; lba <= SECTOR_COUNT; lba++) {
-            char* sector_data = ATA_read_sector(lba);
+            uint8_t* sector_data = ATA_read_sector(lba);
             if (sector_data == NULL) 
                 continue;
 
@@ -560,7 +554,7 @@ ata_dev_t secondary_slave  = {.slave = 1};
     int ATA_global_sector_count() {
         int sectors = 0;
         for (uint32_t lba = 0; lba < SECTOR_COUNT; lba++) {
-            char* sector_data = ATA_read_sector(lba);
+            uint8_t* sector_data = ATA_read_sector(lba);
             if (sector_data != NULL) {
                 sectors++;
                 kfree(sector_data);
@@ -574,9 +568,9 @@ ata_dev_t secondary_slave  = {.slave = 1};
     int ATA_global_sector_empty() {
         int sectors = 0;
         for (uint32_t lba = 0; lba < SECTOR_COUNT; lba++) {
-            char* sector_data = ATA_read_sector(lba);
+            uint8_t* sector_data = ATA_read_sector(lba);
             if (sector_data != NULL) {
-                if (ATA_is_sector_empty(sector_data))
+                if (ATA_is_sector_empty((const uint8_t*)sector_data))
                     sectors++;
 
                 kfree(sector_data);

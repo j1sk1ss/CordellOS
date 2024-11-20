@@ -6,11 +6,11 @@ page_directory* kernel_page_directory;
 
 
 bool VMM_init(uint32_t memory_start) {
-    page_directory* dir = _mkkdir();
+    page_directory* dir = _mkpdir();
     page_table* table3G = (page_table*)_allocate_blocks(1);
-    memset(table3G, 0, sizeof(page_table));
     if (table3G == NULL) return false;
 
+    memset(table3G, 0, sizeof(page_table));
     for (uint32_t i = 0, frame = 0x0; i < PAGES_PER_TABLE; i++, frame += PAGE_SIZE) {
         pt_entry page = 0;
         SET_ATTRIBUTE(&page, PTE_PRESENT);
@@ -166,7 +166,7 @@ void _flush_tlb_entry(virtual_address address) {
     asm ("cli; invlpg (%0); sti" : : "r"(address) );
 }
 
-page_directory* _mkkdir() {
+page_directory* _mkpdir() {
     page_directory* dir = (page_directory*)_allocate_blocks(3);
     if (dir == NULL) {
         kprintf("[%s %i] Failed to allocate memory for page directory\n",  __FILE__, __LINE__);
@@ -181,9 +181,7 @@ page_directory* _mkkdir() {
 }
 
 page_directory* _mkupdir() {
-    page_directory* user_page_directory = _mkkdir();
-    _copy_dir2dir(kernel_page_directory, user_page_directory);
-
+    page_directory* user_page_directory = _mkpdir();
     page_table* user_table = (page_table*)_allocate_blocks(1);
     if (user_table == NULL) {
         kprintf("[%s %i] Failed to allocate memory for user page table\n",  __FILE__, __LINE__);

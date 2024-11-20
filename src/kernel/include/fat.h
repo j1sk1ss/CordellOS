@@ -1,7 +1,6 @@
 #ifndef FAT_H_
 #define FAT_H_
 
-
 #include "ata.h"       // Lib for reading and writing ATA PIO sectors
 #include "elf.h"       // Not important for base implementation. ELF executer
 #include "date_time.h" // Not important for base implementation. Date time getter from CMOS
@@ -53,12 +52,12 @@
 #define NOT_CONVERTED_YET       0x08
 #define TOO_MANY_DOTS           0x10
 
-#define GET_CLUSTER_FROM_ENTRY(x)       (x.low_bits | (x.high_bits << (fat_type / 2)))
-#define GET_CLUSTER_FROM_PENTRY(x)      (x->low_bits | (x->high_bits << (fat_type / 2)))
+#define GET_CLUSTER_FROM_ENTRY(x, fat_type)       (x.low_bits | (x.high_bits << (fat_type / 2)))
+#define GET_CLUSTER_FROM_PENTRY(x, fat_type)      (x->low_bits | (x->high_bits << (fat_type / 2)))
 
-#define GET_ENTRY_LOW_BITS(x)           ((x) & ((1 << (fat_type / 2)) - 1))
-#define GET_ENTRY_HIGH_BITS(x)          ((x) >> (fat_type / 2))
-#define CONCAT_ENTRY_HL_BITS(high, low) ((high << (fat_type / 2)) | low)
+#define GET_ENTRY_LOW_BITS(x, fat_type)           ((x) & ((1 << (fat_type / 2)) - 1))
+#define GET_ENTRY_HIGH_BITS(x, fat_type)          ((x) >> (fat_type / 2))
+#define CONCAT_ENTRY_HL_BITS(high, low, fat_type) ((high << (fat_type / 2)) | low)
 
 #ifndef NULL
 #define NULL 0
@@ -157,22 +156,20 @@ typedef struct long_entry {
 
 /* From file_system.h (CordellOS brunch FS_based_on_FAL) */
 
+typedef struct fat_data {
+	unsigned int fat_size;
+	unsigned int fat_type;
+	unsigned int first_fat_sector;
+	unsigned int first_data_sector;
+	unsigned int total_sectors;
+	unsigned int total_clusters;
+	unsigned int bytes_per_sector;
+	unsigned int sectors_per_cluster;
+	unsigned int ext_root_cluster;
+} fat_data_t;
 
 //Global variables
-extern unsigned int fat_size;
-extern unsigned int fat_type;
-
-extern unsigned int first_fat_sector;
-extern unsigned int first_data_sector;
-
-extern unsigned int total_sectors;
-extern unsigned int total_clusters;
-
-extern unsigned int bytes_per_sector;
-extern unsigned int sectors_per_cluster;
-
-extern unsigned int ext_root_cluster;
-
+extern fat_data_t FAT_data;
 
 //===================================
 //   _____  _    ____  _     _____ 

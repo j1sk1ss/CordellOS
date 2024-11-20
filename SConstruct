@@ -4,7 +4,7 @@ from SCons.Variables import *
 from SCons.Environment import *
 from SCons.Node import *
 
-from build_scripts.utility import remove_suffix
+from scons_scripts.utility import remove_suffix
 
 
 VARS = Variables('build_scripts/config.py', ARGUMENTS)
@@ -116,7 +116,8 @@ TARGET_ENVIRONMENT.Append(
 
     CCFLAGS = [
         '-ffreestanding',
-        '-nostdlib'
+        '-nostdlib',
+        '-Wall'
     ],
 
     CXXFLAGS = [

@@ -111,7 +111,7 @@ TaskManager taskManager = { // Task manager placed in kernel space
 
 				// Create empty pd and fill it by tables from kernel pd
 				if (type == USER) task->page_directory = _mkupdir();
-				else if (type == KERNEL) task->page_directory = _mkkdir();
+				else if (type == KERNEL) task->page_directory = _mkpdir();
 
 				_copy_dir2dir(kernel_page_directory, task->page_directory);
                 VMM_set_directory(task->page_directory);

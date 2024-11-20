@@ -147,7 +147,7 @@ int key_press() {
 }
 
 char get_character(char character) {
-    return alphabet[character];
+    return alphabet[(int)character];
 }
 
 //==================================================================================
@@ -170,13 +170,13 @@ char get_character(char character) {
             if (character < 0 || character >= 128) return;
             if (char_buffer == NULL || stop_buffer == NULL) return;
 
-            char* input = char_buffer;
+            char* input = (char*)char_buffer;
             input[pos] = '\0';
 
-            key_pressed[character] = false;
+            key_pressed[(int)character] = false;
             if (!(character & 0x80)) {
-                key_pressed[character] = true;
-                char currentCharacter = alphabet[character];
+                key_pressed[(int)character] = true;
+                char currentCharacter = alphabet[(char)character];
 
                 //==============
                 //  Work with stop symbols
@@ -202,7 +202,7 @@ char get_character(char character) {
                 //  Work with stop symbols
                 //==============
 
-                if (key_pressed[LSHIFT] || key_pressed[RSHIFT]) currentCharacter = shift_alphabet[character];
+                if (key_pressed[LSHIFT] || key_pressed[RSHIFT]) currentCharacter = shift_alphabet[(int)character];
                 if (currentCharacter == LSHIFT_BUTTON || currentCharacter == RSHIFT_BUTTON) return;
                 if (currentCharacter == BACKSPACE_BUTTON) {
                     if (strlen(input) <= 0) return;
@@ -216,13 +216,12 @@ char get_character(char character) {
                     return;
                 }
 
-                if (mode == VISIBLE_KEYBOARD)
+                if (mode == VISIBLE_KEYBOARD) {
                     if (color != -1) kcprintf(color, "%c", currentCharacter);
                     else kprintf("%c", currentCharacter);
+                }
 
                 input[pos++] = currentCharacter;
-
-
             }
 
             if (key_pressed[LSHIFT] || key_pressed[RSHIFT]) {

@@ -257,72 +257,35 @@
 //	INFO
 //===========================
 
-	uint32_t kmalloc_total_free() {
-		uint32_t total_free = 0;
-		if (kernel_malloc.list_head->free = true) total_free += kernel_malloc.list_head->size + sizeof(malloc_block_t);
-		for (malloc_block_t* cur = kernel_malloc.list_head; cur->next; cur = cur->next)
-			if (cur->next != NULL)
-				if (cur->next->free == true) total_free += cur->next->size + sizeof(malloc_block_t);
-		
-		return total_free;
+	int kprint_kmalloc() {
+		_print_malloc(&kernel_malloc);
+		return 1;
 	}
 
-	uint32_t kmalloc_total_avaliable() {
-		uint32_t total_free = kernel_malloc.list_head->size + sizeof(malloc_block_t);
-		for (malloc_block_t* cur = kernel_malloc.list_head; cur->next; cur = cur->next)
-			if (cur->next != NULL)
-				total_free += cur->next->size + sizeof(malloc_block_t);
-		
-		return total_free;
+	int kprint_umalloc() {
+		_print_malloc(&user_malloc);
+		return 1;
 	}
 
-	uint32_t umalloc_total_avaliable() {
-		uint32_t total_free = user_malloc.list_head->size + sizeof(malloc_block_t);
-		for (malloc_block_t* cur = user_malloc.list_head; cur->next; cur = cur->next)
-			if (cur->next != NULL)
-				total_free += cur->next->size + sizeof(malloc_block_t);
-		
-		return total_free;
-	}
-
-	void print_malloc_map() {
-#ifndef USERMODE 
-
+	int _print_malloc(malloc_head_t* head) {
 		kprintf(
-			"\n|%i(%c)|",
-			kernel_malloc.list_head->size + sizeof(malloc_block_t),
-			kernel_malloc.list_head->free == true ? 'F' : 'O'
+			"\n|%i(%c)|", head->list_head->size + sizeof(malloc_block_t),
+			head->list_head->free == true ? 'F' : 'O'
 		);
 
-		for (malloc_block_t* cur = kernel_malloc.list_head; cur->next; cur = cur->next)
-			if (cur->next != NULL)
+		uint32_t total_free = head->list_head->size + sizeof(malloc_block_t);
+		for (malloc_block_t* cur = head->list_head; cur->next; cur = cur->next) {
+			if (cur->next != NULL) {
+				total_free += cur->next->size + sizeof(malloc_block_t);
 				kprintf(
-					"%i(%c)|",
-					cur->next->size + sizeof(malloc_block_t),
+					"%i(%c)|", cur->next->size + sizeof(malloc_block_t),
 					cur->next->free == true ? 'F' : 'O'
 				);
+			}
+		}
 
-		kprintf(" TOTAL: [%iB]\n", kmalloc_total_avaliable());
-
-#elif defined(USERMODE)
-
-		kprintf(
-			"\n|%i(%c)|",
-			user_malloc.list_head->size + sizeof(malloc_block_t),
-			user_malloc.list_head->free == true ? 'F' : 'O'
-		);
-
-		for (malloc_block_t* cur = user_malloc.list_head; cur->next; cur = cur->next)
-			if (cur->next != NULL)
-				kprintf(
-					"%i(%c)|",
-					cur->next->size + sizeof(malloc_block_t),
-					cur->next->free == true ? 'F' : 'O'
-				);
-
-		kprintf(" TOTAL: [%iB]\n", umalloc_total_avaliable());
-
-#endif
+		kprintf(" TOTAL: [%iB]\n", total_free);
+		return 1;	
 	}
 
 //===========================

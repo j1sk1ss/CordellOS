@@ -14,7 +14,7 @@ void i386_irq_handler(struct Registers* regs) {
     uint8_t pic_irr = (uint8_t)(uintptr_t)i8259_readIRQRequestRegisters();
     
     if (_handler[irq] != NULL) _handler[irq](regs);
-    else kprintf("[%s %i] NO HANDLER FOR: %i\n", __FILE__, __LINE__, irq);
+    else kprintf("[%s %i] NO HANDLER FOR: %i | %i %i\n", __FILE__, __LINE__, irq, pic_isr, pic_irr);
 
     _PICDriver->SendEndOfInterrupt(irq);
 }

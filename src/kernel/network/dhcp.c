@@ -40,7 +40,7 @@ void DHCP_request(uint8_t* request_ip) {
 }
 
 void DHCP_handle_packet(dhcp_packet_t* packet) {
-    uint8_t* options = packet->options + 4;
+    uint8_t* options = (uint8_t*)(packet->options + 4);
     if (packet->op == DHCP_REPLY) {
         uint8_t* type    = DHCP_options(packet, 53);
         uint8_t* pointer = type;
@@ -73,6 +73,8 @@ void* DHCP_options(dhcp_packet_t* packet, uint8_t type) {
 
         options += (2 + len);
     }
+
+    return NULL;
 }
 
 void DHCP_make_packet(dhcp_packet_t* packet, uint8_t msg_type, uint8_t* request_ip) {

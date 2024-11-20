@@ -197,10 +197,12 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
 
             if (mb_info->flags & (1 << 1)) {
                 kprintf("\n\n\t\t =     MEMORY   INFO     = \n\n");
+                size_t progress = 0;
                 multiboot_memory_map_t* mmap_entry = (multiboot_memory_map_t*)mb_info->mmap_addr;
                 while ((uint32_t)mmap_entry < mb_info->mmap_addr + mb_info->mmap_length) {
+                    if (++progress > 1000000) { kprintf("#"); progress = 0; }
                     if (mmap_entry->type == MULTIBOOT_MEMORY_AVAILABLE) {
-                        kprintf("\tREGION |  LEN: [%u]  |  ADDR: [0x%p]  |  TYPE: [%u] \t", mmap_entry->len, mmap_entry->addr, mmap_entry->type);
+                        kprintf("\n\tREGION |  LEN: [%u]  |  ADDR: [0x%p]  |  TYPE: [%u] \t", mmap_entry->len, mmap_entry->addr, mmap_entry->type);
                         const uint32_t pattern = 0xC08DE77;
 
                         uint32_t* ptr = (uint32_t*)(uintptr_t)mmap_entry->addr;
@@ -232,7 +234,7 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
                     mmap_entry = (multiboot_memory_map_t*)((uint32_t)mmap_entry + mmap_entry->size + sizeof(mmap_entry->size));
                 }
 
-                kprintf("\n\n");
+                kprintf("\n");
             }
 
         //===================
@@ -245,6 +247,7 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
             kprintf("[%s %i] VMM INIT ERROR!\n",__FILE__ ,__LINE__);
             goto end;
         }
+
         
 #pragma endregion
 
@@ -314,7 +317,7 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
 
     //===================
     
-    kprintf("DRIVER FAT INIZIALIZZATO\nTC:[%uC]\tSPC:[%uS]\tBPS:[%uB]\n\n", total_clusters, sectors_per_cluster, bytes_per_sector);
+    kprintf("DRIVER FAT INIZIALIZZATO\nTC:[%uC]\tSPC:[%uS]\tBPS:[%uB]\n\n", FAT_data.total_clusters, FAT_data.sectors_per_cluster, FAT_data.bytes_per_sector);
 
     //===================
     // Kernel2user part
@@ -323,7 +326,6 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
 #pragma region [Preparations for user land]
 
         VARS_init(); // Init env vars manager
-
         START_PROCESS("idle", (uint32_t)idle, KERNEL, 1);
 
         if (current_vfs->objexist(CONFIG_PATH) == 1) {

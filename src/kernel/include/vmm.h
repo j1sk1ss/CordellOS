@@ -93,7 +93,7 @@ bool VMM_umap_page(void* phys_address, void* virt_address);
 void VMM_unmap_page(void* virt_address);
 physical_address VMM_virtual2physical(void* virt_address);
 
-page_directory* _mkkdir();
+page_directory* _mkpdir();
 page_directory* _mkupdir();
 void _free_pdir(page_directory* pd);
 void _flush_tlb_entry(virtual_address address);
