@@ -5,7 +5,7 @@
 #include "irq.h"
 #include "pci.h"
 #include "x86.h"
-#include "virt_manager.h"
+#include "vmm.h"
 #include "ethernet.h"
 #include "allocator.h"
 

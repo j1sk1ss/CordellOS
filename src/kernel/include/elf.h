@@ -11,8 +11,8 @@
 #include "elf.h"
 #include "vfs.h"
 #include "stdio.h"
-#include "virt_manager.h"
-#include "phys_manager.h"
+#include "vmm.h"
+#include "pmm.h"
 #include "allocator.h"
 
 #include "../multiboot/multiboot.h"

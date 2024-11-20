@@ -2,10 +2,11 @@
 
 // TODO: make process that clean another processes
 
-TaskManager taskManager;
-bool tasking = false;
-uint32_t v_addr = 0x00C00000;
-
+TaskManager taskManager = { // Task manager placed in kernel space
+	.currentTask = -1,
+	.tasksCount = 0,
+	.tasking = false
+};
 
 //==================
 // Task interaction
@@ -16,7 +17,7 @@ uint32_t v_addr = 0x00C00000;
 		i386_disableInterrupts();
 
 		// Set task page directory
-		set_page_directory(taskManager.tasks[0]->page_directory);
+		VMM_set_directory(taskManager.tasks[0]->page_directory);
 
 		// Load stack to esp
 		asm ("mov %%eax, %%esp": :"a"(taskManager.tasks[0]->cpuState->esp));
@@ -36,7 +37,7 @@ uint32_t v_addr = 0x00C00000;
 		
 		// Set multitasking on
 		taskManager.currentTask = 0;
-		tasking = true;
+		taskManager.tasking = true;
 
 		i386_enableInterrupts();
 
@@ -45,11 +46,11 @@ uint32_t v_addr = 0x00C00000;
 	}
 
 	void TASK_stop_tasking() {
-		tasking = false;
+		taskManager.tasking = false;
 	}
 
 	void TASK_continue_tasking() {
-		tasking = true;
+		taskManager.tasking = true;
 	}
 
 //==================
@@ -59,12 +60,7 @@ uint32_t v_addr = 0x00C00000;
 //==================
 
 	void i386_task_init() {
-		taskManager.tasksCount  = 0;
-		taskManager.currentTask = -1;
-		
-		for (int i = 0; i < TASKS_MAX; i++)
-			taskManager.tasks[i] = NULL;
-
+		for (int i = 0; i < TASKS_MAX; i++) taskManager.tasks[i] = NULL;
 		i386_irq_registerHandler(0, TASK_task_switch);
 	}
 
@@ -103,8 +99,8 @@ uint32_t v_addr = 0x00C00000;
 				}
 
 				if (task->pid == -1) {
-					free(task->cpuState);
-					free(task);
+					kfree(task->cpuState);
+					kfree(task);
 				}
 
 			//=============================
@@ -114,20 +110,18 @@ uint32_t v_addr = 0x00C00000;
 			//=============================
 
 				// Create empty pd and fill it by tables from kernel pd
-				if (type == USER) task->page_directory = mk_usdir();
-				else if (type == KERNEL) {
-					task->page_directory = mk_pdir();
-					copy_dir2dir(kernel_page_directory, task->page_directory);
-				}
+				if (type == USER) task->page_directory = _mkupdir();
+				else if (type == KERNEL) task->page_directory = _mkkdir();
 
-                set_page_directory(task->page_directory);
+				_copy_dir2dir(kernel_page_directory, task->page_directory);
+                VMM_set_directory(task->page_directory);
 				
 				// Allocate page in pd, link it to v_addr
-				type == USER ? umallocp(v_addr) : kmallocp(v_addr);
-                memset((void*)v_addr, 0, PAGE_SIZE);
+				type == USER ? umallocp(0x00C00000) : kmallocp(0x00C00000);
+                memset((void*)0x00C00000, 0, PAGE_SIZE);
                 
 				// Set stack pointer to allocated region
-				task->cpuState->esp     = virtual2physical((void*)v_addr);
+				task->cpuState->esp     = VMM_virtual2physical((void*)0x00C00000);
 				task->virtual_address   = task->cpuState->esp;
 				uint32_t* stack_pointer = (uint32_t*)(task->cpuState->esp + PAGE_SIZE);
 
@@ -183,18 +177,18 @@ uint32_t v_addr = 0x00C00000;
 		// Fill registers
 		//=============================
 
-		set_page_directory(kernel_page_directory);
+		VMM_set_directory(kernel_page_directory);
 
         // v_addr += PAGE_SIZE * 2;
 		return task;
 	}
 
 	void destroy_task(Task* task) {
-		page_directory* task_pagedir = (page_directory*)virtual2physical(task->page_directory);
-		set_page_directory(kernel_page_directory);
-		free_pdir(task_pagedir);
-		free(task->cpuState);
-		free(task);
+		page_directory* task_pagedir = (page_directory*)VMM_virtual2physical(task->page_directory);
+		VMM_set_directory(kernel_page_directory);
+		_free_pdir(task_pagedir);
+		kfree(task->cpuState);
+		kfree(task);
 	}
 
 	Task* get_task(int pid) {
@@ -235,7 +229,7 @@ uint32_t v_addr = 0x00C00000;
 	}
 
 	void TASK_task_switch(struct Registers* regs) {
-		if (tasking == false) return;
+		if (!taskManager.tasking) return;
 		
         // Get current task
 		Task* task = taskManager.tasks[taskManager.currentTask];
@@ -272,7 +266,7 @@ uint32_t v_addr = 0x00C00000;
         memcpy(regs, new_task->cpuState, sizeof(struct Registers));
         if (new_task->page_directory != NULL)
             if (new_task->page_directory != task->page_directory)
-		        set_page_directory(new_task->page_directory);
+		        VMM_set_directory(new_task->page_directory);
 
         i386_enableInterrupts();
 	}

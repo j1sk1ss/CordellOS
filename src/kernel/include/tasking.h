@@ -10,7 +10,7 @@
 #include "x86.h"
 #include "stdio.h"
 #include "irq.h"
-#include "virt_manager.h"
+#include "vmm.h"
 #include "allocator.h"
 
 #include "../util/binary.h"
@@ -45,12 +45,11 @@ typedef struct {
     Task* tasks[TASKS_MAX];
     int tasksCount;
     int currentTask;
-    
+    bool tasking;
 } TaskManager;
 
 
 extern TaskManager taskManager;
-extern bool tasking;
 
 
 void i386_task_init();

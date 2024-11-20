@@ -1,14 +1,12 @@
 #ifndef VMM_H_
 #define VMM_H_
 
-
 #include <stdbool.h>
 #include <string.h>
 
 #include "isr.h"
 #include "x86.h"
-#include "phys_manager.h"
-#include "elf.h"
+#include "pmm.h"
 
 
 #define PAGES_PER_TABLE      1024
@@ -86,34 +84,22 @@ extern page_directory* kernel_page_directory;
 
 
 bool VMM_init(uint32_t kernell_address);
-page_directory* mk_pdir();
-page_directory* mk_usdir();
-void free_pdir(page_directory* pd);
+bool VMM_set_directory(page_directory* pd);
+void* VMM_allocate_page(pt_entry* page);
+pt_entry* VMM_get_page(const virtual_address address);
+void VMM_free_page(pt_entry* page);
+bool VMM_kmap_page(void* phys_address, void* virt_address);
+bool VMM_umap_page(void* phys_address, void* virt_address);
+void VMM_unmap_page(void* virt_address);
+physical_address VMM_virtual2physical(void* virt_address);
 
-pt_entry* get_pt_entry(page_table* pt, virtual_address address);
-pd_entry* get_pd_entry(page_table* pd, virtual_address address);
-pt_entry* get_page(const virtual_address address);
-pt_entry* get_page_in_dir(const virtual_address address, page_directory* dir);
-
-void* allocate_page(pt_entry* page);
-void free_page(pt_entry* page);
-
-bool set_page_directory(page_directory* pd);
-void flush_tlb_entry(virtual_address address);
-
-bool map_page2kernel(void* phys_address, void* virt_address);
-bool map_page2user(void* phys_address, void* virt_address);
-bool map_page2dir(void* phys_address, void* virt_address, page_directory* dir);
-void unmap_page(void* virt_address);
-void unmap_page_in_dir(void* virt_address, page_directory* dir);
-
-physical_address virtual2physical(void* virt_address);
-void copy_dir2dir(page_directory* src, page_directory* dest);
-
-void print_page_map(char arg);
+page_directory* _mkkdir();
+page_directory* _mkupdir();
+void _free_pdir(page_directory* pd);
+void _flush_tlb_entry(virtual_address address);
+void _copy_dir2dir(page_directory* src, page_directory* dest);
 
 struct Registers;
-void page_fault(struct Registers* regs);
-
+void _page_fault(struct Registers* regs);
 
 #endif

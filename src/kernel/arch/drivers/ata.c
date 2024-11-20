@@ -108,7 +108,7 @@ ata_dev_t secondary_slave  = {.slave = 1};
 
     void ATA_device_init(ata_dev_t* dev, int primary) {
         dev->prdt      = (prdt_t*)kmalloc(sizeof(prdt_t));
-        dev->prdt_phys = (uint8_t*)virtual2physical(dev->prdt);
+        dev->prdt_phys = (uint8_t*)VMM_virtual2physical(dev->prdt);
 
         uint8_t* mem_buffer = dev->mem_buffer;
         dev->prdt[0].buffer_phys   = (uint32_t)mem_buffer;

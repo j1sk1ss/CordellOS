@@ -494,11 +494,6 @@ void syscall(struct Registers* regs) {
             print_malloc_map();
         }
 
-        else if (regs->eax == SYS_PAGE_MAP) {
-            char arg = (char)regs->ecx;
-            print_page_map(arg);
-        }
-
     //=======================
     //  SYS INFO SYSCALLS
     //=======================

@@ -6,8 +6,8 @@
 #include <memory.h>
 #include <assert.h>
 
-#include "phys_manager.h"
-#include "virt_manager.h"
+#include "pmm.h"
+#include "vmm.h"
 
 
 #define PAGE_SIZE               4096

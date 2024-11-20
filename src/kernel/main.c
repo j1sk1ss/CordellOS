@@ -7,8 +7,8 @@
 #include "include/tasking.h"
 #include "include/x86.h"
 #include "include/pit.h"
-#include "include/phys_manager.h"
-#include "include/virt_manager.h"
+#include "include/pmm.h"
+#include "include/vmm.h"
 #include "include/mouse.h"
 #include "include/keyboard.h"
 #include "include/date_time.h"
@@ -161,8 +161,8 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
         ELF_build_symbols_from_multiboot(mb_info->u.elf_sec);
 
         kprintf("\n\t\t =    CORDELL  KERNEL    =");
-        kprintf("\n\t\t =     [ ver.   19 ]     =");
-        kprintf("\n\t\t =     [ 25.08  24 ]     = \n\n");
+        kprintf("\n\t\t =     [ ver.   20 ]     =");
+        kprintf("\n\t\t =     [ 20.11  24 ]     = \n\n");
         kprintf("\n\t\t = INFORMAZIONI GENERALI = \n\n");
         kprintf("\tMB FLAGS:        [0x%p]\n", mb_info->flags);
         kprintf("\tMEM LOW:         [%uKB] => MEM UP: [%uKB]\n", mb_info->mem_lower, mb_info->mem_upper);
@@ -226,7 +226,7 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
 
 #endif
 
-                        initialize_memory_region(mmap_entry->addr, mmap_entry->len);
+                        PMM_initialize_memory_region(mmap_entry->addr, mmap_entry->len);
                     }
 
                     mmap_entry = (multiboot_memory_map_t*)((uint32_t)mmap_entry + mmap_entry->size + sizeof(mmap_entry->size));
@@ -239,8 +239,8 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
         // Memory test
         //===================
 
-        deinitialize_memory_region(0x1000, 0x11000);
-        deinitialize_memory_region(MMAP_LOCATION, max_blocks / BLOCKS_PER_BYTE);
+        PMM_deinitialize_memory_region(0x1000, 0x11000);
+        PMM_deinitialize_memory_region(MMAP_LOCATION, PMM_map.max_blocks / BLOCKS_PER_BYTE);
         if (VMM_init(0x100000) == false) {
             kprintf("[%s %i] VMM INIT ERROR!\n",__FILE__ ,__LINE__);
             goto end;
@@ -260,9 +260,9 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
             // multiplication 2 for hardware
             framebuffer_pages *= 2;
             for (uint32_t i = 0, fb_start = gfx_mode.physical_base_pointer; i < framebuffer_pages; i++, fb_start += PAGE_SIZE)
-                map_page2kernel((void*)fb_start, (void*)fb_start);
+                VMM_kmap_page((void*)fb_start, (void*)fb_start);
 
-            deinitialize_memory_region(gfx_mode.physical_base_pointer, framebuffer_pages * BLOCK_SIZE);
+            PMM_deinitialize_memory_region(gfx_mode.physical_base_pointer, framebuffer_pages * BLOCK_SIZE);
 
 #pragma endregion
 

@@ -11,7 +11,7 @@
 #include "stdio.h"
 #include "irq.h"
 #include "pci.h"
-#include "virt_manager.h"
+#include "vmm.h"
 #include "vfs.h"
 
 

@@ -56,7 +56,7 @@ void get_mac_addr(uint8_t* src_mac_addr) {
 
 void rtl8139_send_packet(void* data, uint32_t len) {
     void* transfer_data = kmalloc(len);
-    void* phys_addr     = (void*)virtual2physical(transfer_data);
+    void* phys_addr     = (void*)VMM_virtual2physical(transfer_data);
     memcpy(transfer_data, data, len);
 
     i386_outl(rtl8139_device.io_base + TSAD_array[rtl8139_device.tx_cur], (uint32_t)phys_addr);

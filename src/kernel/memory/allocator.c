@@ -10,7 +10,7 @@
 		.phys_address = 0,
 		.total_pages = 0,
 		.virt_address = 0x300000,
-		.map_page = map_page2kernel
+		.map_page = VMM_kmap_page
 	};
 
 	malloc_head_t user_malloc = {
@@ -18,7 +18,7 @@
 		.phys_address = 0,
 		.total_pages = 0,
 		.virt_address = 0xC00000,
-		.map_page = map_page2user
+		.map_page = VMM_umap_page
 	};
 
 //===========================
@@ -33,13 +33,13 @@
 		head->total_pages = bytes / PAGE_SIZE;
 		if (bytes % PAGE_SIZE > 0) head->total_pages++;
 
-		head->phys_address = (uint32_t)allocate_blocks(head->total_pages);
+		head->phys_address = (uint32_t)_allocate_blocks(head->total_pages);
 		head->list_head = (malloc_block_t*)head->virt_address;
 		assert(head->phys_address);
 
 		for (uint32_t i = 0, virt = head->virt_address; i < head->total_pages; i++, virt += PAGE_SIZE) {
 			head->map_page((void*)(head->phys_address + i * PAGE_SIZE), (void*)virt);
-			pt_entry* page = get_page(virt);
+			pt_entry* page = VMM_get_page(virt);
 			SET_ATTRIBUTE(page, PTE_READ_WRITE);
 		}
 
@@ -98,17 +98,17 @@
 	}
 
 	void kfreep(void* v_addr) {
-		pt_entry* page = get_page((virtual_address)v_addr);
+		pt_entry* page = VMM_get_page((virtual_address)v_addr);
 		if (PAGE_PHYS_ADDRESS(page) && TEST_ATTRIBUTE(page, PTE_PRESENT)) {
-			free_page(page);
-			unmap_page((uint32_t*)v_addr);
-			flush_tlb_entry((virtual_address)v_addr);
+			VMM_free_page(page);
+			VMM_unmap_page((uint32_t*)v_addr);
+			_flush_tlb_entry((virtual_address)v_addr);
 		}
 	}
 
 	int _kmallocp(uint32_t virt, malloc_head_t* head) {
 		pt_entry page = 0;
-		uint32_t* temp = allocate_page(&page);
+		uint32_t* temp = VMM_allocate_page(&page);
 		head->map_page((void*)temp, (void*)virt);
 		SET_ATTRIBUTE(&page, PTE_READ_WRITE);
 		return 1;

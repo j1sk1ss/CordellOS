@@ -153,7 +153,6 @@ void shell_start_screen() {
             else if (strcmp(command_line[0], COMMAND_VERSION)   == 0) shell_start_screen();
             else if (strcmp(command_line[0], COMMAND_ECHO)      == 0) printf("\n%s", command_line[1]);
             else if (strcmp(command_line[0], COMMAND_MEM_DATA)  == 0) print_malloc_map();
-            else if (strcmp(command_line[0], COMMAND_PAGE_DATA) == 0) print_page_map(command_line[1][0]);
             else if (strcmp(command_line[0], COMMAND_CLEAR)     == 0) clrscr();
                 
             else if (strcmp(command_line[0], COMMAND_DISK_DATA) == 0) {
