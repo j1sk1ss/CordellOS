@@ -5,6 +5,7 @@
 #include "elf.h"       // Not important for base implementation. ELF executer
 #include "date_time.h" // Not important for base implementation. Date time getter from CMOS
 
+#include <stddef.h>
 #include <memory.h>
 #include <stdlib.h>  // Allocators (basic malloc required)
 #include <string.h>
@@ -58,22 +59,6 @@
 #define GET_ENTRY_LOW_BITS(x, fat_type)           ((x) & ((1 << (fat_type / 2)) - 1))
 #define GET_ENTRY_HIGH_BITS(x, fat_type)          ((x) >> (fat_type / 2))
 #define CONCAT_ENTRY_HL_BITS(high, low, fat_type) ((high << (fat_type / 2)) | low)
-
-#ifndef NULL
-#define NULL 0
-#endif
-
-#ifndef BOOL
-#define BOOL short
-#endif
-
-#ifndef TRUE
-#define TRUE 1
-#endif
-
-#ifndef FALSE
-#define FALSE 0
-#endif
 
 
 /* Bpb taken from http://wiki.osdev.org/FAT */
@@ -184,9 +169,6 @@ extern fat_data_t FAT_data;
 	int FAT_write(unsigned int clusterNum, unsigned int clusterVal);
 
 //===================================
-
-
-//===================================
 //    ____ _    _   _ ____ _____ _____ ____  
 //   / ___| |  | | | / ___|_   _| ____|  _ \ 
 //  | |   | |  | | | \___ \ | | |  _| | |_) |
@@ -207,9 +189,6 @@ extern fat_data_t FAT_data;
 	int FAT_cpy_cluster2cluster(unsigned int firstCluster, unsigned int secondCluster);
 
 //===================================
-
-
-//===================================
 //   _____ _   _ _____ ______   __
 //  | ____| \ | |_   _|  _ \ \ / /
 //  |  _| |  \| | | | | |_) \ V / 
@@ -217,14 +196,11 @@ extern fat_data_t FAT_data;
 //  |_____|_| \_| |_| |_| \_\|_| 
 //===================================
 
-	Directory* FAT_directory_list(const unsigned int cluster, unsigned char attributesToAdd, short exclusive);
+	Directory* FAT_directory_list(const unsigned int cluster, unsigned char attributesToAdd, int exclusive);
 	int FAT_directory_search(const char* filepart, const unsigned int cluster, directory_entry_t* file, unsigned int* entryOffset);
 	int FAT_directory_add(const unsigned int cluster, directory_entry_t* file_to_add);
 	int FAT_directory_remove(const unsigned int cluster, const char* fileName);
 	int FAT_directory_edit(const unsigned int cluster, directory_entry_t* oldMeta, directory_entry_t* newMeta);
-
-//===================================
-
 
 //===================================
 //    ____ ___  _   _ _____ _____ _   _ _____ 
@@ -248,8 +224,6 @@ extern fat_data_t FAT_data;
 	int FAT_change_meta(const char* filePath, directory_entry_t* newMeta);
 
 //===================================
-
-//===================================
 //    ___ _____ _   _ _____ ____  
 //   / _ \_   _| | | | ____|  _ \ 
 //  | | | || | | |_| |  _| | |_) |
@@ -265,8 +239,15 @@ extern fat_data_t FAT_data;
 	int FAT_name_check(const char* input);
 	unsigned char FAT_check_sum(unsigned char *pFcbName);
 
-	directory_entry_t* FAT_create_entry(const char* name, const char* ext, BOOL isDir, uint32_t firstCluster, uint32_t filesize);
-	Content* FAT_create_content(char* name, BOOL directory, char* extension);
+	directory_entry_t* FAT_create_entry(const char* name, const char* ext, int isDir, uint32_t firstCluster, uint32_t filesize);
+	Content* FAT_create_object(char* name, int directory, char* extension);
+
+	Content* FAT_create_content();
+	Directory* FAT_create_directory();
+	File* FAT_create_file();
+	int FAT_unload_directories_system(Directory* directory);
+	int FAT_unload_files_system(File* file);
+	int FAT_unload_content_system(Content* content);
 
 //===================================
 

@@ -98,16 +98,6 @@ void VESA_backspace() {
     }
 }
 
-void VESA_set_cursor(uint8_t x, uint8_t y) {
-    cursor_x = x * CHAR_X;
-    cursor_y = y * CHAR_Y;
-}
-
-void VESA_set_cursor32(uint32_t x, uint32_t y) {
-    cursor_x = x;
-    cursor_y = y;
-}
-
 void VESA_clrscr() {
     Point fpoint, spoint;
     
@@ -122,10 +112,44 @@ void VESA_clrscr() {
     cursor_y = 0;
 }
 
-int VESA_get_cursor_x() {
+void VESA_set_cursor(uint8_t x, uint8_t y) {
+    cursor_x = x * CHAR_X;
+    cursor_y = y * CHAR_Y;
+}
+
+void VESA_set_cursor32(uint32_t x, uint32_t y) {
+    cursor_x = x;
+    cursor_y = y;
+}
+
+int VESA_get_cursor32_x() {
     return cursor_x;
 }
 
-int VESA_get_cursor_y() {
+int VESA_get_cursor_x() {
+    return cursor_x / CHAR_X;
+}
+
+int VESA_get_cursor32_y() {
     return cursor_y;
+}
+
+int VESA_get_cursor_y() {
+    return cursor_y / CHAR_Y;
+}
+
+int VESA_get_max32_x() {
+    return gfx_mode.x_resolution;
+}
+
+int VESA_get_max_x() {
+    return gfx_mode.x_resolution / CHAR_X;
+}
+
+int VESA_get_max32_y() {
+    return gfx_mode.y_resolution;
+}
+
+int VESA_get_max_y() {
+    return gfx_mode.y_resolution / CHAR_Y;
 }

@@ -162,7 +162,7 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
 
         kprintf("\n\t\t =    CORDELL  KERNEL    =");
         kprintf("\n\t\t =     [ ver.   20 ]     =");
-        kprintf("\n\t\t =     [ 20.11  24 ]     = \n\n");
+        kprintf("\n\t\t =     [ 21.11  24 ]     = \n\n");
         kprintf("\n\t\t = INFORMAZIONI GENERALI = \n\n");
         kprintf("\tMB FLAGS:        [0x%p]\n", mb_info->flags);
         kprintf("\tMEM LOW:         [%uKB] => MEM UP: [%uKB]\n", mb_info->mem_lower, mb_info->mem_upper);
@@ -200,7 +200,19 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
                 size_t progress = 0;
                 multiboot_memory_map_t* mmap_entry = (multiboot_memory_map_t*)mb_info->mmap_addr;
                 while ((uint32_t)mmap_entry < mb_info->mmap_addr + mb_info->mmap_length) {
-                    if (++progress > 1000000) { kprintf("#"); progress = 0; }
+                    if (++progress > 1000000) { 
+                        kprintf("#"); 
+                        progress = 0;
+
+                        int x_cursor = VESA_get_cursor_x();
+                        int y_cursor = VESA_get_cursor_y();
+
+                        VESA_set_cursor(0, VESA_get_max_y() - 2);
+                        kprintf("MEM ADDR: 0x%p", (uint32_t)mmap_entry);
+
+                        VESA_set_cursor(x_cursor, y_cursor);
+                    }
+
                     if (mmap_entry->type == MULTIBOOT_MEMORY_AVAILABLE) {
                         kprintf("\n\tREGION |  LEN: [%u]  |  ADDR: [0x%p]  |  TYPE: [%u] \t", mmap_entry->len, mmap_entry->addr, mmap_entry->type);
                         const uint32_t pattern = 0xC08DE77;

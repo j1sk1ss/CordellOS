@@ -3,7 +3,6 @@
 
 Content* FSLIB_create_content() {
     Content* content = (Content*)clralloc(sizeof(Content));
-
     content->directory      = NULL;
     content->file           = NULL;
     content->parent_cluster = -1;
@@ -13,8 +12,6 @@ Content* FSLIB_create_content() {
 
 Directory* FSLIB_create_directory() {
     Directory* directory = (Directory*)clralloc(sizeof(Directory));
-
-    directory->name         = NULL;
     directory->files        = NULL;
     directory->subDirectory = NULL;
     directory->next         = NULL;
@@ -25,9 +22,6 @@ Directory* FSLIB_create_directory() {
 
 File* FSLIB_create_file() {
     File* file = (File*)clralloc(sizeof(File));
-
-    file->name         = NULL;
-    file->extension    = NULL;
     file->next         = NULL;
     file->data         = NULL;
     file->data_pointer = NULL;
@@ -42,7 +36,6 @@ void FSLIB_unload_directories_system(Directory* directory) {
     if (directory->next != NULL) FSLIB_unload_directories_system(directory->next);
     if (directory->data_pointer != NULL) free(directory->data_pointer);
 
-    free(directory->name);
     free(directory);
 }
 
@@ -52,8 +45,6 @@ void FSLIB_unload_files_system(File* file) {
     if (file->data_pointer != NULL) free(file->data_pointer);
     if (file->data != NULL) free(file->data);
 
-    free(file->name);
-    free(file->extension);
     free(file);
 }
 

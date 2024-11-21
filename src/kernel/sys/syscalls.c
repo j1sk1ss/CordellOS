@@ -53,8 +53,8 @@ void syscall(struct Registers* regs) {
                 cursor_cords[1] = VGA_cursor_get_y();
             }
             else {
-                cursor_cords[0] = VESA_get_cursor_x();
-                cursor_cords[1] = VESA_get_cursor_y();
+                cursor_cords[0] = VESA_get_cursor32_x();
+                cursor_cords[1] = VESA_get_cursor32_y();
             }
         } 
         
@@ -302,7 +302,7 @@ void syscall(struct Registers* regs) {
             regs->eax  = (uint32_t)current_vfs->dir(
                 GET_CLUSTER_FROM_ENTRY(
                     current_vfs->getobj(path)->directory->directory_meta, FAT_data.fat_type
-                ), (char)0, FALSE
+                ), (char)0, 0
             );
         } 
         
@@ -324,7 +324,7 @@ void syscall(struct Registers* regs) {
             char* fname = strtok(mkfile_name, ".");
             char* fexec = strtok(NULL, "."); 
 
-            Content* mkfile_content = FAT_create_content(fname, FALSE, fexec);
+            Content* mkfile_content = FAT_create_content(fname, 0, fexec);
             current_vfs->putobj(mkfile_path, mkfile_content);
             FSLIB_unload_content_system(mkfile_content);
         } 
@@ -333,7 +333,7 @@ void syscall(struct Registers* regs) {
             char* mkdir_path = (char*)regs->ebx;
             char* mkdir_name = (char*)regs->ecx;
 
-            Content* mkdir_content = FAT_create_content(mkdir_name, TRUE, "\0");
+            Content* mkdir_content = FAT_create_content(mkdir_name, 1, "\0");
             current_vfs->putobj(mkdir_path, mkdir_content);
             FSLIB_unload_content_system(mkdir_content);
         } 

@@ -43,19 +43,19 @@ typedef struct directory_entry {
 } __attribute__((packed)) directory_entry_t;
 
 typedef struct FATFile {
+	char extension[4];
+	char name[8];
 	directory_entry_t file_meta;
-	void* data_pointer;
 	int data_size;
+	void* data_pointer;
 	uint32_t* data;
-	char* extension;
-	char* name;
     struct FATFile* next;
 } File;
 
 typedef struct FATDirectory {
+	char name[12];
 	directory_entry_t directory_meta;
 	void* data_pointer;
-	char* name;
 	struct FATDirectory* next;
     struct FATFile* files;
     struct FATDirectory* subDirectory;

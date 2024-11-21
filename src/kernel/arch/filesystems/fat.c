@@ -37,17 +37,17 @@
 		}
 
 		fat_BS_t* bootstruct = (fat_BS_t*)cluster_data;
-		FAT_data.total_sectors        = (bootstruct->total_sectors_16 == 0) ? bootstruct->total_sectors_32 : bootstruct->total_sectors_16;
-		FAT_data.fat_size             = (bootstruct->table_size_16 == 0) ? ((fat_extBS_32_t*)(bootstruct->extended_section))->table_size_32 : bootstruct->table_size_16;
+		FAT_data.total_sectors = (bootstruct->total_sectors_16 == 0) ? bootstruct->total_sectors_32 : bootstruct->total_sectors_16;
+		FAT_data.fat_size = (bootstruct->table_size_16 == 0) ? ((fat_extBS_32_t*)(bootstruct->extended_section))->table_size_32 : bootstruct->table_size_16;
 
 		int root_dir_sectors = ((bootstruct->root_entry_count * 32) + (bootstruct->bytes_per_sector - 1)) / bootstruct->bytes_per_sector;
-		int data_sectors     = FAT_data.total_sectors - (bootstruct->reserved_sector_count + (bootstruct->table_count * FAT_data.fat_size) + root_dir_sectors);
+		int data_sectors = FAT_data.total_sectors - (bootstruct->reserved_sector_count + (bootstruct->table_count * FAT_data.fat_size) + root_dir_sectors);
 
-		FAT_data.total_clusters    = data_sectors / bootstruct->sectors_per_cluster;
+		FAT_data.total_clusters = data_sectors / bootstruct->sectors_per_cluster;
+		if (FAT_data.total_clusters == 0) FAT_data.total_clusters = bootstruct->total_sectors_32 / bootstruct->sectors_per_cluster;
 		FAT_data.first_data_sector = bootstruct->reserved_sector_count + bootstruct->table_count * bootstruct->table_size_16 + (bootstruct->root_entry_count * 32 + bootstruct->bytes_per_sector - 1) / bootstruct->bytes_per_sector;
 
-		if (FAT_data.total_clusters == 0) FAT_data.total_clusters   = bootstruct->total_sectors_32 / bootstruct->sectors_per_cluster;
-		else if (FAT_data.total_clusters < 4085) FAT_data.fat_type  = 12;
+		if (FAT_data.total_clusters < 4085) FAT_data.fat_type  = 12;
 		else if (FAT_data.total_clusters < 65525) FAT_data.fat_type = 16;
 		else {
 			FAT_data.fat_type = 32;
@@ -55,9 +55,9 @@
 		}
 
 		FAT_data.sectors_per_cluster = bootstruct->sectors_per_cluster;
-		FAT_data.bytes_per_sector    = bootstruct->bytes_per_sector;
-		FAT_data.first_fat_sector    = bootstruct->reserved_sector_count;
-		FAT_data.ext_root_cluster    = ((fat_extBS_32_t*)(bootstruct->extended_section))->root_cluster;
+		FAT_data.bytes_per_sector = bootstruct->bytes_per_sector;
+		FAT_data.first_fat_sector = bootstruct->reserved_sector_count;
+		FAT_data.ext_root_cluster = ((fat_extBS_32_t*)(bootstruct->extended_section))->root_cluster;
 
 		kfree(cluster_data);
 		return 0;
@@ -67,29 +67,22 @@
 
 #pragma region [Cluster functions]
 
-	BOOL FAT_cluster_free(unsigned int cluster, int fatType) {
-		if ((cluster == FREE_CLUSTER_32 && FAT_data.fat_type == 32) ||
-			(cluster == FREE_CLUSTER_16 && FAT_data.fat_type == 16) ||
-			(cluster == FREE_CLUSTER_12 && FAT_data.fat_type == 12))
-			return TRUE;
-
-		return FALSE;
+	int FAT_cluster_free(unsigned int cluster) {
+		if (cluster == 0) return 1;
+		return 0;
 	}
 
-	int FAT_set_cluster_free(unsigned int cluster, int fatType) {
-		if (FAT_data.fat_type == 32) return FAT_write(cluster, FREE_CLUSTER_32);
-		if (FAT_data.fat_type == 16) return FAT_write(cluster, FREE_CLUSTER_16);
-		if (FAT_data.fat_type == 12) return FAT_write(cluster, FREE_CLUSTER_12);
-		return -1;
+	int FAT_set_cluster_free(unsigned int cluster) {
+		return FAT_write(cluster, 0);
 	}
 
-	BOOL FAT_cluster_end(unsigned int cluster, int fatType) {
+	int FAT_cluster_end(unsigned int cluster, int fatType) {
 		if ((cluster == END_CLUSTER_32 && FAT_data.fat_type == 32) ||
 			(cluster == END_CLUSTER_16 && FAT_data.fat_type == 16) ||
 			(cluster == END_CLUSTER_12 && FAT_data.fat_type == 12))
-			return TRUE;
+			return 1;
 
-		return FALSE;
+		return 0;
 	}
 
 	int FAT_set_cluster_end(unsigned int cluster, int fatType) {
@@ -99,13 +92,13 @@
 		return -1;
 	}
 
-	BOOL FAT_cluster_bad(unsigned int cluster, int fatType) {
+	int FAT_cluster_bad(unsigned int cluster, int fatType) {
 		if ((cluster == BAD_CLUSTER_32 && FAT_data.fat_type == 32) ||
 			(cluster == BAD_CLUSTER_16 && FAT_data.fat_type == 16) ||
 			(cluster == BAD_CLUSTER_12 && FAT_data.fat_type == 12))
-			return TRUE;
+			return 1;
 
-		return FALSE;
+		return 0;
 	}
 
 	int FAT_set_cluster_bad(unsigned int cluster, int fatType) {
@@ -133,7 +126,6 @@
 
 	int FAT_read(unsigned int clusterNum) {
 		assert(clusterNum >= 2 && clusterNum < FAT_data.total_clusters);
-
 		if (FAT_data.fat_type == 32 || FAT_data.fat_type == 16) {
 			unsigned int cluster_size = FAT_data.bytes_per_sector * FAT_data.sectors_per_cluster;
 			unsigned int fat_offset   = clusterNum * (FAT_data.fat_type == 16 ? 2 : 4);
@@ -223,26 +215,26 @@
 
 		while (cluster < FAT_data.total_clusters) {
 			clusterStatus = FAT_read(cluster);
-			if (FAT_cluster_free(clusterStatus, FAT_data.fat_type) == TRUE) {
+			if (FAT_cluster_free(clusterStatus) == 1) {
 				if (FAT_set_cluster_end(cluster, FAT_data.fat_type) == 0) {
 					lastAllocatedCluster = cluster;
 					return cluster;
 				}
 				else {
 					kprintf("Function FAT_cluster_allocate: Error occurred with FAT_write, aborting operations...\n");
-					return BAD_CLUSTER_32;
+					return -1;
 				}
 			}
 			else if (clusterStatus < 0) {
 				kprintf("Function FAT_cluster_allocate: Error occurred with FAT_read, aborting operations...\n");
-				return BAD_CLUSTER_32;
+				return -1;
 			}
 
 			cluster++;
 		}
 
 		lastAllocatedCluster = 2;
-		return BAD_CLUSTER_32;
+		return -1;
 	}
 
 //========================================================================================
@@ -261,17 +253,17 @@
 	int FAT_cluster_deallocate(const unsigned int cluster) {
 		if (FAT_data.fat_type != 12 && FAT_data.fat_type != 16 && FAT_data.fat_type != 32) {
 			kprintf("Function FAT_cluster_allocate: FAT_data.fat_type is not valid!\n");
-			return BAD_CLUSTER_12;
+			return -1;
 		}
 
 		unsigned int clusterStatus = FAT_read(cluster);
-		if (FAT_cluster_free(clusterStatus, FAT_data.fat_type) == TRUE) return 0;
+		if (FAT_cluster_free(clusterStatus) == 1) return 0;
 		else if (clusterStatus < 0) {
 			kprintf("Function FAT_cluster_deallocate: Error occurred with FAT_read, aborting operations...\n");
 			return -1;
 		}
 
-		if (FAT_set_cluster_free(cluster, FAT_data.fat_type) == 0) return 0;
+		if (FAT_set_cluster_free(cluster) == 0) return 0;
 		else {
 			kprintf("Function FAT_cluster_deallocate: Error occurred with FAT_write, aborting operations...\n");
 			return -1;
@@ -298,42 +290,36 @@
 	// Read cluster data
 	uint8_t* FAT_cluster_read(unsigned int clusterNum) {
 		assert(clusterNum >= 2 && clusterNum < FAT_data.total_clusters);
-
 		unsigned int start_sect = (clusterNum - 2) * (unsigned short)FAT_data.sectors_per_cluster + FAT_data.first_data_sector;
 		uint8_t* cluster_data = ATA_read_sectors(start_sect, FAT_data.sectors_per_cluster);
 		assert(cluster_data != NULL);
-		
 		return cluster_data;
 	}
 
 	// Read cluster data and stop reading when script meets one of stop values
 	uint8_t* FAT_cluster_read_stop(unsigned int clusterNum, uint8_t* stop) {
 		assert(clusterNum >= 2 && clusterNum < FAT_data.total_clusters);
-
 		unsigned int start_sect = (clusterNum - 2) * (unsigned short)FAT_data.sectors_per_cluster + FAT_data.first_data_sector;
 		uint8_t* response = ATA_read_sectors_stop(start_sect, FAT_data.sectors_per_cluster, stop);
 		assert(response != NULL);
-		
 		return response;
 	}
 
 	// Read cluster with seek
 	uint8_t* FAT_cluster_readoff(unsigned int clusterNum, uint32_t offset) {
 		assert(clusterNum >= 2 && clusterNum < FAT_data.total_clusters);
-
 		unsigned int start_sect = (clusterNum - 2) * (unsigned short)FAT_data.sectors_per_cluster + FAT_data.first_data_sector;
 		uint8_t* cluster_data = ATA_readoff_sectors(start_sect, offset, FAT_data.sectors_per_cluster);
-
+		assert(cluster_data != NULL);
 		return cluster_data;
 	}
 
 	// Read cluster data and stop reading when script meets one of stop values with seek
 	uint8_t* FAT_cluster_readoff_stop(unsigned int clusterNum, uint32_t offset, uint8_t* stop) {
 		assert(clusterNum >= 2 && clusterNum < FAT_data.total_clusters);
-
 		unsigned int start_sect = (clusterNum - 2) * (unsigned short)FAT_data.sectors_per_cluster + FAT_data.first_data_sector;
 		uint8_t* cluster_data = ATA_readoff_sectors_stop(start_sect, offset, FAT_data.sectors_per_cluster, stop);
-		
+		assert(cluster_data != NULL);
 		return cluster_data;
 	}
 
@@ -354,20 +340,14 @@
 
 	int FAT_cluster_write(void* contentsToWrite, unsigned int clusterNum) {
 		assert(clusterNum >= 2 && clusterNum < FAT_data.total_clusters);
-
 		unsigned int start_sect = (clusterNum - 2) * (unsigned short)FAT_data.sectors_per_cluster + FAT_data.first_data_sector;
-		assert(ATA_write_sectors(start_sect, contentsToWrite, FAT_data.sectors_per_cluster) != -1);
-		
-		return 0;
+		return ATA_write_sectors(start_sect, contentsToWrite, FAT_data.sectors_per_cluster);
 	}
 
 	int FAT_cluster_writeoff(void* contentsToWrite, unsigned int clusterNum, uint32_t offset, uint32_t size) {
 		assert(clusterNum >= 2 && clusterNum < FAT_data.total_clusters);
-
 		unsigned int start_sect = (clusterNum - 2) * (unsigned short)FAT_data.sectors_per_cluster + FAT_data.first_data_sector;
-		assert(ATA_writeoff_sectors(start_sect, contentsToWrite, FAT_data.sectors_per_cluster, offset, size) != -1);
-		
-		return 0;
+		return ATA_writeoff_sectors(start_sect, contentsToWrite, FAT_data.sectors_per_cluster, offset, size);
 	}
 
 //========================================================================================
@@ -386,12 +366,9 @@
 	int FAT_cpy_cluster2cluster(unsigned int source, unsigned int destination) {
 		assert(source >= 2 && source < FAT_data.total_clusters);
 		assert(destination >= 2 && destination < FAT_data.total_clusters);
-
 		unsigned int first = (source - 2) * (unsigned short)FAT_data.sectors_per_cluster + FAT_data.first_data_sector;
 		unsigned int second = (destination - 2) * (unsigned short)FAT_data.sectors_per_cluster + FAT_data.first_data_sector;
-		assert(ATA_cpy_sectors2sectors(first, second, FAT_data.sectors_per_cluster) != -1);
-		
-		return 0;
+		return ATA_cpy_sectors2sectors(first, second, FAT_data.sectors_per_cluster);
 	}
 
 //========================================================================================
@@ -409,13 +386,11 @@
 	int FAT_cluster_clear(unsigned int clusterNum) {
 		assert(clusterNum >= 2 && clusterNum < FAT_data.total_clusters);
 
-		char clear[FAT_data.sectors_per_cluster];
-		memset(clear, 0, FAT_data.sectors_per_cluster);
+		uint8_t clear[FAT_data.sectors_per_cluster * SECTOR_SIZE];
+		memset(clear, 0, FAT_data.sectors_per_cluster * SECTOR_SIZE);
 
 		unsigned int start_sect = (clusterNum - 2) * (unsigned short)FAT_data.sectors_per_cluster + FAT_data.first_data_sector;
-		assert(ATA_write_sectors(start_sect, (const uint8_t*)clear, FAT_data.sectors_per_cluster) != -1);
-		
-		return 0;
+		return ATA_write_sectors(start_sect, (const uint8_t*)clear, FAT_data.sectors_per_cluster);
 	}
 
 	// Add allocated cluster to file
@@ -425,15 +400,15 @@
 		else if (content->file != NULL) content_meta = content->file->file_meta;
 
 		unsigned int cluster = GET_CLUSTER_FROM_ENTRY(content_meta, FAT_data.fat_type);
-		while (FAT_cluster_end(cluster, FAT_data.fat_type) == FALSE) {
-			assert(FAT_cluster_bad(cluster, FAT_data.fat_type) == FALSE);
+		while (FAT_cluster_end(cluster, FAT_data.fat_type) == 0) {
+			assert(FAT_cluster_bad(cluster, FAT_data.fat_type) == 0);
 			assert(cluster != -1 );
 			cluster = FAT_read(cluster);
 		}
 
-		if (FAT_cluster_end(cluster, FAT_data.fat_type) == TRUE) {
+		if (FAT_cluster_end(cluster, FAT_data.fat_type) == 1) {
 			unsigned int newCluster = FAT_cluster_allocate();
-			assert(FAT_cluster_bad(newCluster, FAT_data.fat_type) == FALSE);
+			assert(FAT_cluster_bad(newCluster, FAT_data.fat_type) == 0);
 			assert(FAT_write(cluster, newCluster) == 0);
 		}
 	}
@@ -453,20 +428,20 @@
 // receives the cluster to list, and will list all regular entries and directories, plus whatever attributes are passed in
 // returns: -1 is a general error
 
-	Directory* FAT_directory_list(const unsigned int cluster, unsigned char attributesToAdd, BOOL exclusive) {
-		Directory* currentDirectory = FSLIB_create_directory();
+	Directory* FAT_directory_list(const unsigned int cluster, unsigned char attributesToAdd, int exclusive) {
+		Directory* currentDirectory = FAT_create_directory();
 		assert(cluster >= 2 && cluster < FAT_data.total_clusters);
 		
 		const uint8_t default_hidden_attributes = (FILE_HIDDEN | FILE_SYSTEM);
 		uint8_t attributes_to_hide = default_hidden_attributes;
-		if (exclusive == FALSE) attributes_to_hide &= (~attributesToAdd);
-		else if (exclusive == TRUE) attributes_to_hide = (~attributesToAdd);
+		if (exclusive == 0) attributes_to_hide &= (~attributesToAdd);
+		else if (exclusive == 1) attributes_to_hide = (~attributesToAdd);
 
 		uint8_t* cluster_data = FAT_cluster_read(cluster);
 		currentDirectory->data_pointer = (void*)cluster_data;
 		if (cluster_data == NULL) {
 			kprintf("Function FAT_directory_list: FAT_cluster_read encountered an error. Aborting...\n");
-			FSLIB_unload_directories_system(currentDirectory);
+			FAT_unload_directories_system(currentDirectory);
 			return NULL;
 		}
 
@@ -488,14 +463,14 @@
 				}
 				else {
 					unsigned int next_cluster = FAT_read(cluster);
-					if (FAT_cluster_end(next_cluster, FAT_data.fat_type) == TRUE) break;
+					if (FAT_cluster_end(next_cluster, FAT_data.fat_type) == 1) break;
 					else if (next_cluster < 0) {
 						kprintf("Function FAT_directory_list: FAT_read encountered an error. Aborting...\n");
-						FSLIB_unload_directories_system(currentDirectory);
+						FAT_unload_directories_system(currentDirectory);
 						return NULL;
 					}
 					else {
-						FSLIB_unload_directories_system(currentDirectory);
+						FAT_unload_directories_system(currentDirectory);
 						return FAT_directory_list(next_cluster, attributesToAdd, exclusive);
 					}
 				}
@@ -503,20 +478,13 @@
 
 			else {
 				if ((file_metadata->attributes & FILE_DIRECTORY) != FILE_DIRECTORY) {			
-					File* file = FSLIB_create_file();
-
+					File* file = FAT_create_file();
 					file->file_meta = *file_metadata;
-					file->name      = (char*)kmalloc(8);
-					file->extension = (char*)kmalloc(4);
 
-					char* name = (char*)kmalloc(13);
-					char* name_pointer = name;
-
-					strcpy(name, (char*)file_metadata->file_name);
-					strncpy(file->name, strtok(name, " "), 8);
-					strncpy(file->extension, strtok(NULL, " "), 4);
-
-					kfree(name_pointer);
+					char name[13] = { 0 };
+					strcpy(name, (const char*)file_metadata->file_name);
+					strncpy(file->name, (const char*)strtok(name, " "), 8);
+					strncpy(file->extension, (const char*)strtok(NULL, " "), 4);
 
 					if (currentDirectory->files == NULL) currentDirectory->files = file;
 					else {
@@ -528,18 +496,12 @@
 
 				else {
 					if ((file_metadata->attributes & FILE_DIRECTORY) == FILE_DIRECTORY) {
-						Directory* upperDir = FSLIB_create_directory();
-
+						Directory* upperDir = FAT_create_directory();
 						upperDir->directory_meta = *file_metadata;
-						upperDir->name = (char*)kmalloc(11);
 
-						char* name = (char*)kmalloc(13);
-						char* name_pointer = name;
-
+						char name[13] = { 0 };
 						strcpy(name, (char*)file_metadata->file_name);
 						strncpy(upperDir->name, strtok(name, " "), 11);
-
-						kfree(name_pointer);
 						
 						if (currentDirectory->subDirectory == NULL) currentDirectory->subDirectory = upperDir;
 						else {
@@ -578,9 +540,8 @@
 	int FAT_directory_search(const char* filepart, const unsigned int cluster, directory_entry_t* file, unsigned int* entryOffset) {
 		assert(cluster >= 2 && cluster < FAT_data.total_clusters);
 
-		char searchName[13] = { '\0' };
+		char searchName[13] = { 0 };
 		strcpy(searchName, filepart);
-
 		if (FAT_name_check(searchName) != 0)
 			FAT_name2fatname(searchName);
 
@@ -603,7 +564,7 @@
 
 				else {
 					int next_cluster = FAT_read(cluster);
-					if (FAT_cluster_end(next_cluster, FAT_data.fat_type) == TRUE) break;
+					if (FAT_cluster_end(next_cluster, FAT_data.fat_type) == 1) break;
 
 					else if (next_cluster < 0) {
 						kprintf("Function FAT_directory_search: FAT_read encountered an error. Aborting...\n");
@@ -660,9 +621,9 @@
 				}
 				else {
 					unsigned int next_cluster = FAT_read(cluster);
-					if (FAT_cluster_end(next_cluster, FAT_data.fat_type) == TRUE) {
+					if (FAT_cluster_end(next_cluster, FAT_data.fat_type) == 1) {
 						next_cluster = FAT_cluster_allocate();
-						if (FAT_cluster_bad(next_cluster, FAT_data.fat_type) == TRUE) {
+						if (FAT_cluster_bad(next_cluster, FAT_data.fat_type) == 1) {
 							kprintf("Function FAT_directory_add: allocation of new cluster failed. Aborting...\n");
 							kfree(cluster_data);
 							return -1;
@@ -688,7 +649,7 @@
 				file_to_add->last_modification_time = file_to_add->creation_time;
 
 				unsigned int new_cluster = FAT_cluster_allocate();
-				if (FAT_cluster_bad(new_cluster, FAT_data.fat_type) == TRUE) {
+				if (FAT_cluster_bad(new_cluster, FAT_data.fat_type) == 1) {
 					kprintf("Function FAT_directory_add: allocation of new cluster failed. Aborting...\n");
 					kfree(cluster_data);
 
@@ -905,7 +866,7 @@
 // Returns: -1 is general error, -2 is content not found
 
 	Content* FAT_get_content(const char* filePath) {
-		Content* fatContent = kmalloc(sizeof(Content));
+		Content* fatContent = (Content*)kmalloc(sizeof(Content));
 
 		fatContent->directory = NULL;
 		fatContent->file 	  = NULL;
@@ -917,7 +878,7 @@
 		if (FAT_data.fat_type == 32) active_cluster = FAT_data.ext_root_cluster;
 		else {
 			kprintf("Function FAT_get_content: FAT16 and FAT12 are not supported!\n");
-			FSLIB_unload_content_system(fatContent);
+			FAT_unload_content_system(fatContent);
 			return NULL;
 		}
 		
@@ -929,13 +890,13 @@
 
 				int retVal = FAT_directory_search(fileNamePart, active_cluster, &content_meta, NULL);
 				if (retVal == -2) {
-					FSLIB_unload_content_system(fatContent);
+					FAT_unload_content_system(fatContent);
 					return NULL;
 				}
 
 				else if (retVal == -1) {
 					kprintf("Function FAT_get_content: An error occurred in FAT_directory_search. Aborting...\n");
-					FSLIB_unload_content_system(fatContent);
+					FAT_unload_content_system(fatContent);
 					return NULL;
 				}
 
@@ -945,9 +906,7 @@
 			}
 		
 		if ((content_meta.attributes & FILE_DIRECTORY) != FILE_DIRECTORY) {
-			fatContent->file 		       = kmalloc(sizeof(File));
-			fatContent->file->name         = kmalloc(8);
-			fatContent->file->extension    = kmalloc(4);
+			fatContent->file 		       = (File*)kmalloc(sizeof(File));
 			fatContent->file->next         = NULL;
 			fatContent->file->data_pointer = NULL;
 
@@ -981,41 +940,30 @@
 				}
 			}
 			
-			fatContent->file->data = kmalloc(content_size * sizeof(uint32_t));
+			fatContent->file->data = (uint32_t*)kmalloc(content_size * sizeof(uint32_t));
 			memcpy(fatContent->file->data, content, content_size * sizeof(uint32_t));
 			fatContent->file->data_size = content_size;
 			kfree(content);
 
 			fatContent->file->file_meta = content_meta;
 
-			char* name = kmalloc(13);
-			char* name_pointer = name;
-
+			char name[13] = { 0 };
 			strcpy(name, (char*)fatContent->file->file_meta.file_name);
 			strncpy(fatContent->file->name, strtok(name, " "), 8);
 			strncpy(fatContent->file->extension, strtok(NULL, " "), 4);
-
-			kfree(name_pointer);
 			return fatContent;
 		}
 		else {
-			fatContent->directory = kmalloc(sizeof(Directory)); 
-			
+			fatContent->directory = (Directory*)kmalloc(sizeof(Directory)); 
 			fatContent->directory->directory_meta 	= content_meta;
-			fatContent->directory->name             = kmalloc(11);
 			fatContent->directory->files            = NULL;
 			fatContent->directory->subDirectory     = NULL;
 			fatContent->directory->next             = NULL;
 			fatContent->directory->data_pointer     = NULL;
 			
-			char* name = kmalloc(13);
-			char* name_pointer = name;
-			
+			char name[13] = { 0 };
 			strcpy(name, (char*)content_meta.file_name);
-			strncpy(fatContent->directory->name, strtok(name, " "), 11);
-
-			kfree(name_pointer);
-			
+			strncpy(fatContent->directory->name, strtok(name, " "), 12);
 			return fatContent;
 		}
 	}
@@ -1158,7 +1106,7 @@
 
 				content_data += dataWrite;
 
-				if (FAT_cluster_bad(cluster, FAT_data.fat_type) == TRUE) {
+				if (FAT_cluster_bad(cluster, FAT_data.fat_type) == 1) {
 					kprintf("Function FAT_write_content: the cluster chain is corrupted with a bad cluster. Aborting...\n");
 					return -1;
 				}
@@ -1175,7 +1123,7 @@
 						prevCluster = cluster;
 						cluster = FAT_read(cluster);
 						
-						if (FAT_cluster_bad(cluster, FAT_data.fat_type) == TRUE) {
+						if (FAT_cluster_bad(cluster, FAT_data.fat_type) == 1) {
 							kprintf("Function FAT_write_content: allocation of new cluster failed. Aborting...\n");
 							return -1;
 						}
@@ -1186,7 +1134,7 @@
 						}
 					}
 					
-					if (FAT_cluster_end(endCluster, FAT_data.fat_type) != TRUE) 
+					if (FAT_cluster_end(endCluster, FAT_data.fat_type) != 1) 
 						FAT_set_cluster_end(endCluster, FAT_data.fat_type);
 					
 					break;
@@ -1378,7 +1326,7 @@
 
 			directory_entry_t file_info = directory->directory->directory_meta;
 			unsigned int active_cluster = GET_CLUSTER_FROM_ENTRY(file_info, FAT_data.fat_type);
-			FSLIB_unload_content_system(directory);
+			FAT_unload_content_system(directory);
 
 		//	FINDING DIR\FILE BY PATH
 		//====================
@@ -1455,7 +1403,7 @@
 				prev_cluster = FAT_read(data_cluster);
 				if (FAT_cluster_deallocate(data_cluster) != 0) {
 					kprintf("[%s %i] FAT_cluster_deallocate encountered an error. Aborting...\n", __FILE__, __LINE__);
-					FSLIB_unload_content_system(fatContent);
+					FAT_unload_content_system(fatContent);
 					return -1;
 				}
 
@@ -1464,14 +1412,14 @@
 
 			if (FAT_directory_remove(fatContent->parent_cluster, (char*)content_meta.file_name) != 0) {
 				kprintf("[%s %i] FAT_directory_remove encountered an error. Aborting...\n", __FILE__, __LINE__);
-				FSLIB_unload_content_system(fatContent);
+				FAT_unload_content_system(fatContent);
 				return -1;
 			}
 		
 		// DELETE DATA
 		//====================
 
-		FSLIB_unload_content_system(fatContent);
+		FAT_unload_content_system(fatContent);
 		return 0; // directory or file successfully deleted
 	}
 
@@ -1499,13 +1447,13 @@
 		directory_entry_t dst_meta;
 		if (fatContent->directory != NULL) {
 			content_meta = fatContent->directory->directory_meta;
-			dstContent   = FAT_create_content(fatContent->directory->name, TRUE, NULL);
+			dstContent   = FAT_create_object(fatContent->directory->name, 1, NULL);
 
 			dst_meta = dstContent->directory->directory_meta;
 		}
 		else if (fatContent->file != NULL) {
 			content_meta = fatContent->file->file_meta;
-			dstContent   = FAT_create_content(fatContent->file->name, FALSE, fatContent->file->extension);
+			dstContent   = FAT_create_object(fatContent->file->name, 0, fatContent->file->extension);
 
 			dst_meta = dstContent->file->file_meta;
 		}
@@ -1523,8 +1471,8 @@
 		}
 
 		FAT_put_content(destination, dstContent);
-		FSLIB_unload_content_system(fatContent);
-		FSLIB_unload_content_system(dstContent);
+		FAT_unload_content_system(fatContent);
+		FAT_unload_content_system(dstContent);
 	}
 
 //========================================================================================
@@ -1712,8 +1660,8 @@
 		return (Sum);
 	}
 
-	directory_entry_t* FAT_create_entry(const char* name, const char* ext, BOOL isDir, uint32_t firstCluster, uint32_t filesize) {
-		directory_entry_t* data = kmalloc(sizeof(directory_entry_t));
+	directory_entry_t* FAT_create_entry(const char* name, const char* ext, int isDir, uint32_t firstCluster, uint32_t filesize) {
+		directory_entry_t* data = (directory_entry_t*)kmalloc(sizeof(directory_entry_t));
 
 		data->reserved0 			 = 0; 
 		data->creation_time_tenths 	 = 0;
@@ -1731,7 +1679,7 @@
 		data->low_bits 	= firstCluster;
 		data->high_bits = firstCluster >> 16;  
 
-		if(isDir == TRUE) {
+		if(isDir == 1) {
 			data->file_size  = 0;
 			data->attributes = FILE_DIRECTORY;
 		} else {
@@ -1752,45 +1700,85 @@
 		return data; 
 	}
 
-	Content* FAT_create_content(char* name, BOOL directory, char* extension) {
-		Content* content = kmalloc(sizeof(Content));
-		
-		content->directory = NULL;
-		content->file = NULL;
-
+	Content* FAT_create_object(char* name, int directory, char* extension) {
+		Content* content = FAT_create_content();
 		if (strlen(name) > 11 || strlen(extension) > 4) {
 			printf("Uncorrect name or ext lenght.\n");
-			FSLIB_unload_content_system(content);
+			FAT_unload_content_system(content);
 			return NULL;
 		}
 		
-		if (directory == TRUE) {
-			content->directory = (Directory*)kmalloc(sizeof(Directory));
-			content->directory->files        = NULL;
-			content->directory->subDirectory = NULL;
-			content->directory->next         = NULL;
-			content->directory->data_pointer = NULL;
-
-			content->directory->name = (char*)kmalloc(12);
-			strncpy(content->directory->name, name, 11);
-			
-			content->directory->directory_meta = *FAT_create_entry(name, NULL, TRUE, FAT_cluster_allocate(), 0);
+		if (directory == 1) {
+			content->directory = FAT_create_directory();
+			strncpy(content->directory->name, name, 12);
+			content->directory->directory_meta = *FAT_create_entry(name, NULL, 1, FAT_cluster_allocate(), 0);
 		}
 		else {
-			content->file = (File*)kmalloc(sizeof(File));
-			content->file->data_pointer = NULL;
-			content->file->data         = NULL;
-			content->file->next         = NULL;
-
-			content->file->name = (char*)kmalloc(12);
-			content->file->extension = (char*)kmalloc(5);
-			strncpy(content->file->name, name, 11);
+			content->file = FAT_create_file();
+			strncpy(content->file->name, name, 8);
 			strncpy(content->file->extension, extension, 4);
-			
-			content->file->file_meta = *FAT_create_entry(name, extension, FALSE, FAT_cluster_allocate(), 1);
+			content->file->file_meta = *FAT_create_entry(name, extension, 0, FAT_cluster_allocate(), 1);
 		}
 
 		return content;
 	}
+
+	Content* FAT_create_content() {
+		Content* content = (Content*)kmalloc(sizeof(Content));
+		content->directory      = NULL;
+		content->file           = NULL;
+		content->parent_cluster = -1;
+
+		return content;
+	}
+
+	Directory* FAT_create_directory() {
+		Directory* directory = (Directory*)kmalloc(sizeof(Directory));
+		directory->files        = NULL;
+		directory->subDirectory = NULL;
+		directory->next         = NULL;
+		directory->data_pointer = NULL;
+
+		return directory;
+	}
+
+	File* FAT_create_file() {
+		File* file = (File*)kmalloc(sizeof(File));
+		file->next         = NULL;
+		file->data         = NULL;
+		file->data_pointer = NULL;
+
+		return file;
+	}
+
+	int FAT_unload_directories_system(Directory* directory) {
+		if (directory == NULL) return -1;
+		if (directory->files != NULL) FAT_unload_files_system(directory->files);
+		if (directory->subDirectory != NULL) FAT_unload_directories_system(directory->subDirectory);
+		if (directory->next != NULL) FAT_unload_directories_system(directory->next);
+		if (directory->data_pointer != NULL) kfree(directory->data_pointer);
+
+		kfree(directory);
+		return 1;
+	}
+
+	int FAT_unload_files_system(File* file) {
+		if (file == NULL) return -1;
+		if (file->next != NULL) FAT_unload_files_system(file->next);
+		if (file->data_pointer != NULL) kfree(file->data_pointer);
+		if (file->data != NULL) kfree(file->data);
+
+		kfree(file);
+		return 1;
+	}
+
+	int FAT_unload_content_system(Content* content) {
+		if (content == NULL) return -1;
+		if (content->directory != NULL) FAT_unload_directories_system(content->directory);
+		if (content->file != NULL) FAT_unload_files_system(content->file);
+		
+		kfree(content);
+		return 1;
+	}	
 
 //========================================================================================

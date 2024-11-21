@@ -50,7 +50,7 @@ ELF32_program* ELF_read(const char* path, int type) {
     Content* content = current_vfs->getobj(path);
     if (content->file == NULL) {
         kprintf("[%s %i] File not found\n", __FILE__, __LINE__);
-        FSLIB_unload_content_system(content);
+        FAT_unload_content_system(content);
         return NULL;
     }
 
@@ -64,14 +64,14 @@ ELF32_program* ELF_read(const char* path, int type) {
         if (ehdr->e_ident[0] != '\x7f' || ehdr->e_ident[1] != 'E') {
             kprintf("\n[%s %i] Error: Not ELF.\n", __FILE__, __LINE__);
             kfree(header);
-            FSLIB_unload_content_system(content);
+            FAT_unload_content_system(content);
             return NULL;
         }
 
         if (ehdr->e_type != ET_EXEC && ehdr->e_type != ET_DYN) {
             kprintf("\n[%s %i] Error: Program is not an executable or dynamic executable.\n", __FILE__, __LINE__);
             kfree(header);
-            FSLIB_unload_content_system(content);
+            FAT_unload_content_system(content);
             return NULL;
         }
 
@@ -120,7 +120,7 @@ ELF32_program* ELF_read(const char* path, int type) {
     //==========================
 
     kfree(program_header);
-    FSLIB_unload_content_system(content);
+    FAT_unload_content_system(content);
     return program;
 }
 

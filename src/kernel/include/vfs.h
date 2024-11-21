@@ -20,7 +20,7 @@ typedef void (*file_read_offset)(Content*, uint8_t*, uint32_t, uint32_t);
 typedef void (*file_read_offset_stop)(Content*, uint8_t*, uint32_t, uint32_t, uint8_t*);
 typedef int (*file_write)(Content*, char*);
 typedef void (*file_write_offset)(Content*, uint8_t*, uint32_t, uint32_t);
-typedef Directory* (*open_dir)(const unsigned int, unsigned char, short);
+typedef Directory* (*open_dir)(const unsigned int, unsigned char, int);
 typedef Content* (*get_object)(const char*);
 typedef int (*object_exists)(const char*);
 typedef int (*put_object)(const char*, Content*);
