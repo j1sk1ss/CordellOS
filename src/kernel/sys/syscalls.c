@@ -138,18 +138,18 @@ void syscall(struct Registers* regs) {
         }
 
         else if (regs->eax == SYS_TIME) {
-            datetime_read_rtc();
+            _datetime_read_rtc();
             short* date_buffer = (short*)regs->ecx;
-            date_buffer[0] = datetime_second;
-            date_buffer[1] = datetime_minute;
-            date_buffer[2] = datetime_hour;
-            date_buffer[3] = datetime_day;
-            date_buffer[4] = datetime_month;
-            date_buffer[5] = datetime_year;
+            date_buffer[0] = DTM_datetime.datetime_second;
+            date_buffer[1] = DTM_datetime.datetime_minute;
+            date_buffer[2] = DTM_datetime.datetime_hour;
+            date_buffer[3] = DTM_datetime.datetime_day;
+            date_buffer[4] = DTM_datetime.datetime_month;
+            date_buffer[5] = DTM_datetime.datetime_year;
         } 
 
         else if (regs->eax == SYS_GET_TICKS) {
-            regs->eax = get_ticks();
+            regs->eax = DTM_get_ticks();
         }
 
         //=======================

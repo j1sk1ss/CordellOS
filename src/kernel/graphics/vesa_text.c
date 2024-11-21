@@ -1,8 +1,8 @@
 #include "../include/vesa_text.h"
 
 
-int cursor_x = 0;
-int cursor_y = 0;
+static int cursor_x = 0;
+static int cursor_y = 0;
 
 
 void VESA_scrollback(int lines) {
@@ -13,15 +13,17 @@ void VESA_scrollback(int lines) {
 
     memmove(screenBuffer, screenBuffer + scrollBytes, screenSize - scrollBytes);
 
-    Point fpoint, spoint;
-    
-    fpoint.X = 0;
-    fpoint.Y = gfx_mode.y_resolution - lines;
-    spoint.X = gfx_mode.x_resolution;
-    spoint.Y = gfx_mode.y_resolution;
+    Point fpoint = {
+        .X = 0,
+        .Y = gfx_mode.y_resolution - lines
+    };
+
+    Point spoint = {
+        .X = gfx_mode.x_resolution,
+        .Y = gfx_mode.y_resolution
+    };
     
     GFX_fill_rect_solid(fpoint, spoint, BLACK);
-    // GFX_buffer2buffer();
 }
 
 void VESA_newline() {

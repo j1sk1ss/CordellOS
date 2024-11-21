@@ -11,7 +11,7 @@
 #include "include/vmm.h"
 #include "include/mouse.h"
 #include "include/keyboard.h"
-#include "include/date_time.h"
+#include "include/datetime.h"
 #include "include/allocator.h"
 #include "include/syscalls.h"
 #include "include/speaker.h"
@@ -131,7 +131,7 @@ void shell() {
 }
 
 void idle() {
-    tick();
+    _tick();
 }
 
 #pragma endregion
@@ -225,7 +225,6 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
                         }
 
 #ifndef NO_MEM_CHECK
-
                         ptr = (uint32_t*)(uintptr_t)mmap_entry->addr;
                         while (ptr < end) {
                             if (*ptr != pattern) {
@@ -237,10 +236,13 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
                         }
 
                         kprintf("MEM TEST PASSED!\n");
-
 #endif
 
                         PMM_initialize_memory_region(mmap_entry->addr, mmap_entry->len);
+
+#ifdef FAST_MEM_CHECK
+                        break;
+#endif
                     }
 
                     mmap_entry = (multiboot_memory_map_t*)((uint32_t)mmap_entry + mmap_entry->size + sizeof(mmap_entry->size));
