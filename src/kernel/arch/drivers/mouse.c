@@ -74,7 +74,6 @@ void i386_mouse_handler(struct Registers* regs) {
 }
 
 void place() {
-    if (!is_vesa) return;
     if (screen_state.x < 0 || screen_state.y < 0) {
         screen_state.x = mouse_state.x;
         screen_state.y = mouse_state.y;

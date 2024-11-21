@@ -1,79 +1,62 @@
 #include "../include/stdio.h"
 
 
-bool is_vesa = false;
+static const char _HexChars[] = "0123456789ABCDEF";
+stdio_mode_t KSTDIO_data = {
+    .clrscr         = VGA_clrscr,
+    .fill_color     = VGA_set_color,
+    .putc           = VGA_putc,
+    .get_cursor_x   = VGA_cursor_get_x,
+    .get_cursor_y   = VGA_cursor_get_y,
+    .set_cursor     = VGA_setcursor,
+    .put_chr        = VGA_putchr,
+    .get_char       = VGA_getchr
+};
 
 
 void kclrscr() {
-    if (is_vesa) {
-        VESA_clrscr();
-        // GFX_buffer2buffer();
-    }
-    else VGA_clrscr();
+    KSTDIO_data.clrscr();
 }
 
-void kfputc(char c, uint8_t file, int color) {
-    if (color == 1) kcputc(c, file);
-    else {
-        if (!is_vesa) VGA_putc(c);
-        else VESA_putc(c);
-    }
+void kputc(char c) {
+    _kfputc(c);
 }
 
-void kcputc(char c, uint32_t color) {
-    if (!is_vesa) {
-        VGA_putc(c);
-        VGA_putcolor(VGA_cursor_get_x() - 1, VGA_cursor_get_y(), color);
-    } else VESA_cputc(c, WHITE, color);
+void kputs(const char* str) {
+    _kfputs(str);
 }
 
-void kfputs(const char* str, uint8_t file, int color) {
-    while(*str) {
-        kfputc(*str, file, color);
-        str++;
+void kprintf(const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    kvfprintf(fmt, args);
+    va_end(args);
+}
+
+void kprint_buffer(const char* msg, const void* buffer, uint32_t count) {
+    _kfprint_buffer(msg, buffer, count);
+}
+
+void kprint_hex_table(const char* data, size_t length) {
+    for (size_t i = 0; i < length; ++i) {
+        kprintf("%c%c ", '0' + ((unsigned char)*data >> 4), '0' + ((unsigned char)*data & 0x0F));
+        if ((i + 1) % 16 == 0 || i == length - 1) kprintf("\n");
+        data++;
     }
 }
 
 void kset_color(int color) {
-    if (!is_vesa) VGA_set_color(color);
-    else {
-        Point fpoint, spoint;
-
-        fpoint.X = 0;
-        fpoint.Y = 0;
-        spoint.X = gfx_mode.x_resolution;
-        spoint.Y = gfx_mode.y_resolution;
-
-        GFX_fill_rect_solid(fpoint, spoint, color);
-    }
+    KSTDIO_data.fill_color(color);
 }
 
-const char _HexChars[] = "0123456789ABCDEF";
-
-void kfprintf_unsigned(uint8_t file, unsigned long long number, int radix, int color) {
-    char buffer[32];
-    int pos = 0;
-
-    // convert number to ASCII
-    do  {
-        unsigned long long rem = number % radix;
-        number /= radix;
-        buffer[pos++] = _HexChars[rem];
-    } while (number > 0);
-
-    // print number in reverse order
-    while (--pos >= 0) kfputc(buffer[pos], file, color);
+void kfprintf(const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    kvfprintf(fmt, args);
+    va_end(args);
 }
 
-void kfprintf_signed(uint8_t file, long long number, int radix, int color) {
-    if (number < 0) {
-        kfputc('-', file, color);
-        kfprintf_unsigned(file, -number, radix, color);
-    }
-    else kfprintf_unsigned(file, number, radix, color);
-}
-
-void kvfprintf(uint8_t file, const char* fmt, va_list args, int color) {
+void kvfprintf(const char* fmt, va_list args) {
     int state   = PRINTF_STATE_NORMAL;
     int length  = PRINTF_LENGTH_DEFAULT;
     int radix   = 10;
@@ -90,7 +73,7 @@ void kvfprintf(uint8_t file, const char* fmt, va_list args, int color) {
                     break;
 
                     default:    
-                        kfputc(*fmt, file, color);
+                        _kfputc(*fmt);
                     break;
                 }
 
@@ -138,15 +121,15 @@ void kvfprintf(uint8_t file, const char* fmt, va_list args, int color) {
             PRINTF_STATE_SPEC_:
                 switch (*fmt) {
                     case 'c':   
-                        kfputc((char)va_arg(args, int), file, color);
+                        _kfputc((char)va_arg(args, int));
                     break;
 
                     case 's':   
-                        kfputs(va_arg(args, const char*), file, color);
+                        _kfputs(va_arg(args, const char*));
                     break;
 
                     case '%':   
-                        kfputc('%', file, color);
+                        _kfputc('%');
                     break;
 
                     case 'd':
@@ -185,15 +168,15 @@ void kvfprintf(uint8_t file, const char* fmt, va_list args, int color) {
                             case PRINTF_LENGTH_SHORT_SHORT:
                             case PRINTF_LENGTH_SHORT:
                             case PRINTF_LENGTH_DEFAULT:     
-                                kfprintf_signed(file, va_arg(args, int), radix, color);
+                                _kfprintf_signed(va_arg(args, int), radix);
                             break;
 
                             case PRINTF_LENGTH_LONG:        
-                                kfprintf_signed(file, va_arg(args, long), radix, color);
+                                _kfprintf_signed(va_arg(args, long), radix);
                             break;
 
                             case PRINTF_LENGTH_LONG_LONG:   
-                                kfprintf_signed(file, va_arg(args, long long), radix, color);
+                                _kfprintf_signed(va_arg(args, long long), radix);
                             break;
                         }
                     }
@@ -201,16 +184,16 @@ void kvfprintf(uint8_t file, const char* fmt, va_list args, int color) {
                         switch (length) {
                             case PRINTF_LENGTH_SHORT_SHORT:
                             case PRINTF_LENGTH_SHORT:
-                            case PRINTF_LENGTH_DEFAULT:     
-                                kfprintf_unsigned(file, va_arg(args, unsigned int), radix, color);
+                            case PRINTF_LENGTH_DEFAULT:
+                                _kfprintf_unsigned(va_arg(args, unsigned int), radix);
                             break;
                                                             
-                            case PRINTF_LENGTH_LONG:        
-                                kfprintf_unsigned(file, va_arg(args, unsigned  long), radix, color);
+                            case PRINTF_LENGTH_LONG:
+                                _kfprintf_unsigned(va_arg(args, unsigned  long), radix);
                             break;
 
-                            case PRINTF_LENGTH_LONG_LONG:   
-                                kfprintf_unsigned(file, va_arg(args, unsigned  long long), radix, color);
+                            case PRINTF_LENGTH_LONG_LONG:
+                                _kfprintf_unsigned(va_arg(args, unsigned  long long), radix);
                             break;
                         }
                     }
@@ -230,56 +213,49 @@ void kvfprintf(uint8_t file, const char* fmt, va_list args, int color) {
     }
 }
 
-void kfprintf(uint8_t file, const char* fmt, ...) {
-    va_list args;
-    va_start(args, fmt);
-    kvfprintf(file, fmt, args, 0);
-    va_end(args);
+void _kfputc(char c) {
+    KSTDIO_data.putc(c);
 }
 
-void kfprint_buffer(uint8_t file, const char* msg, const void* buffer, uint32_t count) {
+void _kfputs(const char* str) {
+    while(*str) {
+        _kfputc(*str);
+        str++;
+    }
+}
+
+void _kfprint_buffer(const char* msg, const void* buffer, uint32_t count) {
     const uint8_t* u8Buffer = (const uint8_t*)buffer;
     
-    kfputs(msg, file, 0);
+    _kfputs(msg);
     for (uint16_t i = 0; i < count; i++) {
-        kfputc(_HexChars[u8Buffer[i] >> 4], file, 0);
-        kfputc(_HexChars[u8Buffer[i] & 0xF], file, 0);
-        kfputc(' ', file, 0);
+        _kfputc(_HexChars[u8Buffer[i] >> 4]);
+        _kfputc(_HexChars[u8Buffer[i] & 0xF]);
+        _kfputc(' ');
     }
 
-    kfputc('\n', file, 0);
+    _kfputc('\n');
 }
 
-void kputc(char c) {
-    kfputc(c, 0, 0);
+void _kfprintf_unsigned(unsigned long long number, int radix) {
+    char buffer[32] = { 0 };
+    int pos = 0;
+
+    // convert number to ASCII
+    do {
+        unsigned long long rem = number % radix;
+        number /= radix;
+        buffer[pos++] = _HexChars[rem];
+    } while (number > 0);
+
+    // print number in reverse order
+    while (--pos >= 0) _kfputc(buffer[pos]);
 }
 
-void kputs(const char* str) {
-    kfputs(str, 0, 0);
-}
-
-void kprintf(const char* fmt, ...) {
-    va_list args;
-    va_start(args, fmt);
-    kvfprintf(0, fmt, args, 0);
-    va_end(args);
-}
-
-void kcprintf(uint8_t color, const char* fmt, ...) {
-    va_list args;
-    va_start(args, fmt);
-    kvfprintf(color, fmt, args, 1);
-    va_end(args);
-}
-
-void kprint_buffer(const char* msg, const void* buffer, uint32_t count) {
-    kfprint_buffer(0, msg, buffer, count);
-}
-
-void kprint_hex_table(const char* data, size_t length) {
-    for (size_t i = 0; i < length; ++i) {
-        kprintf("%c%c ", '0' + ((unsigned char)*data >> 4), '0' + ((unsigned char)*data & 0x0F));
-        if ((i + 1) % 16 == 0 || i == length - 1) kprintf("\n");
-        data++;
+void _kfprintf_signed(long long number, int radix) {
+    if (number < 0) {
+        _kfputc('-');
+        _kfprintf_unsigned(-number, radix);
     }
+    else _kfprintf_unsigned(number, radix);
 }

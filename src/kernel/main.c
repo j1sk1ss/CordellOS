@@ -156,7 +156,7 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
         }
 
         if (mb_info->vbe_mode != TEXT_MODE) GFX_init(mb_info);
-        else _screenBuffer = (uint8_t*)(uintptr_t)mb_info->framebuffer_addr;
+        else VGA_data.buffer = (uint8_t*)(uintptr_t)mb_info->framebuffer_addr;
 
         ELF_build_symbols_from_multiboot(mb_info->u.elf_sec);
 

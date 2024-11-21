@@ -208,17 +208,14 @@ char get_character(char character) {
                     if (strlen(input) <= 0) return;
                     input[pos--] = '\0';
 
-                    if (!is_vesa) {
-                        VGA_setcursor(VGA_cursor_get_x() - 1, VGA_cursor_get_y());
-                        VGA_putchr(VGA_cursor_get_x(), VGA_cursor_get_y(), ' ');
-                    } else VESA_backspace();
+                    KSTDIO_data.set_cursor(KSTDIO_data.get_cursor_x() - 1, KSTDIO_data.get_cursor_y());
+                    KSTDIO_data.put_chr(KSTDIO_data.get_cursor_x(), KSTDIO_data.get_cursor_y(), ' ');
 
                     return;
                 }
 
                 if (mode == VISIBLE_KEYBOARD) {
-                    if (color != -1) kcprintf(color, "%c", currentCharacter);
-                    else kprintf("%c", currentCharacter);
+                    kprintf("%c", currentCharacter);
                 }
 
                 input[pos++] = currentCharacter;

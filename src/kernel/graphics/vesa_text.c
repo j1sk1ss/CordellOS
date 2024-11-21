@@ -1,8 +1,8 @@
 #include "../include/vesa_text.h"
 
 
-static int cursor_x = 0;
-static int cursor_y = 0;
+static int _cursor_x = 0;
+static int _cursor_y = 0;
 
 
 void VESA_scrollback(int lines) {
@@ -15,51 +15,41 @@ void VESA_scrollback(int lines) {
 
     Point fpoint = {
         .X = 0,
-        .Y = gfx_mode.y_resolution - lines
+        .Y = VESA_get_max32_y() - lines
     };
 
     Point spoint = {
-        .X = gfx_mode.x_resolution,
-        .Y = gfx_mode.y_resolution
+        .X = VESA_get_max32_x(),
+        .Y = VESA_get_max32_y()
     };
     
     GFX_fill_rect_solid(fpoint, spoint, BLACK);
 }
 
 void VESA_newline() {
-    cursor_x = 0;
-    if(cursor_y >= gfx_mode.y_resolution) {
+    _cursor_x = 0;
+    if (_cursor_y >= VESA_get_max32_y()) {
         VESA_scrollback(CHAR_Y);
-        cursor_y = gfx_mode.y_resolution - CHAR_Y;
+        _cursor_y = VESA_get_max32_y() - CHAR_Y;
     } 
-    else cursor_y += CHAR_Y;
+    else _cursor_y += CHAR_Y;
+}
+
+void VESA_putchr(uint8_t x, uint8_t y, char c) {
+    GFX_put_char(x * CHAR_X, y * CHAR_Y, c, WHITE, BLACK);
+}
+
+void VESA_cputchr(uint8_t x, uint8_t y, char c, uint32_t fcolor, uint32_t bcolor) {
+    GFX_put_char(x * CHAR_X, y * CHAR_Y, c, fcolor, bcolor);
 }
 
 void VESA_putc(char c) {
-    int _tabSize = 4;
-    if (cursor_x + CHAR_X >= gfx_mode.x_resolution) 
-        VESA_newline();
-
-    switch (c) {
-        case '\n':
-            VESA_newline();
-            break;
-
-        case '\t':
-            for (int i = 0; i < _tabSize - ((gfx_mode.x_resolution) / CHAR_X % _tabSize); i++)
-                VESA_putc(' ');
-            break;
-
-        default:
-            GFX_put_char(cursor_x, cursor_y, c, WHITE, BLACK);
-            cursor_x += CHAR_X;
-            break;
-    }
+    VESA_cputc(c, WHITE, BLACK);
 }
 
 void VESA_cputc(char c, uint32_t fcolor, uint32_t bcolor) {
     int _tabSize = 4;
-    if (cursor_x + CHAR_X >= gfx_mode.x_resolution) 
+    if (_cursor_x + CHAR_X >= VESA_get_max32_x()) 
         VESA_newline();
 
     switch (c) {
@@ -68,13 +58,13 @@ void VESA_cputc(char c, uint32_t fcolor, uint32_t bcolor) {
             break;
 
         case '\t':
-            for (int i = 0; i < _tabSize - ((gfx_mode.x_resolution) / CHAR_X % _tabSize); i++)
+            for (int i = 0; i < _tabSize - ((VESA_get_max32_x()) / CHAR_X % _tabSize); i++)
                 VESA_cputc(' ', fcolor, bcolor);
             break;
 
         default:
-            GFX_put_char(cursor_x, cursor_y, c, fcolor, bcolor);
-            cursor_x += CHAR_X;
+            GFX_put_char(_cursor_x, _cursor_y, c, fcolor, bcolor);
+            _cursor_x += CHAR_X;
             break;
     }
 }
@@ -92,59 +82,62 @@ void VESA_memset(uint8_t* dest, uint32_t rgb, uint32_t count) {
     }
 }
 
-void VESA_backspace() {
-    if(cursor_x > 0) {
-        cursor_x -= CHAR_X;
-        VESA_putc(' ');
-        cursor_x -= CHAR_X;
-    }
+void VESA_clrscr() {
+    VESA_fill(BLACK);
 }
 
-void VESA_clrscr() {
-    Point fpoint, spoint;
-    
-    fpoint.X = 0;
-    fpoint.Y = 0;
-    spoint.X = gfx_mode.x_resolution;
-    spoint.Y = gfx_mode.y_resolution;
-    
-    GFX_fill_rect_solid(fpoint, spoint, BLACK);
+void VESA_fill(uint32_t color) {
+    Point fpoint = {
+        .X = 0,
+        .Y = 0
+    };
 
-    cursor_x = 0;
-    cursor_y = 0;
+    Point spoint = {
+        .X = VESA_get_max32_x(),
+        .Y = VESA_get_max32_y()
+    };
+    
+    GFX_fill_rect_solid(fpoint, spoint, color);
+
+    _cursor_x = 0;
+    _cursor_y = 0;
 }
 
 void VESA_set_cursor(uint8_t x, uint8_t y) {
-    cursor_x = x * CHAR_X;
-    cursor_y = y * CHAR_Y;
+    if (x >= 0 && y >= 0) {
+        _cursor_x = x * CHAR_X;
+        _cursor_y = y * CHAR_Y;
+    }
 }
 
 void VESA_set_cursor32(uint32_t x, uint32_t y) {
-    cursor_x = x;
-    cursor_y = y;
+    if (x >= 0 && y >= 0) {
+        _cursor_x = x;
+        _cursor_y = y;
+    }
 }
 
 int VESA_get_cursor32_x() {
-    return cursor_x;
+    return _cursor_x;
 }
 
-int VESA_get_cursor_x() {
-    return cursor_x / CHAR_X;
+uint8_t VESA_get_cursor_x() {
+    return _cursor_x / CHAR_X;
 }
 
 int VESA_get_cursor32_y() {
-    return cursor_y;
+    return _cursor_y;
 }
 
-int VESA_get_cursor_y() {
-    return cursor_y / CHAR_Y;
+uint8_t VESA_get_cursor_y() {
+    return _cursor_y / CHAR_Y;
 }
 
 int VESA_get_max32_x() {
     return gfx_mode.x_resolution;
 }
 
-int VESA_get_max_x() {
+uint8_t VESA_get_max_x() {
     return gfx_mode.x_resolution / CHAR_X;
 }
 
@@ -152,6 +145,6 @@ int VESA_get_max32_y() {
     return gfx_mode.y_resolution;
 }
 
-int VESA_get_max_y() {
+uint8_t VESA_get_max_y() {
     return gfx_mode.y_resolution / CHAR_Y;
 }

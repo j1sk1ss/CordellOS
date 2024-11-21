@@ -38,7 +38,14 @@ void GFX_init(struct multiboot_info* mb_info) {
         }
     }
 
-    is_vesa = true;
+    KSTDIO_data.clrscr = VESA_clrscr;
+    KSTDIO_data.fill_color = VESA_fill;
+    KSTDIO_data.putc = VESA_putc;
+    KSTDIO_data.get_cursor_x = VESA_get_cursor_x;
+    KSTDIO_data.get_cursor_y = VESA_get_cursor_y;
+    KSTDIO_data.set_cursor = VESA_set_cursor;
+    KSTDIO_data.put_chr = VESA_putchr;
+    KSTDIO_data.get_char = GFX_get_char;
 }
 
 void GFX_draw_pixel(uint16_t X, uint16_t Y, uint32_t color) {
@@ -101,9 +108,7 @@ int GFX_get_char(int x, int y) {
     uint32_t* abs_row = (uint32_t*)(((unsigned char*)gfx_mode.physical_base_pointer) + (y * gfx_mode.pitch));
     abs_row += x;
 
-    uint32_t char_data[32];
-    memset(char_data, 0, sizeof(char_data));
-
+    uint32_t char_data[32] = { 0 };
     for (int row = 0; row < CHAR_Y * 8; row += 8) {
         memcpy(char_data + row, abs_row, 32);
         abs_row += step;

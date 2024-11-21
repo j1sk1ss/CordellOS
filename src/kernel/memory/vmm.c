@@ -255,7 +255,6 @@ void _copy_dir2dir(page_directory* src, page_directory* dest) {
 
 void _page_fault(struct Registers* regs) {
     kclrscr();
-    kset_color(BLUE);
 
 	uint32_t faulting_address = 0;
 	asm ("mov %%cr2, %0" : "=r" (faulting_address));
@@ -266,29 +265,29 @@ void _page_fault(struct Registers* regs) {
 	int reserved = regs->error & 0x8;		// When set, one or more page directory entries contain reserved bits which are set to 1. This only applies when the PSE or PAE flags in CR4 are set to 1.
 	int id		 = regs->error & 0x10;		// When set, the page fault was caused by an instruction fetch. This only applies when the No-Execute bit is supported and enabled.
 
-	kcprintf(BLUE, "\nWHOOOPS..\nPAGE FAULT! (\t");
+	kprintf("\nWHOOOPS..\nPAGE FAULT! (\t");
 
     //=======
     // PARAMS
 
-        if (present) kcprintf(BLUE, "NOT PRESENT\t");
-        else kcprintf(BLUE, "PAGE PROTECTION\t");
+        if (present) kprintf("NOT PRESENT\t");
+        else kprintf("PAGE PROTECTION\t");
         
-        if (rw) kcprintf(BLUE, "READONLY\t");
-        else kcprintf(BLUE, "WRITEONLY\t");
+        if (rw) kprintf("READONLY\t");
+        else kprintf("WRITEONLY\t");
 
-        if (us) kcprintf(BLUE, "USERMODE\t");
-        if (reserved) kcprintf(BLUE, "RESERVED\t");
-        if (id) kcprintf(BLUE, "INST FETCH\t");
+        if (us) kprintf("USERMODE\t");
+        if (reserved) kprintf("RESERVED\t");
+        if (id) kprintf("INST FETCH\t");
 
     //
     //=======
 
-	kcprintf(BLUE,") AT 0x%p\n", faulting_address);
-    kcprintf(BLUE,"CHECK YOUR CODE, BUDDY!\n");
-    kcprintf(BLUE,"\nSTACK TRACE:\n");
+	kprintf(") AT 0x%p\n", faulting_address);
+    kprintf("CHECK YOUR CODE, BUDDY!\n");
+    kprintf("\nSTACK TRACE:\n");
 
     i386_isr_interrupt_details(faulting_address, regs->ebp, regs->esp);
 
-	kernel_panic(BLUE, "\nPAGE FAULT");
+	kernel_panic("\nPAGE FAULT");
 }

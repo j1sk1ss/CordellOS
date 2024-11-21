@@ -22,14 +22,11 @@ void syscall(struct Registers* regs) {
         } 
         
         else if (regs->eax == SYS_COLOR_PUTC) {
-            char data      = (char)regs->ebx;
-            uint32_t color = (uint32_t)regs->ecx;
-            kcputc(data, color);
+            // TODO: cleanup
         } 
         
         else if (regs->eax == SYS_CLEAR) {
-            if (!is_vesa) VGA_clrscr();
-            else VESA_clrscr();
+            KSTDIO_data.clrscr();
         } 
         
         else if (regs->eax == SYS_SCREEN_COLOR) {
@@ -41,46 +38,31 @@ void syscall(struct Registers* regs) {
             char* result = (char*)regs->ecx;
             int x = (int)regs->ebx;
             int y = (int)regs->ecx;
-            if (!is_vesa) result[0] = VGA_getchr(x, y);
-            else result[0] = GFX_get_char(x, y);
+            result[0] = KSTDIO_data.get_char(x, y);
         } 
 
         else if (regs->eax == SYS_GET_CURSOR) {
             int* cursor_cords = (int*)regs->ecx;
+            cursor_cords[0] = KSTDIO_data.get_cursor_x();
+            cursor_cords[1] = KSTDIO_data.get_cursor_y();
 
-            if (!is_vesa) {
-                cursor_cords[0] = VGA_cursor_get_x();
-                cursor_cords[1] = VGA_cursor_get_y();
-            }
-            else {
-                cursor_cords[0] = VESA_get_cursor32_x();
-                cursor_cords[1] = VESA_get_cursor32_y();
-            }
         } 
         
         else if (regs->eax == SYS_SET_CURSOR) {
             int x = (int)regs->ebx;
             int y = (int)regs->ecx;
-            
-            if (!is_vesa) VGA_setcursor(x, y);
-            else VESA_set_cursor(x, y);
+            KSTDIO_data.set_cursor(x, y);
         } 
         
         else if (regs->eax == SYS_SET_CURSOR32) {
-            int x = (int)regs->ebx;
-            int y = (int)regs->ecx;
-            
-            if (!is_vesa) VGA_setcursor(x, y);
-            else VESA_set_cursor32(x, y);
+            // TODO: cleanup
         } 
 
         else if (regs->eax == SYS_SET_SCRCHAR) {
             int x = (int)regs->ebx;
             int y = (int)regs->ecx;
             char new_char = (char)regs->edx;
-
-            if (!is_vesa) VGA_putchr(x, y, new_char);
-            else GFX_put_char(x, y, new_char, WHITE, BLACK);
+            KSTDIO_data.put_chr(x, y, new_char);
         } 
         
         else if (regs->eax == SYS_SET_SCRCOLOR) {
@@ -225,7 +207,7 @@ void syscall(struct Registers* regs) {
 
             else if (regs->eax == SYS_KERN_PANIC) {
                 char* message = (char*)regs->ecx;
-                kernel_panic(BLUE, message);
+                kernel_panic(message);
             }
 
         //=======================
