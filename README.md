@@ -52,7 +52,7 @@ This container tested in MacOS 10.15, Windows 10 (On win10 can be problems with 
 |    8.1) Syscalls to std libs           |[&check;]|                                                               |
 |        8.1.0) Syscalls for content...  |[&check;]|                                                               |
 |        8.1.1) Syscalls for content...  |[&check;]|                                                               |
-|        8.1.2) Syscalls for kmallocp... |[&check;]|                                                               |
+|        8.1.2) Syscalls for _kmallocp... |[&check;]|                                                               |
 |    8.2) VBE userland                   |[ ]      |                                                               |
 |        8.2.0) VBE file manager         |[?]      |                                                               |
 |        8.2.1) VBE text editor          |[?]      |                                                               |

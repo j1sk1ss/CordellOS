@@ -3,7 +3,7 @@
 
 int ETH_send_packet(uint8_t* dst_mac_addr, uint8_t* data, int len, uint16_t protocol) {
     uint8_t src_mac_addr[6];
-    ethernet_frame_t* frame = (ethernet_frame_t*)kmalloc(sizeof(ethernet_frame_t) + len);
+    ethernet_frame_t* frame = (ethernet_frame_t*)_kmalloc(sizeof(ethernet_frame_t) + len);
     void* frame_data = (void*)frame + sizeof(ethernet_frame_t);
 
     get_mac_addr(src_mac_addr);
@@ -14,7 +14,7 @@ int ETH_send_packet(uint8_t* dst_mac_addr, uint8_t* data, int len, uint16_t prot
     frame->type = host2net16(protocol);
 
     rtl8139_send_packet(frame, sizeof(ethernet_frame_t) + len);
-    kfree(frame);
+    _kfree(frame);
 
     return len;
 }

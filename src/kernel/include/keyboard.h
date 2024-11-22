@@ -12,8 +12,8 @@
 #include "x86.h"
 #include "irq.h"
 #include "stdio.h"
-#include "vga_text.h"
-#include "vesa_text.h"
+#include "vga.h"
+#include "vesa.h"
 
 
 #define KBD_DATA_PORT           0x60

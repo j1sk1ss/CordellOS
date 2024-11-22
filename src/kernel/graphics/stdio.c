@@ -3,14 +3,14 @@
 
 static const char _HexChars[] = "0123456789ABCDEF";
 stdio_mode_t KSTDIO_data = {
-    .clrscr         = VGA_clrscr,
-    .fill_color     = VGA_set_color,
-    .putc           = VGA_putc,
-    .get_cursor_x   = VGA_cursor_get_x,
-    .get_cursor_y   = VGA_cursor_get_y,
-    .set_cursor     = VGA_setcursor,
-    .put_chr        = VGA_putchr,
-    .get_char       = VGA_getchr
+    .clrscr         = NULL,
+    .fill_color     = NULL,
+    .putc           = NULL,
+    .get_cursor_x   = NULL,
+    .get_cursor_y   = NULL,
+    .set_cursor     = NULL,
+    .put_chr        = NULL,
+    .get_char       = NULL
 };
 
 
@@ -35,14 +35,6 @@ void kprintf(const char* fmt, ...) {
 
 void kprint_buffer(const char* msg, const void* buffer, uint32_t count) {
     _kfprint_buffer(msg, buffer, count);
-}
-
-void kprint_hex_table(const char* data, size_t length) {
-    for (size_t i = 0; i < length; ++i) {
-        kprintf("%c%c ", '0' + ((unsigned char)*data >> 4), '0' + ((unsigned char)*data & 0x0F));
-        if ((i + 1) % 16 == 0 || i == length - 1) kprintf("\n");
-        data++;
-    }
 }
 
 void kset_color(int color) {

@@ -70,7 +70,7 @@ void i386_isr_interrupt_details(uint32_t eip, uint32_t ebp, uint32_t esp) {
 
 void i386_isr_stack_trace_line(uint32_t eip) {
   const char* symbol_name = ELF_lookup_function((uint32_t)((uint32_t*)eip));
-  kprintf(BLUE, "[0x%x] : %s\n", eip, symbol_name);
+  kprintf("[0x%x] : %s\n", eip, symbol_name);
 }
 
 void i386_isr_registerHandler(int interrupt, ISRHandler handler) {

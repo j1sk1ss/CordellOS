@@ -1,12 +1,13 @@
 #ifndef VESA_H_
 #define VESA_H_
 
-
-#include "gfx.h"
-#include "keyboard.h"
-
 #include <memory.h>
 
+#include "stdio.h"
+#include "gfx.h"
+
+
+void VESA_init();
 
 void VESA_clrscr();
 void VESA_fill(uint32_t color);

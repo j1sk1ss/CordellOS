@@ -29,7 +29,7 @@
 //	- Create first malloc block
 //===========================
 
-	int _mm_init(const uint32_t bytes, malloc_head_t* head) {
+	int __mm_init(size_t bytes, malloc_head_t* head) {
 		head->total_pages = bytes / PAGE_SIZE;
 		if (bytes % PAGE_SIZE > 0) head->total_pages++;
 
@@ -64,40 +64,60 @@
 //	- Merge free blocks for merging blocks in page
 //===========================
 
-	int kmallocp(uint32_t v_addr) {
-		return _kmallocp(v_addr, &kernel_malloc);
+	int ALC_mallocp(uint32_t v_addr, uint8_t type) {
+		if (type == KERNEL) return _kmallocp(v_addr);
+		else return _umallocp(v_addr);
 	}
 
-	int umallocp(uint32_t v_addr) {
-		return _kmallocp(v_addr, &user_malloc);
+	int _kmallocp(uint32_t v_addr) {
+		return __kmallocp(v_addr, &kernel_malloc);
+	}
+
+	int _umallocp(uint32_t v_addr) {
+		return __kmallocp(v_addr, &user_malloc);
+	}
+
+	void* ALC_malloc(size_t size, uint8_t type) {
+		if (type == KERNEL) return _kmalloc(size);
+		else return _umalloc(size);
 	}
 
 	// Memory allocation in kernel address space. Usermode will cause error
-	void* kmalloc(const uint32_t size) {
-		return _kmalloc(size, &kernel_malloc);
+	void* _kmalloc(size_t size) {
+		return __kmalloc(size, &kernel_malloc);
 	}
 
-	void* umalloc(const uint32_t size) {
-		return _kmalloc(size, &user_malloc);
+	void* _umalloc(size_t size) {
+		return __kmalloc(size, &user_malloc);
 	}
 
-	void* krealloc(void* ptr, size_t size) {
-		return _krealloc(ptr, size, &kernel_malloc);
+	void* ALC_realloc(void* ptr, size_t size, uint8_t type) {
+		if (type == KERNEL) return _krealloc(ptr, size);
+		else return _urealloc(ptr, size);
 	}
 
-	void* urealloc(void* ptr, size_t size) {
-		return _krealloc(ptr, size, &user_malloc);
+	void* _krealloc(void* ptr, size_t size) {
+		return __krealloc(ptr, size, &kernel_malloc);
 	}
 
-	int kfree(void* ptr) {
-		return _kfree(ptr, &kernel_malloc);
+	void* _urealloc(void* ptr, size_t size) {
+		return __krealloc(ptr, size, &user_malloc);
 	}
 
-	int ufree(void* ptr) {
-		return _kfree(ptr, &user_malloc);
+	int ALC_free(void* ptr, uint8_t type) {
+		if (type == KERNEL) return _kfree(ptr);
+		else return _ufree(ptr);
 	}
 
-	void kfreep(void* v_addr) {
+	int _kfree(void* ptr) {
+		return __kfree(ptr, &kernel_malloc);
+	}
+
+	int _ufree(void* ptr) {
+		return __kfree(ptr, &user_malloc);
+	}
+
+	void _kfreep(void* v_addr) {
 		pt_entry* page = VMM_get_page((virtual_address)v_addr);
 		if (PAGE_PHYS_ADDRESS(page) && TEST_ATTRIBUTE(page, PTE_PRESENT)) {
 			VMM_free_page(page);
@@ -106,7 +126,7 @@
 		}
 	}
 
-	int _kmallocp(uint32_t virt, malloc_head_t* head) {
+	int __kmallocp(uint32_t virt, malloc_head_t* head) {
 		pt_entry page = 0;
 		uint32_t* temp = VMM_allocate_page(&page);
 		head->map_page((void*)temp, (void*)virt);
@@ -114,29 +134,29 @@
 		return 1;
 	}
 
-	void* _krealloc(void* ptr, size_t size, malloc_head_t* head) {
+	void* __krealloc(void* ptr, size_t size, malloc_head_t* head) {
 		void* new_data = NULL;
 		if (size) {
-			if(!ptr) return _kmalloc(size, head);
-			new_data = _kmalloc(size, head);
+			if(!ptr) return __kmalloc(size, head);
+			new_data = __kmalloc(size, head);
 			if(new_data) {
 				memcpy(new_data, ptr, size);
-				_kfree(ptr, head);
+				__kfree(ptr, head);
 			}
 		}
 
 		return new_data;
 	}
 
-	void* _kmalloc(size_t size, malloc_head_t* head) {
+	void* __kmalloc(size_t size, malloc_head_t* head) {
 		if (size <= 0) return NULL;
-		if (head->list_head == NULL) _mm_init(size, head);
+		if (head->list_head == NULL) __mm_init(size, head);
 
 		//=============
 		// Find a block
 		//=============
 
-			_merge_free_blocks(head->list_head);
+			__merge_free_blocks(head->list_head);
 			malloc_block_t* cur = head->list_head;
 			while (cur->next != NULL) {
 				if (cur->free == true) {
@@ -154,7 +174,7 @@
 		//=============
 		
 			if (size == cur->size) cur->free = false;
-			else if (cur->size > size + sizeof(malloc_block_t)) _block_split(cur, size);
+			else if (cur->size > size + sizeof(malloc_block_t)) __block_split(cur, size);
 			else {
 				//=============
 				// Allocate new page
@@ -166,14 +186,14 @@
 
 					uint32_t virt = head->virt_address + head->total_pages * PAGE_SIZE; // TODO: new pages to new blocks. Don`t mix them to avoid pagedir errors in contswitch
 					for (uint8_t i = 0; i < num_pages; i++) {
-						_kmallocp(virt, head);
+						__kmallocp(virt, head);
 
 						virt += PAGE_SIZE;
 						cur->size += PAGE_SIZE;
 						head->total_pages++;
 					}
 
-					_block_split(cur, size);
+					__block_split(cur, size);
 
 				//=============
 				// Allocate new page
@@ -187,13 +207,13 @@
 		return (void*)cur + sizeof(malloc_block_t);
 	}
 
-	int _kfree(void* ptr, malloc_head_t* head) {
+	int __kfree(void* ptr, malloc_head_t* head) {
 		if (!ptr) return -1;
 		for (malloc_block_t* cur = head->list_head; cur->next; cur = cur->next) 
 			if ((void*)cur + sizeof(malloc_block_t) == ptr && cur->free == false) {
 				cur->free = true;
 				memset(ptr, 0, cur->size);
-				_merge_free_blocks(head->list_head);
+				__merge_free_blocks(head->list_head);
 
 				break;
 			}
@@ -203,7 +223,7 @@
 				uint32_t num_pages = cur->pcount;
 				for (uint32_t i = 0; i < num_pages; i++) {
 					uint32_t v_addr = cur->v_addr + i * PAGE_SIZE;
-					kfreep((void*)v_addr);
+					_kfreep((void*)v_addr);
 				}
 
 				// Mark the block as free and clear memory content
@@ -211,13 +231,13 @@
 				memset(ptr, 0, cur->size);
 
 				// Merge adjacent free blocks
-				_merge_free_blocks(head->list_head);
+				__merge_free_blocks(head->list_head);
 				break;
 			}
 		}
 	}
 
-	int _block_split(malloc_block_t* node, const uint32_t size) {
+	int __block_split(malloc_block_t* node, size_t size) {
 		malloc_block_t* new_node = (malloc_block_t*)((void*)node + size + sizeof(malloc_block_t));
 
 		new_node->size   = node->size - size - sizeof(malloc_block_t);
@@ -233,7 +253,7 @@
 		return 1;
 	}
 
-	int _merge_free_blocks(malloc_block_t* block) {
+	int __merge_free_blocks(malloc_block_t* block) {
 		malloc_block_t* cur = block;
 		while (cur != NULL && cur->next != NULL) {
 			if (cur->free == true && cur->next->free == true) {

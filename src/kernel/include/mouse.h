@@ -5,6 +5,7 @@
 #include "x86.h"
 #include "irq.h"
 #include "stdio.h"
+#include "gfx.h"
 
 
 #define MOUSE_IRQ   12

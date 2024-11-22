@@ -71,8 +71,8 @@ TaskManager taskManager = { // Task manager placed in kernel space
 		//=============================
 
 			// Allocate memory for new task body
-			Task* task     = (Task*)kmalloc(sizeof(Task));
-			task->cpuState = (struct Registers*)kmalloc(sizeof(struct Registers));
+			Task* task     = (Task*)_kmalloc(sizeof(Task));
+			task->cpuState = (struct Registers*)_kmalloc(sizeof(struct Registers));
 
 			//=============================
 			// Find new pid
@@ -99,8 +99,8 @@ TaskManager taskManager = { // Task manager placed in kernel space
 				}
 
 				if (task->pid == -1) {
-					kfree(task->cpuState);
-					kfree(task);
+					_kfree(task->cpuState);
+					_kfree(task);
 				}
 
 			//=============================
@@ -117,7 +117,7 @@ TaskManager taskManager = { // Task manager placed in kernel space
                 VMM_set_directory(task->page_directory);
 				
 				// Allocate page in pd, link it to v_addr
-				type == USER ? umallocp(0x00C00000) : kmallocp(0x00C00000);
+				type == USER ? _umallocp(0x00C00000) : _kmallocp(0x00C00000);
                 memset((void*)0x00C00000, 0, PAGE_SIZE);
                 
 				// Set stack pointer to allocated region
@@ -187,8 +187,8 @@ TaskManager taskManager = { // Task manager placed in kernel space
 		page_directory* task_pagedir = (page_directory*)VMM_virtual2physical(task->page_directory);
 		VMM_set_directory(kernel_page_directory);
 		_free_pdir(task_pagedir);
-		kfree(task->cpuState);
-		kfree(task);
+		_kfree(task->cpuState);
+		_kfree(task);
 	}
 
 	Task* get_task(int pid) {

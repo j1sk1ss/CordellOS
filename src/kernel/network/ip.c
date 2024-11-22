@@ -41,7 +41,7 @@ uint16_t IP_calculate_checksum(ip_packet_t* packet) {
 
 void IP_send_packet(uint8_t* dst_ip, void* data, int len, uint8_t protocol) {
     int arp_sent = 3;
-    ip_packet_t* packet = (ip_packet_t*)kmalloc(sizeof(ip_packet_t) + len);
+    ip_packet_t* packet = (ip_packet_t*)_kmalloc(sizeof(ip_packet_t) + len);
 
     packet->version              = IP_IPV4;
     packet->ihl                  = 5; // Internet Header Length
@@ -84,7 +84,7 @@ void IP_send_packet(uint8_t* dst_ip, void* data, int len, uint8_t protocol) {
 
     ETH_send_packet(dst_hardware_addr, (uint8_t*)packet, host2net16(packet->length), ETHERNET_TYPE_IP);
     if (NETWORK_DEBUG) kprintf("\nIP Packet Sent...(checksum: %x)", packet->header_checksum);
-    kfree(packet);
+    _kfree(packet);
 }
 
 

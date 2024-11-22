@@ -15,7 +15,7 @@ uint8_t TSD_array[4]  = { 0x10, 0x14, 0x18, 0x1C };
 
 
 struct ethernet_packet* pop_packet() {
-    struct ethernet_packet* packet = kmalloc(sizeof(ethernet_frame_t) + sizeof(int));
+    struct ethernet_packet* packet = _kmalloc(sizeof(ethernet_frame_t) + sizeof(int));
     packet->packet = ethernet_packets[current_ethernet_packet];
     packet->len = packet_meta[current_ethernet_packet--];
 
@@ -28,7 +28,7 @@ void receive_packet() {
     uint16_t packet_length = *(t + 1);
 
     t = t + 2;
-    void* packet = kmalloc(packet_length);
+    void* packet = _kmalloc(packet_length);
     memcpy(packet, t, packet_length);
 
     ETH_handle_packet((ethernet_frame_t*)packet, packet_length);
@@ -39,7 +39,7 @@ void receive_packet() {
     if (current_packet_ptr > RX_BUFFER_SIZE) current_packet_ptr -= RX_BUFFER_SIZE;
 
     i386_outw(rtl8139_device.io_base + CAPR, current_packet_ptr - 0x10);
-    kfree(packet);
+    _kfree(packet);
 }
 
 void rtl8139_handler(struct Registers* reg) {
@@ -55,7 +55,7 @@ void get_mac_addr(uint8_t* src_mac_addr) {
 }
 
 void rtl8139_send_packet(void* data, uint32_t len) {
-    void* transfer_data = kmalloc(len);
+    void* transfer_data = _kmalloc(len);
     void* phys_addr     = (void*)VMM_virtual2physical(transfer_data);
     memcpy(transfer_data, data, len);
 
@@ -63,7 +63,7 @@ void rtl8139_send_packet(void* data, uint32_t len) {
     i386_outl(rtl8139_device.io_base + TSD_array[rtl8139_device.tx_cur++], len);
     if (rtl8139_device.tx_cur > 3) rtl8139_device.tx_cur = 0;
 
-    kfree(transfer_data);
+    _kfree(transfer_data);
 }
 
 void i386_init_rtl8139() {

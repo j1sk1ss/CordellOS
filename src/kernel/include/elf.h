@@ -135,7 +135,7 @@ typedef struct ELF32_symbols_desctiptor {
 
 
 ELF32_program* ELF_read(const char* path, int type);
-void ELF_free_program(ELF32_program* program);
+void ELF_free_program(ELF32_program* program, uint8_t type);
 
 void ELF_kernel_trace();
 void ELF_build_symbols_from_multiboot(multiboot_elf_section_header_table_t mb);

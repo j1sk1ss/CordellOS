@@ -1,14 +1,11 @@
 #ifndef GFX_H_
 #define GFX_H_
 
-
 #include <stdint.h>
 #include <math.h>
 #include <font.h>
 
-#include "stdio.h"
 #include "x86.h"
-
 #include "../multiboot/multiboot.h"
 
 
@@ -130,6 +127,5 @@ int GFX_get_char(int x, int y);
 
 uint32_t GFX_convert_color(const uint32_t color);
 void GFX_buffer2buffer();
-
 
 #endif

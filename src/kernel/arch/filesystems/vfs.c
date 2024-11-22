@@ -6,7 +6,7 @@ vfs_node_t* current_vfs = NULL;
 
 
 void VFS_initialize(ata_dev_t* dev, uint32_t fs_type) {
-    vfs_list = kmalloc(sizeof(vfs_node_t));
+    vfs_list = _kmalloc(sizeof(vfs_node_t));
     vfs_list->fs_type = fs_type;
     vfs_list->device  = dev;
 
@@ -34,7 +34,7 @@ void VFS_initialize(ata_dev_t* dev, uint32_t fs_type) {
 }
 
 void VFS_add_node(ata_dev_t* dev, uint32_t fs_type) {
-    vfs_node_t* new_node = kmalloc(sizeof(vfs_node_t));
+    vfs_node_t* new_node = _kmalloc(sizeof(vfs_node_t));
     new_node->fs_type = fs_type;
     new_node->device  = dev;
 

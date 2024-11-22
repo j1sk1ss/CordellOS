@@ -22,10 +22,10 @@ void DHCP_discover() {
     memset(request_ip, 0x0, 4); // 0.0.0.0:68
     memset(dst_ip, 0xFF, 4);    // 255.255.255.255:67
 
-    dhcp_packet_t* packet = (dhcp_packet_t*)kmalloc(sizeof(dhcp_packet_t));
+    dhcp_packet_t* packet = (dhcp_packet_t*)_kmalloc(sizeof(dhcp_packet_t));
     DHCP_make_packet(packet, DHCPDISCOVER, request_ip);
     UDP_send_packet(dst_ip, 68, 67, packet, sizeof(dhcp_packet_t));
-    kfree(packet);
+    _kfree(packet);
 }
 
 // Send DHCP request for IP
@@ -33,10 +33,10 @@ void DHCP_request(uint8_t* request_ip) {
     uint8_t dst_ip[4];
     memset(dst_ip, 0xFF, 4);
 
-    dhcp_packet_t* packet = (dhcp_packet_t*)kmalloc(sizeof(dhcp_packet_t));
+    dhcp_packet_t* packet = (dhcp_packet_t*)_kmalloc(sizeof(dhcp_packet_t));
     DHCP_make_packet(packet, DHCPREQUEST, request_ip);
     UDP_send_packet(dst_ip, 68, 67, packet, sizeof(dhcp_packet_t));
-    kfree(packet);
+    _kfree(packet);
 }
 
 void DHCP_handle_packet(dhcp_packet_t* packet) {
@@ -55,7 +55,7 @@ void DHCP_handle_packet(dhcp_packet_t* packet) {
             ARP_lookup_add(mac, ip_addr);
         }
 
-        kfree(pointer);
+        _kfree(pointer);
     }
 }
 
@@ -66,7 +66,7 @@ void* DHCP_options(dhcp_packet_t* packet, uint8_t type) {
     while(curr_type != 0xFF) {
         uint8_t len = *(options + 1);
         if(curr_type == type) {
-            void* ret = kmalloc(len);
+            void* ret = _kmalloc(len);
             memcpy(ret, options + 2, len);
             return ret;
         }

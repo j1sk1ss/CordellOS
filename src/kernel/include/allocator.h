@@ -31,23 +31,31 @@ typedef struct malloc_head {
 } malloc_head_t;
 
 
-void* kmalloc(const uint32_t size);
-void* krealloc(void* ptr, size_t size);
-void* umalloc(const uint32_t size);
-void* urealloc(void* ptr, size_t size);
-int kmallocp(uint32_t v_addr);
-int umallocp(uint32_t v_addr);
-void kfreep(void* v_addr);
-int kfree(void* ptr);
-int ufree(void* ptr);
+void* ALC_malloc(size_t size, uint8_t type);
+void* _kmalloc(size_t size);
+void* _umalloc(size_t size);
 
-int _mm_init(const uint32_t bytes, malloc_head_t* head);
-void* _kmalloc(size_t size, malloc_head_t* head);
-int _kmallocp(uint32_t virt, malloc_head_t* head);
-void* _krealloc(void* ptr, size_t size, malloc_head_t* head);
-int _kfree(void* ptr, malloc_head_t* head);
-int _block_split(malloc_block_t *node, const uint32_t size);
-int _merge_free_blocks(malloc_block_t* block);
+void* ALC_realloc(void* ptr, size_t size, uint8_t type);
+void* _krealloc(void* ptr, size_t size);
+void* _urealloc(void* ptr, size_t size);
+
+int ALC_mallocp(uint32_t v_addr, uint8_t type);
+int _kmallocp(uint32_t v_addr);
+int _umallocp(uint32_t v_addr);
+
+int ALC_free(void* ptr, uint8_t type);
+int _kfree(void* ptr);
+int _ufree(void* ptr);
+
+void _kfreep(void* v_addr);
+
+int __mm_init(size_t bytes, malloc_head_t* head);
+void* __kmalloc(size_t size, malloc_head_t* head);
+int __kmallocp(uint32_t virt, malloc_head_t* head);
+void* __krealloc(void* ptr, size_t size, malloc_head_t* head);
+int __kfree(void* ptr, malloc_head_t* head);
+int __block_split(malloc_block_t *node, size_t size);
+int __merge_free_blocks(malloc_block_t* block);
 
 int kprint_kmalloc();
 int kprint_umalloc();

@@ -7,10 +7,6 @@
 #include <stddef.h>
 #include <string.h>
 
-#include "vga_text.h"
-#include "vesa_text.h"
-#include "gfx.h"
-
 
 #define PRINTF_STATE_NORMAL         0
 #define PRINTF_STATE_LENGTH         1
@@ -29,8 +25,8 @@ typedef struct stdio_mode {
     void* (*clrscr)();
     void* (*putc)(char c);
     void* (*fill_color)(uint32_t color);
-    int* (*get_cursor_x)();
-    int* (*get_cursor_y)();
+    uint8_t* (*get_cursor_x)();
+    uint8_t* (*get_cursor_y)();
     void* (*set_cursor)(uint8_t x, uint8_t y);
     void* (*put_chr)(uint8_t x, uint8_t y, char c);
     char* (*get_char)(uint8_t x, uint8_t y);
@@ -38,6 +34,7 @@ typedef struct stdio_mode {
 
 
 extern stdio_mode_t KSTDIO_data;
+
 
 void kclrscr();
 void kvfprintf(const char* fmt, va_list args);
@@ -56,6 +53,5 @@ void _kfprintf_signed(long long number, int radix);
 void _kfprint_buffer(const char* msg, const void* buffer, uint32_t count);
 
 void kset_color(int color);
-void kprint_hex_table(const char* data, size_t length);
 
 #endif

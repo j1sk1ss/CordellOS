@@ -65,8 +65,7 @@ typedef struct vga_data {
 } vga_data_t;
 
 
-extern vga_data_t VGA_data;
-
+void VGA_init(uint8_t* buffer);
 
 void VGA_clrscr();
 void VGA_scrollback(int lines);

@@ -1,9 +1,20 @@
-#include "../include/vesa_text.h"
+#include "../include/vesa.h"
 
 
 static int _cursor_x = 0;
 static int _cursor_y = 0;
 
+
+void VESA_init() {
+    KSTDIO_data.clrscr = VESA_clrscr;
+    KSTDIO_data.fill_color = VESA_fill;
+    KSTDIO_data.putc = VESA_putc;
+    KSTDIO_data.get_cursor_x = VESA_get_cursor_x;
+    KSTDIO_data.get_cursor_y = VESA_get_cursor_y;
+    KSTDIO_data.set_cursor = VESA_set_cursor;
+    KSTDIO_data.put_chr = VESA_putchr;
+    KSTDIO_data.get_char = GFX_get_char;
+}
 
 void VESA_scrollback(int lines) {
     uint32_t bytesPerLine = gfx_mode.x_resolution * (gfx_mode.bits_per_pixel / 8);

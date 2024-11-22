@@ -37,15 +37,6 @@ void GFX_init(struct multiboot_info* mb_info) {
             }
         }
     }
-
-    KSTDIO_data.clrscr = VESA_clrscr;
-    KSTDIO_data.fill_color = VESA_fill;
-    KSTDIO_data.putc = VESA_putc;
-    KSTDIO_data.get_cursor_x = VESA_get_cursor_x;
-    KSTDIO_data.get_cursor_y = VESA_get_cursor_y;
-    KSTDIO_data.set_cursor = VESA_set_cursor;
-    KSTDIO_data.put_chr = VESA_putchr;
-    KSTDIO_data.get_char = GFX_get_char;
 }
 
 void GFX_draw_pixel(uint16_t X, uint16_t Y, uint32_t color) {

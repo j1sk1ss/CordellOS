@@ -27,8 +27,8 @@
 #include "multiboot/multiboot.h"
 
 
-//#define USERMODE
-//#define DEBUG_MODE
+// #define USERMODE
+// #define DEBUG_MODE
 
 #define CONFIG_KSHELL   0
 #define CONFIG_MOUSE    1
@@ -78,7 +78,7 @@
 //      12) Syscalls to std libs                                  [V]
 //          12.0) Syscalls for content change                     [V]
 //          12.1) Syscalls for content delete                     [V]
-//          12.2) Syscalls for kmallocp and freep                 [V]
+//          12.2) Syscalls for _kmallocp and freep                 [V]
 //      13) VBE userland                                          [?]
 //          13.0) VBE file manager                                [?]
 //          13.1) VBE text editor                                 [?]
@@ -155,8 +155,13 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
             goto end;
         }
 
-        if (mb_info->vbe_mode != TEXT_MODE) GFX_init(mb_info);
-        else VGA_data.buffer = (uint8_t*)(uintptr_t)mb_info->framebuffer_addr;
+        if (mb_info->vbe_mode != TEXT_MODE) {
+            GFX_init(mb_info);
+            VESA_init();
+        }
+        else {
+            VGA_init((uint8_t*)(uintptr_t)mb_info->framebuffer_addr);
+        }
 
         ELF_build_symbols_from_multiboot(mb_info->u.elf_sec);
 
@@ -390,7 +395,7 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
             if (config[CONFIG_KSHELL] == CONFIG_ENABLED) START_PROCESS("shell", (uint32_t)shell, KERNEL, 10);
 #endif
 
-            kfree(config);
+            _kfree(config);
         } else START_PROCESS("shell", (uint32_t)shell, KERNEL, 10);
 
         TASK_start_tasking();

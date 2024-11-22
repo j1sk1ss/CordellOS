@@ -160,47 +160,47 @@ void syscall(struct Registers* regs) {
             else if (regs->eax == SYS_PAGE_FREE) {
                 void* ptr_to_free = (void*)regs->ebx;
                 if (ptr_to_free != NULL)
-                    kfreep(ptr_to_free);
+                    _kfreep(ptr_to_free);
             }
 
 #ifndef USERMODE
 
             else if (regs->eax == SYS_MALLOC) {
                 uint32_t size = regs->ebx;
-                void* allocated_memory = kmalloc(size);
+                void* allocated_memory = _kmalloc(size);
                 regs->eax = (uint32_t)allocated_memory;
             } 
             
             else if (regs->eax == SYS_PAGE_MALLOC) {
                 uint32_t address = regs->ebx;
-                kmallocp(address);
+                _kmallocp(address);
                 regs->eax = address;
             } 
 
             else if (regs->eax == SYS_FREE) {
                 void* ptr_to_free = (void*)regs->ebx;
                 if (ptr_to_free != NULL)
-                    kfree(ptr_to_free);
+                    _kfree(ptr_to_free);
             }
 
 #elif defined(USERMODE)
 
             else if (regs->eax == SYS_MALLOC) {
                 uint32_t size = regs->ebx;
-                void* allocated_memory = umalloc(size);
+                void* allocated_memory = _umalloc(size);
                 regs->eax = (uint32_t)allocated_memory;
             } 
             
             else if (regs->eax == SYS_PAGE_MALLOC) {
                 uint32_t address = regs->ebx;
-                umallocp(address);
+                _umallocp(address);
                 regs->eax = address;
             } 
 
             else if (regs->eax == SYS_FREE) {
                 void* ptr_to_free = (void*)regs->ebx;
                 if (ptr_to_free != NULL)
-                    ufree(ptr_to_free);
+                    _ufree(ptr_to_free);
             }
 
 #endif

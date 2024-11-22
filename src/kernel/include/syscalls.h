@@ -6,7 +6,8 @@
 
 #include "isr.h"
 #include "stdio.h"
-#include "vga_text.h"
+#include "vga.h"
+#include "vesa.h"
 #include "keyboard.h"
 #include "datetime.h"
 #include "vfs.h"
