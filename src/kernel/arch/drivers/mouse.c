@@ -63,8 +63,8 @@ void i386_mouse_handler(struct Registers* regs) {
 
             if(mouse_state.x < 0) mouse_state.x = 0;
             if(mouse_state.y < 0) mouse_state.y = 0;
-            if(mouse_state.x >= gfx_mode.x_resolution) mouse_state.x = gfx_mode.x_resolution;
-            if(mouse_state.y >= gfx_mode.y_resolution) mouse_state.y = gfx_mode.y_resolution;
+            if(mouse_state.x >= GFX_data.x_resolution) mouse_state.x = GFX_data.x_resolution;
+            if(mouse_state.y >= GFX_data.y_resolution) mouse_state.y = GFX_data.y_resolution;
         }
 
         status = i386_inb(MOUSE_STATUS);
@@ -81,19 +81,19 @@ void place() {
 
     if (screen_state.x == mouse_state.x && screen_state.y == mouse_state.y) return;
     if (screen_state.x != -1 && screen_state.y != -1) 
-        for (uint16_t i = screen_state.x; i < min(gfx_mode.x_resolution, screen_state.x + MOUSE_XSIZE); i++)
-            for (uint16_t j = screen_state.y; j < min(gfx_mode.y_resolution, screen_state.y + MOUSE_YSIZE); j++) 
-                GFX_vdraw_pixel(i, j, screen_state.buffer[(i - screen_state.x) * MOUSE_XSIZE + (j - screen_state.y)]);
+        for (uint16_t i = screen_state.x; i < min(GFX_data.x_resolution, screen_state.x + MOUSE_XSIZE); i++)
+            for (uint16_t j = screen_state.y; j < min(GFX_data.y_resolution, screen_state.y + MOUSE_YSIZE); j++) 
+                GFX_pdraw_pixel(i, j, screen_state.buffer[(i - screen_state.x) * MOUSE_XSIZE + (j - screen_state.y)]);
                 
     screen_state.x = mouse_state.x;
     screen_state.y = mouse_state.y;
     
-    for (uint16_t i = screen_state.x; i < min(gfx_mode.x_resolution, screen_state.x + MOUSE_XSIZE); i++)
-        for (uint16_t j = screen_state.y; j < min(gfx_mode.y_resolution, screen_state.y + MOUSE_YSIZE); j++) {
+    for (uint16_t i = screen_state.x; i < min(GFX_data.x_resolution, screen_state.x + MOUSE_XSIZE); i++)
+        for (uint16_t j = screen_state.y; j < min(GFX_data.y_resolution, screen_state.y + MOUSE_YSIZE); j++) {
             screen_state.buffer[(i - screen_state.x) * MOUSE_XSIZE + (j - screen_state.y)] = GFX_get_pixel(i, j);
 
             int32_t color = __cursor_bitmap__[(i - screen_state.x) * MOUSE_XSIZE + (j - screen_state.y)];
-            GFX_vdraw_pixel(i, j, color);
+            GFX_pdraw_pixel(i, j, color);
         }
 }
 

@@ -33,7 +33,7 @@
 		head->total_pages = bytes / PAGE_SIZE;
 		if (bytes % PAGE_SIZE > 0) head->total_pages++;
 
-		head->phys_address = (uint32_t)_allocate_blocks(head->total_pages);
+		head->phys_address = (uint32_t)PMM_allocate_blocks(head->total_pages);
 		head->list_head = (malloc_block_t*)head->virt_address;
 		assert(head->phys_address);
 

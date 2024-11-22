@@ -9,9 +9,6 @@
 #include "../multiboot/multiboot.h"
 
 
-#define CHAR_BODY	0x0000000F
-#define EMPTY_SPACE	0x000000F0
-
 #define BLACK       0x00000000 
 #define WHITE       0x00FFFFFF 
 #define DARK_GRAY   0x00222222
@@ -112,20 +109,16 @@ typedef struct point {
 } Point;
 
 
-extern vbe_mode_info_t gfx_mode;
+extern vbe_mode_info_t GFX_data;
 
 
 void GFX_init(struct multiboot_info* mb_info);
 
-void GFX_draw_pixel(uint16_t X, uint16_t Y, uint32_t color);
 void GFX_vdraw_pixel(uint16_t X, uint16_t Y, uint32_t color);
+void GFX_pdraw_pixel(uint16_t X, uint16_t Y, uint32_t color);
+void __draw_pixel(uint16_t x, uint16_t y, uint32_t color, uint32_t buffer);
 uint32_t GFX_get_pixel(uint16_t X, uint16_t Y);
-void GFX_fill_rect_solid(Point top_left, Point bottom_right, uint32_t color);
-
-void GFX_put_char(int x, int y, int c, uint32_t foreground, uint32_t background);
-int GFX_get_char(int x, int y);
 
 uint32_t GFX_convert_color(const uint32_t color);
-void GFX_buffer2buffer();
 
 #endif

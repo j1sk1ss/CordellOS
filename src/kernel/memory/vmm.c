@@ -7,7 +7,7 @@ page_directory* kernel_page_directory;
 
 bool VMM_init(uint32_t memory_start) {
     page_directory* dir = _mkpdir();
-    page_table* table3G = (page_table*)_allocate_blocks(1);
+    page_table* table3G = (page_table*)PMM_allocate_blocks(1);
     if (table3G == NULL) return false;
 
     memset(table3G, 0, sizeof(page_table));
@@ -25,7 +25,7 @@ bool VMM_init(uint32_t memory_start) {
     SET_ATTRIBUTE(entry, PDE_READ_WRITE);
     SET_FRAME(entry, (physical_address)table3G); 
 
-    page_table* table = (page_table*)_allocate_blocks(1);
+    page_table* table = (page_table*)PMM_allocate_blocks(1);
     memset(table, 0, sizeof(page_table));
     if (table == NULL) return false;
 
@@ -67,7 +67,7 @@ bool VMM_set_directory(page_directory* pd) {
 }
 
 void* VMM_allocate_page(pt_entry* page) {
-    void* block = _allocate_blocks(1);
+    void* block = PMM_allocate_blocks(1);
     if (block) {
         SET_FRAME(page, (physical_address)block);
         SET_ATTRIBUTE(page, PTE_PRESENT);
@@ -89,7 +89,7 @@ pt_entry* VMM_get_page(const virtual_address address) {
 
 void VMM_free_page(pt_entry* page) {
     void* address = (void*)PAGE_PHYS_ADDRESS(page);
-    if (address) _free_blocks((uint32_t*)address, 1);
+    if (address) PMM_free_blocks((uint32_t*)address, 1);
     CLEAR_ATTRIBUTE(page, PTE_PRESENT);
 }
 
@@ -98,7 +98,7 @@ bool VMM_kmap_page(void* phys_address, void* virt_address) {
     pd_entry* entry = &pd->entries[PD_INDEX((uint32_t)virt_address)];
 
     if ((*entry & PTE_PRESENT) != PTE_PRESENT) {
-        page_table* table = (page_table*)_allocate_blocks(1);
+        page_table* table = (page_table*)PMM_allocate_blocks(1);
         if (!table) return false;
 
         memset(table, 0, sizeof(page_table));
@@ -122,7 +122,7 @@ bool VMM_umap_page(void* phys_address, void* virt_address) {
     pd_entry* entry = &pd->entries[PD_INDEX((uint32_t)virt_address)];
 
     if ((*entry & PTE_PRESENT) != PTE_PRESENT) {
-        page_table* table = (page_table*)_allocate_blocks(1);
+        page_table* table = (page_table*)PMM_allocate_blocks(1);
         if (!table) return false;
 
         memset(table, 0, sizeof(page_table));
@@ -167,7 +167,7 @@ void _flush_tlb_entry(virtual_address address) {
 }
 
 page_directory* _mkpdir() {
-    page_directory* dir = (page_directory*)_allocate_blocks(3);
+    page_directory* dir = (page_directory*)PMM_allocate_blocks(3);
     if (dir == NULL) {
         kprintf("[%s %i] Failed to allocate memory for page directory\n",  __FILE__, __LINE__);
         return NULL;
@@ -182,10 +182,10 @@ page_directory* _mkpdir() {
 
 page_directory* _mkupdir() {
     page_directory* user_page_directory = _mkpdir();
-    page_table* user_table = (page_table*)_allocate_blocks(1);
+    page_table* user_table = (page_table*)PMM_allocate_blocks(1);
     if (user_table == NULL) {
         kprintf("[%s %i] Failed to allocate memory for user page table\n",  __FILE__, __LINE__);
-        _free_blocks((uint32_t*)user_page_directory, 3);
+        PMM_free_blocks((uint32_t*)user_page_directory, 3);
         return NULL;
     }
 
@@ -226,24 +226,24 @@ void _free_pdir(page_directory* pd) {
 
                 if (*page & PTE_PRESENT) {
                     void* phys_address = (void*)PAGE_PHYS_ADDRESS(page);
-                    _free_blocks((uint32_t*)phys_address, 1);
+                    PMM_free_blocks((uint32_t*)phys_address, 1);
                 }
             }
 
-            _free_blocks((uint32_t*)pt, 1);
+            PMM_free_blocks((uint32_t*)pt, 1);
         }
     }
 
-    _free_blocks((uint32_t*)pd, 3);
+    PMM_free_blocks((uint32_t*)pd, 3);
 }
 
 void _copy_dir2dir(page_directory* src, page_directory* dest) {
     if (!src || !dest) return;
     for (uint32_t i = 0; i < TABLES_PER_DIRECTORY; i++) {
         if (src->entries[i] & PDE_PRESENT) {
-            page_table* new_table = (page_table*)_allocate_blocks(1);
+            page_table* new_table = (page_table*)PMM_allocate_blocks(1);
             if (!new_table) {
-                _free_blocks((uint32_t*)dest, 3);
+                PMM_free_blocks((uint32_t*)dest, 3);
                 return;
             }
 

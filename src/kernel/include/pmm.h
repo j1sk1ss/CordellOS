@@ -23,14 +23,14 @@ typedef struct pmm_map {
 extern pmma_map_t PMM_map;
 
 
-void PMM_init(const uint32_t start_address, const uint32_t size);
-void PMM_deinitialize_memory_region(const uint32_t base_address, const uint32_t size);
-void PMM_initialize_memory_region(const uint32_t base_address, const uint32_t size);
+void PMM_init(const uint32_t start_address, size_t size);
+void PMM_deinitialize_memory_region(const uint32_t base_address, size_t size);
+void PMM_initialize_memory_region(const uint32_t base_address, size_t size);
+uint32_t* PMM_allocate_blocks(size_t num_blocks);
+void PMM_free_blocks(const uint32_t* address, size_t num_blocks);
 
 void _set_block(const uint32_t bit);
 void _unset_block(const uint32_t bit);
-int32_t _find_first_free_blocks(const uint32_t num_blocks);
-uint32_t* _allocate_blocks(const uint32_t num_blocks);
-void _free_blocks(const uint32_t* address, const uint32_t num_blocks);
+int32_t _find_first_free_blocks(size_t num_blocks);
 
 #endif

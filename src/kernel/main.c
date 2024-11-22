@@ -1,5 +1,3 @@
-#include <fslib.h>
-
 #include "include/hal.h"
 #include "include/vfs.h"
 #include "include/fat.h"
@@ -120,17 +118,17 @@
 void shell() {
 
 #ifdef USERMODE
-    uint32_t esp;
+    uint32_t esp = 0;
     asm("mov %%esp, %0" : "=r"(esp));
     TSS_set_stack(0x10, esp);
-    fexec(SHELL_PATH, 0, NULL);
+    current_vfs->objexec(SHELL_PATH, 0, NULL, USER);
 #else
     current_vfs->objexec(SHELL_PATH, 0, NULL, KERNEL);
 #endif
 
 }
 
-void idle() {
+void _idle() {
     _tick();
 }
 
@@ -276,15 +274,15 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
 
 #pragma region  [Video memory info & reserving]
 
-            uint32_t framebuffer_pages = gfx_mode.buffer_size / PAGE_SIZE;
+            uint32_t framebuffer_pages = GFX_data.buffer_size / PAGE_SIZE;
             if (framebuffer_pages % PAGE_SIZE > 0) framebuffer_pages++;
     
             // multiplication 2 for hardware
             framebuffer_pages *= 2;
-            for (uint32_t i = 0, fb_start = gfx_mode.physical_base_pointer; i < framebuffer_pages; i++, fb_start += PAGE_SIZE)
+            for (uint32_t i = 0, fb_start = GFX_data.physical_base_pointer; i < framebuffer_pages; i++, fb_start += PAGE_SIZE)
                 VMM_kmap_page((void*)fb_start, (void*)fb_start);
 
-            PMM_deinitialize_memory_region(gfx_mode.physical_base_pointer, framebuffer_pages * BLOCK_SIZE);
+            PMM_deinitialize_memory_region(GFX_data.physical_base_pointer, framebuffer_pages * BLOCK_SIZE);
 
 #pragma endregion
 
@@ -345,7 +343,7 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
 #pragma region [Preparations for user land]
 
         VARS_init(); // Init env vars manager
-        START_PROCESS("idle", (uint32_t)idle, KERNEL, 1);
+        START_PROCESS("_idle", (uint32_t)_idle, KERNEL, 1);
 
         if (current_vfs->objexist(CONFIG_PATH) == 1) {
             Content* boot_config = current_vfs->getobj(CONFIG_PATH);

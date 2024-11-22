@@ -3,6 +3,7 @@
 
 static int _cursor_x = 0;
 static int _cursor_y = 0;
+static uint32_t _chars[CHARCOUNT * CHARLEN];
 
 
 void VESA_init() {
@@ -13,28 +14,30 @@ void VESA_init() {
     KSTDIO_data.get_cursor_y = VESA_get_cursor_y;
     KSTDIO_data.set_cursor = VESA_set_cursor;
     KSTDIO_data.put_chr = VESA_putchr;
-    KSTDIO_data.get_char = GFX_get_char;
+    KSTDIO_data.get_char = __vmem_getc;
+
+    for (uint8_t c = ' '; c < '~'; c++) {
+        uint16_t offset = (c - 31) * 16 ;
+        for (int row = 0; row < CHAR_Y; row++) {
+            uint8_t mask = 1 << 7;
+            uint32_t* abs_row = _chars + CHAROFF(c) + (row * 8);
+            for (int i = 0; i < 8; i++) {
+                if (font.Bitmap[offset + row] & mask) abs_row[i] = CHAR_BODY;
+                else abs_row[i] = EMPTY_SPACE;
+                mask = (mask >> 1);
+            }
+        }
+    }
 }
 
 void VESA_scrollback(int lines) {
-    uint32_t bytesPerLine = gfx_mode.x_resolution * (gfx_mode.bits_per_pixel / 8);
-    uint32_t screenSize   = gfx_mode.y_resolution * bytesPerLine;
+    uint32_t bytesPerLine = GFX_data.x_resolution * (GFX_data.bits_per_pixel / 8);
+    uint32_t screenSize   = GFX_data.y_resolution * bytesPerLine;
     uint32_t scrollBytes  = lines * bytesPerLine;
-    uint8_t* screenBuffer = (uint8_t*)gfx_mode.physical_base_pointer;
+    uint8_t* screenBuffer = (uint8_t*)GFX_data.physical_base_pointer;
 
     memmove(screenBuffer, screenBuffer + scrollBytes, screenSize - scrollBytes);
-
-    Point fpoint = {
-        .X = 0,
-        .Y = VESA_get_max32_y() - lines
-    };
-
-    Point spoint = {
-        .X = VESA_get_max32_x(),
-        .Y = VESA_get_max32_y()
-    };
-    
-    GFX_fill_rect_solid(fpoint, spoint, BLACK);
+    __vmem_fill(BLACK, 0, VESA_get_max32_y() - lines, VESA_get_max32_x(), VESA_get_max32_y());
 }
 
 void VESA_newline() {
@@ -47,11 +50,11 @@ void VESA_newline() {
 }
 
 void VESA_putchr(uint8_t x, uint8_t y, char c) {
-    GFX_put_char(x * CHAR_X, y * CHAR_Y, c, WHITE, BLACK);
+    __vmem_putc(x * CHAR_X, y * CHAR_Y, c, WHITE, BLACK);
 }
 
 void VESA_cputchr(uint8_t x, uint8_t y, char c, uint32_t fcolor, uint32_t bcolor) {
-    GFX_put_char(x * CHAR_X, y * CHAR_Y, c, fcolor, bcolor);
+    __vmem_putc(x * CHAR_X, y * CHAR_Y, c, fcolor, bcolor);
 }
 
 void VESA_putc(char c) {
@@ -74,7 +77,7 @@ void VESA_cputc(char c, uint32_t fcolor, uint32_t bcolor) {
             break;
 
         default:
-            GFX_put_char(_cursor_x, _cursor_y, c, fcolor, bcolor);
+            __vmem_putc(_cursor_x, _cursor_y, c, fcolor, bcolor);
             _cursor_x += CHAR_X;
             break;
     }
@@ -98,20 +101,15 @@ void VESA_clrscr() {
 }
 
 void VESA_fill(uint32_t color) {
-    Point fpoint = {
-        .X = 0,
-        .Y = 0
-    };
-
-    Point spoint = {
-        .X = VESA_get_max32_x(),
-        .Y = VESA_get_max32_y()
-    };
-    
-    GFX_fill_rect_solid(fpoint, spoint, color);
-
+    __vmem_fill(BLACK, 0, 0, VESA_get_max32_x(), VESA_get_max32_y());
     _cursor_x = 0;
     _cursor_y = 0;
+}
+
+void __vmem_fill(uint32_t color, uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
+    for (uint16_t x = a; x < c; x++)
+        for (uint16_t y = b; y < d; y++)
+            GFX_pdraw_pixel(x, y, color);
 }
 
 void VESA_set_cursor(uint8_t x, uint8_t y) {
@@ -145,17 +143,50 @@ uint8_t VESA_get_cursor_y() {
 }
 
 int VESA_get_max32_x() {
-    return gfx_mode.x_resolution;
+    return GFX_data.x_resolution;
 }
 
 uint8_t VESA_get_max_x() {
-    return gfx_mode.x_resolution / CHAR_X;
+    return GFX_data.x_resolution / CHAR_X;
 }
 
 int VESA_get_max32_y() {
-    return gfx_mode.y_resolution;
+    return GFX_data.y_resolution;
 }
 
 uint8_t VESA_get_max_y() {
-    return gfx_mode.y_resolution / CHAR_Y;
+    return GFX_data.y_resolution / CHAR_Y;
+}
+
+void __vmem_putc(int x, int y, char c, uint32_t foreground, uint32_t background) {
+    uint32_t step = GFX_data.pitch / 4;
+    uint32_t* chardat = _chars + CHAROFF(c);
+    uint32_t* abs_row = (uint32_t*)(((unsigned char*)GFX_data.physical_base_pointer) + (y * GFX_data.pitch));
+    abs_row += x;
+
+    for (int row = 0; row < CHAR_Y * 8; row += 8) {
+        for (int i = 0; i < 8; i++) {
+            uint32_t pixel_color = (chardat[row + i] == CHAR_BODY) ? foreground : background;
+            abs_row[i] = pixel_color;
+        }
+        abs_row += step;
+    }
+}
+
+char __vmem_getc(int x, int y) {
+    uint32_t step = GFX_data.pitch / 4;
+    uint32_t* abs_row = (uint32_t*)(((unsigned char*)GFX_data.physical_base_pointer) + (y * GFX_data.pitch));
+    abs_row += x;
+
+    uint32_t char_data[32] = { 0 };
+    for (int row = 0; row < CHAR_Y * 8; row += 8) {
+        memcpy(char_data + row, abs_row, 32);
+        abs_row += step;
+    }
+
+    char character = 0;
+    for (int i = 0; i < CHAR_Y * 8; i++) 
+        character |= (char_data[i] & 0x01) << i;
+
+    return character;
 }

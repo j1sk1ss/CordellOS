@@ -380,14 +380,14 @@ void syscall(struct Registers* regs) {
             uint16_t x      = (uint16_t)regs->ebx;
             uint16_t y      = (uint16_t)regs->ecx;
             uint32_t pixel  = (uint32_t)regs->edx;
-            GFX_draw_pixel(x, y, pixel);
+            GFX_vdraw_pixel(x, y, pixel);
         } 
         
         else if (regs->eax == SYS_VPUT_PIXEL) {
             uint16_t x      = (uint16_t)regs->ebx;
             uint16_t y      = (uint16_t)regs->ecx;
             uint32_t pixel  = (uint32_t)regs->edx;
-            GFX_vdraw_pixel(x, y, pixel);
+            GFX_pdraw_pixel(x, y, pixel);
         } 
 
         else if (regs->eax == SYS_GET_PIXEL) {
@@ -398,17 +398,17 @@ void syscall(struct Registers* regs) {
         } 
 
         else if (regs->eax == SYS_FBUFFER_SWIPE) {
-            GFX_buffer2buffer();
+            // TODO: Cleanup
         }
 
         else if (regs->eax == SYS_GET_RESOLUTION_X) {
             int* resolution = (int*)regs->edx;
-            resolution[0] = gfx_mode.x_resolution;
+            resolution[0] = GFX_data.x_resolution;
         }
 
         else if (regs->eax == SYS_GET_RESOLUTION_Y) {
             int* resolution = (int*)regs->edx;
-            resolution[0] = gfx_mode.y_resolution;
+            resolution[0] = GFX_data.y_resolution;
         }
 
     //=======================
