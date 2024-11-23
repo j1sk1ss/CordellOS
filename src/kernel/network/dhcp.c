@@ -3,15 +3,16 @@
 #include "../include/dhcp.h"
 
 
-uint8_t ip_addr[4] = { 0x00 };
-int is_ip_allocated = 0;
+dhcp_data_t DHCP_data = {
+    .ip_addr = { 0x00 },
+    .allocated = 0
+};
 
 
 // Get IP of This machine 
 int DHCP_get_host_addr(uint8_t* addr) {
-    memcpy(addr, ip_addr, 4);
-    if (is_ip_allocated == 0) return 0;
-    else return 1;
+    memcpy(addr, DHCP_data.ip_addr, 4);
+    return DHCP_data.allocated;
 }
 
 // Find DHCP server in LNET
@@ -47,12 +48,12 @@ void DHCP_handle_packet(dhcp_packet_t* packet) {
 
         if (*type == 2) DHCP_request((uint8_t*)&packet->your_ip);
         else if (*type == 5) {
-            memcpy(ip_addr, &packet->your_ip, 4);
-            is_ip_allocated = 1;
+            memcpy(DHCP_data.ip_addr, &packet->your_ip, 4);
+            DHCP_data.allocated = 1;
 
             uint8_t mac[6];
             get_mac_addr(mac);
-            ARP_lookup_add(mac, ip_addr);
+            ARP_lookup_add(mac, DHCP_data.ip_addr);
         }
 
         _kfree(pointer);

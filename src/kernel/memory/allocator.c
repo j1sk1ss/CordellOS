@@ -128,7 +128,7 @@
 
 	int __kmallocp(uint32_t virt, malloc_head_t* head) {
 		pt_entry page = 0;
-		uint32_t* temp = VMM_allocate_page(&page);
+		uint32_t* temp = _create_page(&page);
 		head->map_page((void*)temp, (void*)virt);
 		SET_ATTRIBUTE(&page, PTE_READ_WRITE);
 		return 1;

@@ -26,7 +26,7 @@
 
 
 // #define USERMODE
-// #define DEBUG_MODE
+#define DEBUG_MODE
 
 #define CONFIG_KSHELL   0
 #define CONFIG_MOUSE    1
@@ -43,6 +43,7 @@
 
 #ifdef DEBUG_MODE
     #define NO_MEM_CHECK
+    #define FAST_MEM_CHECK
 #endif
 
 
@@ -71,7 +72,7 @@
 //      9) Std lib for graphics                                   [V]       12.3) RLT8139 driver                                     | |
 //          8.0.0) Objects                                        [V]   13) Windows                                                  | |
 //          8.0.1) Click event                                    [V]   14) Enviroment variables                                     | |
-//      10) Mouse to int                                          [V]   15) Hash crypto libs (shell login with pass&login hashing)   | |
+//      10) Mouse to int                                          [V]   15) Hash crypto libs (_shell login with pass&login hashing)   | |
 //      11) Loading BMP without malloc for fdata                  [V]   16) Speaker driver                                           | |
 //      12) Syscalls to std libs                                  [V]
 //          12.0) Syscalls for content change                     [V]
@@ -115,7 +116,7 @@
 
 #pragma region [Default tasks]
 
-void shell() {
+void _shell() {
 
 #ifdef USERMODE
     uint32_t esp = 0;
@@ -388,13 +389,13 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
             if (config[CONFIG_MOUSE] == CONFIG_ENABLED) show_mouse = 1;
 
 #ifdef USERMODE
-            if (config[CONFIG_KSHELL] == CONFIG_ENABLED) START_PROCESS("shell", (uint32_t)shell, USER, 10);
+            if (config[CONFIG_KSHELL] == CONFIG_ENABLED) START_PROCESS("_shell", (uint32_t)_shell, USER, 10);
 #else
-            if (config[CONFIG_KSHELL] == CONFIG_ENABLED) START_PROCESS("shell", (uint32_t)shell, KERNEL, 10);
+            if (config[CONFIG_KSHELL] == CONFIG_ENABLED) START_PROCESS("_shell", (uint32_t)_shell, KERNEL, 10);
 #endif
 
             _kfree(config);
-        } else START_PROCESS("shell", (uint32_t)shell, KERNEL, 10);
+        } else START_PROCESS("_shell", (uint32_t)_shell, KERNEL, 10);
 
         TASK_start_tasking();
     

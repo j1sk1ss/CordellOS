@@ -49,8 +49,13 @@ typedef struct dhcp_packet {
     uint8_t options[64];
 } __attribute__ ((packed)) dhcp_packet_t;
 
+typedef struct dhcp_data {
+    uint8_t ip_addr[4];
+    int allocated;
+} dhcp_data_t;
 
-extern int is_ip_allocated;
+
+extern dhcp_data_t DHCP_data;
 
 
 int DHCP_get_host_addr(uint8_t* addr);

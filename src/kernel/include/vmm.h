@@ -85,7 +85,6 @@ extern page_directory* kernel_page_directory;
 
 bool VMM_init(uint32_t kernell_address);
 bool VMM_set_directory(page_directory* pd);
-void* VMM_allocate_page(pt_entry* page);
 pt_entry* VMM_get_page(const virtual_address address);
 void VMM_free_page(pt_entry* page);
 bool VMM_kmap_page(void* phys_address, void* virt_address);
@@ -95,6 +94,9 @@ physical_address VMM_virtual2physical(void* virt_address);
 
 page_directory* _mkpdir();
 page_directory* _mkupdir();
+page_table* _mkptable(uint32_t p_addr, uint8_t type);
+void* _create_page(pt_entry* page);
+bool _map_page(void* p_addr, void* v_addr, uint8_t type);
 void _free_pdir(page_directory* pd);
 void _flush_tlb_entry(virtual_address address);
 void _copy_dir2dir(page_directory* src, page_directory* dest);

@@ -12,7 +12,7 @@ void IP_get_ip_str(uint8_t* ip) {
 void IP_set(uint8_t* ip) {
     memcpy(my_ip, ip, 4);
 
-    uint8_t mac[6];
+    uint8_t mac[6] = { 0x00 };
     get_mac_addr(mac);
 
     ARP_lookup_add(mac, my_ip); // TODO: delete old ARP data
@@ -41,7 +41,7 @@ uint16_t IP_calculate_checksum(ip_packet_t* packet) {
 
 void IP_send_packet(uint8_t* dst_ip, void* data, int len, uint8_t protocol) {
     int arp_sent = 3;
-    ip_packet_t* packet = (ip_packet_t*)_kmalloc(sizeof(ip_packet_t) + len);
+    ip_packet_t* packet = (ip_packet_t*)ALC_malloc(sizeof(ip_packet_t) + len, KERNEL);
 
     packet->version              = IP_IPV4;
     packet->ihl                  = 5; // Internet Header Length
@@ -84,7 +84,7 @@ void IP_send_packet(uint8_t* dst_ip, void* data, int len, uint8_t protocol) {
 
     ETH_send_packet(dst_hardware_addr, (uint8_t*)packet, host2net16(packet->length), ETHERNET_TYPE_IP);
     if (NETWORK_DEBUG) kprintf("\nIP Packet Sent...(checksum: %x)", packet->header_checksum);
-    _kfree(packet);
+    ALC_free(packet, KERNEL);
 }
 
 
