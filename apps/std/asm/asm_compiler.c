@@ -1,14 +1,14 @@
 #include "asm_compiler.h"
 
 
-int intermediate_index = 0;
-inlang** intermediate_table = NULL;
+static int intermediate_index = 0;
+static inlang** intermediate_table = NULL;
 
-int symbol_index = 0;
-symtable** symbol_tab = NULL;
+static int symbol_index = 0;
+static symtable** symbol_tab = NULL;
 
-int blocks_index = 0;
-blctable** block_tab = NULL;
+static int blocks_index = 0;
+static blctable** block_tab = NULL;
 
 
 int main(int args, char* argv[]) {
@@ -22,20 +22,15 @@ int main(int args, char* argv[]) {
 	blocks_index       = 0;
 
 	int stack[STACK_SIZE], top = -1;
-	int memory_array[MEMORY_SIZE];
+	int memory_array[MEMORY_SIZE] = { 0 };
 	int memory_index = VARIABLE_MEMORY_START - 1 ;  // 0 to 7 are already reserved
 
 	symbol_tab = (symtable**)malloc(sizeof(symtable*) * 25);
-	for (int i = 0; i < 25; i++)
-		symbol_tab[i] = (symtable*)malloc(sizeof(symtable));
-
-	intermediate_table = (inlang**)malloc(sizeof(inlang*)*50);
-	for (int i = 0; i < 50; i++)
-		intermediate_table[i] = (inlang*)malloc(sizeof(inlang));
-
+	intermediate_table = (inlang**)malloc(sizeof(inlang*) * 50);
 	block_tab = (blctable**)malloc(sizeof(blctable*) * 50);
-	for (int i = 0; i < 50; i++)
-		block_tab[i] = (blctable*)malloc(sizeof(blctable));
+	for (int i = 0; i < 25; i++) symbol_tab[i] = (symtable*)malloc(sizeof(symtable));
+	for (int i = 0; i < 50; i++) intermediate_table[i] = (inlang*)malloc(sizeof(inlang));
+	for (int i = 0; i < 50; i++) block_tab[i] = (blctable*)malloc(sizeof(blctable));
 
     // Determine the number of lines (count the newline characters)
     int num_lines = 0;
@@ -64,11 +59,10 @@ int main(int args, char* argv[]) {
     }
 
 	char tokens[10][10];
-	char *buffer = (char*)malloc(10 * sizeof(char));
-
+	char* buffer = (char*)malloc(10 * sizeof(char));
 	int index = 0;
 
-	// before start //
+	// before start we save variable list //
 	while (1) {
 		if (strcmp(lines[index], "start-\n\0") == 0) 
 			break;
@@ -90,15 +84,9 @@ int main(int args, char* argv[]) {
 		}
 
 		// generating tokens //
-		if (strcmp(tokens[0], "data") == 0)
-			data_func(tokens, memory_array, &memory_index);
-		else if (strcmp(tokens[0], "const") == 0)
-			const_func(tokens, memory_array, &memory_index);
-
-		index++;
-
-		if (index > 11)
-			return -1;
+		if (strcmp(tokens[0], "data") == 0) _data_func(tokens, memory_array, &memory_index);
+		else if (strcmp(tokens[0], "const") == 0) _const_func(tokens, memory_array, &memory_index);
+		if (++index > 11) return -1;
 	}
 	// before start //
 
@@ -127,43 +115,43 @@ int main(int args, char* argv[]) {
 		while (lines[index][i] != '\0' && j < sizeof(param) - 1 && lines[index][i] != '\n') param[j++] = lines[index][i++];
 		param[j] = '\0';
 		
-		opcode = generate_operation_code(instruction);
+		opcode = _generate_operation_code(instruction);
 		switch (opcode) {
 		    case MOV_INSTRUCTION: 
-				mov_func(param, instruction_number);
+				_mov_func(param, instruction_number);
 			break;
 
 			case ADD_INSTRUCTION:
-				bianryOperations_func(opcode, param, instruction_number);
+				_bianryOperations_func(opcode, param, instruction_number);
 			break;
 
 			case SUB_INSTRUCTION:
-				bianryOperations_func(opcode, param, instruction_number);
+				_bianryOperations_func(opcode, param, instruction_number);
 			break;
 
 			case MUL_INSTRUCTION:
-				bianryOperations_func(opcode, param, instruction_number);
+				_bianryOperations_func(opcode, param, instruction_number);
 			break;
 
 			case JMP_INSTRUCTION: 
-				if (strcmp(instruction, "else") == 0) else_func(instruction_number, stack, &top);
-				else jump_func(param, instruction_number);
+				if (strcmp(instruction, "else") == 0) _else_func(instruction_number, stack, &top);
+				else _jump_func(param, instruction_number);
 			break;
 
 			case IF_INSTRUCTION:
-				if_func(param, instruction_number, stack, &top);
+				_if_func(param, instruction_number, stack, &top);
 			break;
 
 			case PRINT_INSTRUCTION:
-				print_func(param, instruction_number);
+				_print_func(param, instruction_number);
 			break;
 
 			case READ_INSTRUCTION:
-				read_func(param, instruction_number);
+				_read_func(param, instruction_number);
 			break;
 
 			case EIF_INSTRUCTION:
-				endif_func(instruction_number, stack, &top);
+				_endif_func(instruction_number, stack, &top);
 				instruction_number--;
 			break;
 
@@ -171,49 +159,49 @@ int main(int args, char* argv[]) {
 				goto ending;
 
 			case PRINTS_INSTRUCTION:
-				prints_func(param, instruction_number);
+				_prints_func(param, instruction_number);
 			break;
 
 			case MKFILE_INSTRUCTION:
-				mkfile_func(param, instruction_number);
+				_mkfile_func(param, instruction_number);
 			break;
 
 			case RMFILE_INSTRUCTION:
-				rmfile_func(param, instruction_number);
+				_rmfile_func(param, instruction_number);
 			break;
 
 			case WFILE_INSTRUCTION:
-				wfile_func(param, instruction_number);
+				_wfile_func(param, instruction_number);
 			break;
 
 			case RFILE_INSTRUCTION:
-				rfile_func(param, instruction_number);
+				_rfile_func(param, instruction_number);
 			break;
 
 			case FOR_INSTRUCTION:
-				for_func(param, instruction_number, stack, &top);
+				_for_func(param, instruction_number, stack, &top);
 			break;
 
 			case EFOR_INSTRUCTION:
-				endfor_func(instruction_number, stack, &top);
+				_endfor_func(instruction_number, stack, &top);
 				instruction_number--;
 			break;
 
 			case WHILE_INSTRUCTION:
-				while_func(param, instruction_number, stack, &top);
+				_while_func(param, instruction_number, stack, &top);
 			break;
 
 			case EWHILE_INSTRUCTION:
-				endwhile_func(instruction_number, stack, &top);
+				_endwhile_func(instruction_number, stack, &top);
 				instruction_number--;
 			break;
 
 			case PRINTL_INSTRUCTION:
-				printl_func(param, instruction_number);
+				_printl_func(param, instruction_number);
 			break;
 
 			case CLEAR_INSTRUCTION:
-				clear_func(instruction_number);
+				_clear_func(instruction_number);
 			break;
 		}
 
@@ -221,7 +209,7 @@ int main(int args, char* argv[]) {
 	}
 ending: 
 
-	asm_executor(memory_array, memory_index, 0, intermediate_index);
+	_asm_executor(memory_array, memory_index, 0, intermediate_index);
 	
 	for (int i = 0; i < 25; i++) free(symbol_tab[i]);
 	for (int i = 0; i < 50; i++) free(intermediate_table[i]);
@@ -235,7 +223,7 @@ ending:
 	return 0;
 }
 
-void const_func(char(*tokens)[10], int *memory, int *memory_index) {
+void _const_func(char(*tokens)[10], int *memory, int *memory_index) {
 	if (symbol_index == 0){
 		symbol_tab[symbol_index]->address = VARIABLE_MEMORY_START;
 		strcpy(symbol_tab[symbol_index]->variable_name, tokens[1]);
@@ -253,7 +241,7 @@ void const_func(char(*tokens)[10], int *memory, int *memory_index) {
 	(*memory_index)++;
 }
 
-void data_func(char (*tokens)[10], int *memory, int *memory_index) {
+void _data_func(char (*tokens)[10], int *memory, int *memory_index) {
 	int i = 0, size = 0;
 	char variable_name[VARIABLE_LENGTH];
     
@@ -311,46 +299,39 @@ void data_func(char (*tokens)[10], int *memory, int *memory_index) {
 	}
 }
 
-int generate_operation_code(char *instruction) {
+int _generate_operation_code(char *instruction) {
 	if (strcmp(instruction, "mov") == 0) 										return MOV_INSTRUCTION;
-
 	if (strcmp(instruction, "add") == 0) 										return ADD_INSTRUCTION;
 	if (strcmp(instruction, "sub") == 0) 										return SUB_INSTRUCTION;
 	if (strcmp(instruction, "mul") == 0) 										return MUL_INSTRUCTION;
-
 	if (strcmp(instruction, "jump") == 0 || strcmp(instruction, "else") == 0) 	return JMP_INSTRUCTION;
 	if (strcmp(instruction, "if") == 0) 										return IF_INSTRUCTION;
 	if (strcmp(instruction, "endif") == 0) 										return EIF_INSTRUCTION;
-
 	if (strcmp(instruction, "eq") == 0) 										return EQ_INSTRUCTION;
 	if (strcmp(instruction, "lt") == 0) 										return LT_INSTRUCTION;
 	if (strcmp(instruction, "gt") == 0) 										return GT_INSTRUCTION;
 	if (strcmp(instruction, "lteq") == 0) 										return LTEQ_INSTRUCTION;
 	if (strcmp(instruction, "gteq") == 0) 										return GTEQ_INSTRUCTION;
 	if (strcmp(instruction, "neq") == 0)										return NEQ_INSTRUCTION;
-
 	if (strcmp(instruction, "clear") == 0)										return CLEAR_INSTRUCTION;
 	if (strcmp(instruction, "prints") == 0) 									return PRINTS_INSTRUCTION;
 	if (strcmp(instruction, "print") == 0) 										return PRINT_INSTRUCTION;
 	if (strcmp(instruction, "printl") == 0)										return PRINTL_INSTRUCTION;
 	if (strcmp(instruction, "read") == 0) 										return READ_INSTRUCTION;
-
 	if (strcmp(instruction, "end") == 0) 										return END_INSTRUCTION;
-
 	if (strcmp(instruction, "mkfile") == 0) 									return MKFILE_INSTRUCTION;
 	if (strcmp(instruction, "rmfile") == 0) 									return RMFILE_INSTRUCTION;
 	if (strcmp(instruction, "wfile") == 0) 										return WFILE_INSTRUCTION;
 	if (strcmp(instruction, "rfile") == 0) 										return RFILE_INSTRUCTION;
-
 	if (strcmp(instruction, "for") == 0)										return FOR_INSTRUCTION;
 	if (strcmp(instruction, "endfor") == 0)										return EFOR_INSTRUCTION;
 	if (strcmp(instruction, "while") == 0)										return WHILE_INSTRUCTION;
 	if (strcmp(instruction, "endwhile") == 0)									return EWHILE_INSTRUCTION;
 }
 
-int get_address(char *variable_name) {
+int _get_address(char* variable_name) {
 	int i = 0, is_array = 0, array_index = 0;
-	char temp[VARIABLE_LENGTH];
+	char temp[VARIABLE_LENGTH] = { 0 };
 
 	if (variable_name[1] == 'x' && variable_name[0] >= 'a' && variable_name[0] <= 'h')
 		return variable_name[0] - 'a';
@@ -397,7 +378,7 @@ int get_address(char *variable_name) {
 	return -1;
 }
 
-void mov_func(char *param, int instruction_number) {
+void _mov_func(char *param, int instruction_number) {
 	char dest[VARIABLE_LENGTH], src[VARIABLE_LENGTH];
 	char *token;
 
@@ -410,14 +391,14 @@ void mov_func(char *param, int instruction_number) {
 	intermediate_table[intermediate_index]->instruction_position = instruction_number;
 	if (dest[1] == 'x' && dest[0] >= 'a' && dest[0] <= 'h') { // destination is register
 		intermediate_table[intermediate_index]->opcode 			= 2;
-		intermediate_table[intermediate_index]->parameters[0] 	= get_address(dest);
-		intermediate_table[intermediate_index]->parameters[1] 	= get_address(src);
+		intermediate_table[intermediate_index]->parameters[0] 	= _get_address(dest);
+		intermediate_table[intermediate_index]->parameters[1] 	= _get_address(src);
 		intermediate_table[intermediate_index]->parameters[2] 	= -1;  // to run the for loop
 	}
 	else {
 		intermediate_table[intermediate_index]->opcode 			= MOV_INSTRUCTION;   // destination is memory // i.e register to memory
-		intermediate_table[intermediate_index]->parameters[0] 	= get_address(dest);
-		intermediate_table[intermediate_index]->parameters[1] 	= get_address(src);
+		intermediate_table[intermediate_index]->parameters[0] 	= _get_address(dest);
+		intermediate_table[intermediate_index]->parameters[1] 	= _get_address(src);
 		intermediate_table[intermediate_index]->parameters[2] 	= -1;  // to run the for loop
 	}
 
@@ -425,7 +406,7 @@ void mov_func(char *param, int instruction_number) {
 	return;
 }
 
-void bianryOperations_func(int opcode, char *param, int instruction_number) {
+void _bianryOperations_func(int opcode, char *param, int instruction_number) {
 	char dest[VARIABLE_LENGTH], operand1[VARIABLE_LENGTH], operand2[VARIABLE_LENGTH];
 	/* get the first token */
 	char *token;
@@ -441,17 +422,17 @@ void bianryOperations_func(int opcode, char *param, int instruction_number) {
 
 	intermediate_table[intermediate_index]->opcode 					= opcode;
 	intermediate_table[intermediate_index]->instruction_position 	= instruction_number;
-	intermediate_table[intermediate_index]->parameters[0] 			= get_address(dest);
-	intermediate_table[intermediate_index]->parameters[1] 			= get_address(operand1);
-	intermediate_table[intermediate_index]->parameters[2] 			= get_address(operand2);
+	intermediate_table[intermediate_index]->parameters[0] 			= _get_address(dest);
+	intermediate_table[intermediate_index]->parameters[1] 			= _get_address(operand1);
+	intermediate_table[intermediate_index]->parameters[2] 			= _get_address(operand2);
 	intermediate_table[intermediate_index]->parameters[3] 			= -1;
 
 	intermediate_index++;
 	return;
 }
 
-void read_func(char *param, int instruction_number) {
-	intermediate_table[intermediate_index]->parameters[0] 			= get_address(param);
+void _read_func(char *param, int instruction_number) {
+	intermediate_table[intermediate_index]->parameters[0] 			= _get_address(param);
 	intermediate_table[intermediate_index]->parameters[1] 			= -1;
 	intermediate_table[intermediate_index]->opcode 					= READ_INSTRUCTION;
 	intermediate_table[intermediate_index]->instruction_position 	= instruction_number;
@@ -460,8 +441,8 @@ void read_func(char *param, int instruction_number) {
 	return;
 }
 
-void print_func(char *param, int instruction_number) {
-	intermediate_table[intermediate_index]->parameters[0] 			= get_address(param);
+void _print_func(char *param, int instruction_number) {
+	intermediate_table[intermediate_index]->parameters[0] 			= _get_address(param);
 	intermediate_table[intermediate_index]->parameters[1] 			= -1;
 	intermediate_table[intermediate_index]->opcode 					= PRINT_INSTRUCTION;
 	intermediate_table[intermediate_index]->instruction_position 	= instruction_number;
@@ -470,7 +451,7 @@ void print_func(char *param, int instruction_number) {
 	return;
 }
 
-void prints_func(char *param, int instruction_number) {
+void _prints_func(char *param, int instruction_number) {
 	intermediate_table[intermediate_index]->string = (char*)malloc(strlen(param));
 	strcpy(intermediate_table[intermediate_index]->string, param);
 
@@ -479,7 +460,7 @@ void prints_func(char *param, int instruction_number) {
 	return;
 }
 
-void printl_func(char *param, int instruction_number) {
+void _printl_func(char *param, int instruction_number) {
 	intermediate_table[intermediate_index]->string = (char*)malloc(strlen(param));
 	strcpy(intermediate_table[intermediate_index]->string, param);
 
@@ -488,13 +469,13 @@ void printl_func(char *param, int instruction_number) {
 	return;
 }
 
-void clear_func(int instruction_number) {
+void _clear_func(int instruction_number) {
 	intermediate_table[intermediate_index]->opcode = CLEAR_INSTRUCTION;	
 	intermediate_table[intermediate_index++]->instruction_position = instruction_number;
 	return;
 }
 
-void mkfile_func(char* param, int instruction_number) {
+void _mkfile_func(char* param, int instruction_number) {
 	intermediate_table[intermediate_index]->string_params[0] = (char*)malloc(strlen(param));
 	strcpy(intermediate_table[intermediate_index]->string_params[0], param);
 
@@ -503,7 +484,7 @@ void mkfile_func(char* param, int instruction_number) {
 	return;
 }
 
-void rmfile_func(char* param, int instruction_number) {
+void _rmfile_func(char* param, int instruction_number) {
 	intermediate_table[intermediate_index]->string = (char*)malloc(strlen(param));
 	strcpy(intermediate_table[intermediate_index]->string, param);
 
@@ -514,7 +495,7 @@ void rmfile_func(char* param, int instruction_number) {
 	return;
 }
 
-void wfile_func(char* param, int instruction_number) {
+void _wfile_func(char* param, int instruction_number) {
 	char* first = strtok(param, " ");
 	intermediate_table[intermediate_index]->string_params[0] = (char*)malloc(strlen(first));
 	strcpy(intermediate_table[intermediate_index]->string_params[0], first);
@@ -530,9 +511,9 @@ void wfile_func(char* param, int instruction_number) {
 	return;
 }
 
-void rfile_func(char *param, int instruction_number) {
+void _rfile_func(char *param, int instruction_number) {
 	char* first = strtok(param, " ");
-	intermediate_table[intermediate_index]->parameters[0] = get_address(first);
+	intermediate_table[intermediate_index]->parameters[0] = _get_address(first);
 
 	first = strtok(NULL, " ");
 	intermediate_table[intermediate_index]->string = (char*)malloc(strlen(first));
@@ -545,10 +526,10 @@ void rfile_func(char *param, int instruction_number) {
 	return;
 }
 
-void for_func(char *param, int instruction_number, int *stack, int *top) {
+void _for_func(char *param, int instruction_number, int *stack, int *top) {
 	intermediate_table[intermediate_index]->instruction_position 	= instruction_number;
 	intermediate_table[intermediate_index]->opcode 					= FOR_INSTRUCTION;
-	intermediate_table[intermediate_index]->parameters[0] 			= get_address(param);
+	intermediate_table[intermediate_index]->parameters[0] 			= _get_address(param);
 	intermediate_table[intermediate_index]->parameters[3] 			= -2;
 	intermediate_table[intermediate_index]->parameters[4] 			= -1;
 
@@ -557,7 +538,7 @@ void for_func(char *param, int instruction_number, int *stack, int *top) {
 	return;
 }
 
-void endfor_func(int instruction_number, int *stack, int *top) {
+void _endfor_func(int instruction_number, int *stack, int *top) {
 	int poped_value = stack[(*top)--];
 	int i = intermediate_index;
 	
@@ -568,7 +549,7 @@ void endfor_func(int instruction_number, int *stack, int *top) {
 	return;
 }
 
-void while_func(char *param, int instruction_number, int *stack, int *top) {
+void _while_func(char *param, int instruction_number, int *stack, int *top) {
 	char operand1[VARIABLE_LENGTH], oper[4], operand2[VARIABLE_LENGTH];
 	char *token;
 
@@ -592,9 +573,9 @@ void while_func(char *param, int instruction_number, int *stack, int *top) {
 
 	intermediate_table[intermediate_index]->instruction_position 	= instruction_number;
 	intermediate_table[intermediate_index]->opcode 					= WHILE_INSTRUCTION;
-	intermediate_table[intermediate_index]->parameters[0] 			= get_address(operand1);
-	intermediate_table[intermediate_index]->parameters[1] 			= get_address(operand2);
-	intermediate_table[intermediate_index]->parameters[2] 			= generate_operation_code(oper);
+	intermediate_table[intermediate_index]->parameters[0] 			= _get_address(operand1);
+	intermediate_table[intermediate_index]->parameters[1] 			= _get_address(operand2);
+	intermediate_table[intermediate_index]->parameters[2] 			= _generate_operation_code(oper);
 	intermediate_table[intermediate_index]->parameters[3] 			= -2;
 	intermediate_table[intermediate_index]->parameters[4] 			= -1;
 
@@ -603,7 +584,7 @@ void while_func(char *param, int instruction_number, int *stack, int *top) {
 	return;
 }
 
-void endwhile_func(int instruction_number, int *stack, int *top) {
+void _endwhile_func(int instruction_number, int *stack, int *top) {
 	int poped_value = stack[(*top)--];
 	int i = intermediate_index;
 	
@@ -614,7 +595,7 @@ void endwhile_func(int instruction_number, int *stack, int *top) {
 	return;
 }
 
-void if_func(char *param, int instruction_number, int *stack, int *top) {
+void _if_func(char *param, int instruction_number, int *stack, int *top) {
 	char operand1[VARIABLE_LENGTH], oper[4], operand2[VARIABLE_LENGTH];
 	char *token;
 
@@ -638,9 +619,9 @@ void if_func(char *param, int instruction_number, int *stack, int *top) {
 
 	intermediate_table[intermediate_index]->instruction_position 	= instruction_number;
 	intermediate_table[intermediate_index]->opcode 					= IF_INSTRUCTION;
-	intermediate_table[intermediate_index]->parameters[0] 			= get_address(operand1);
-	intermediate_table[intermediate_index]->parameters[1] 			= get_address(operand2);
-	intermediate_table[intermediate_index]->parameters[2] 			= generate_operation_code(oper);
+	intermediate_table[intermediate_index]->parameters[0] 			= _get_address(operand1);
+	intermediate_table[intermediate_index]->parameters[1] 			= _get_address(operand2);
+	intermediate_table[intermediate_index]->parameters[2] 			= _generate_operation_code(oper);
 	intermediate_table[intermediate_index]->parameters[3] 			= -2;
 	intermediate_table[intermediate_index]->parameters[4] 			= -1;
 	
@@ -649,7 +630,7 @@ void if_func(char *param, int instruction_number, int *stack, int *top) {
 	return;
 }
 
-void else_func(int instruction_number, int *stack, int *top) {
+void _else_func(int instruction_number, int *stack, int *top) {
 	intermediate_table[intermediate_index]->instruction_position 	= instruction_number;
 	intermediate_table[intermediate_index]->opcode 					= ELS_INSTRUCTION;
 	intermediate_table[intermediate_index]->parameters[0] 			= -2;
@@ -661,7 +642,7 @@ void else_func(int instruction_number, int *stack, int *top) {
 	return;
 }
 
-void endif_func(int instruction_number, int *stack, int *top) {
+void _endif_func(int instruction_number, int *stack, int *top) {
 	int poped_value = stack[(*top)--];
 	int i = intermediate_index;
 	
@@ -679,7 +660,7 @@ void endif_func(int instruction_number, int *stack, int *top) {
 	return;
 }
 
-void jump_func(char *param, int instruction_number) {
+void _jump_func(char *param, int instruction_number) {
 	intermediate_table[intermediate_index]->instruction_position = instruction_number;
 	intermediate_table[intermediate_index]->opcode = JMP_INSTRUCTION;
 
@@ -723,7 +704,7 @@ void display_block_table() {
 	return;
 }
 
-int check_condition(int operand1, int operand2, int opcode) {
+int _check_condition(int operand1, int operand2, int opcode) {
 	switch(opcode){
 		case EQ_INSTRUCTION: 
 			if (operand1 == operand2)
@@ -759,11 +740,11 @@ int check_condition(int operand1, int operand2, int opcode) {
 	return 0;
 }
 
-void asm_executor(int *memory_array, int memory_index, int start, int end) {
+void _asm_executor(int *memory_array, int memory_index, int start, int end) {
 	for (int i = start; i < end;) {  // iterating on the intermediate language table
 		switch (intermediate_table[i]->opcode) {
 			case READ_INSTRUCTION:  
-				printf("\n\r");
+				printf("\n");
 				char input_buffer[128] = { '\0' };
 				char stp[2] = { '\n', '\0' };
 				keyboard_read(VISIBLE_KEYBOARD, -1, stp, input_buffer);
@@ -791,7 +772,7 @@ void asm_executor(int *memory_array, int memory_index, int start, int end) {
 		    break; // MUL Instruction //
 
 			case PRINT_INSTRUCTION: 
-                printf("\n%d\n", memory_array[intermediate_table[i]->parameters[0]]);
+                printf("\n%d", memory_array[intermediate_table[i]->parameters[0]]);
 	    	break;  // PRINT Instruction //
 
 			case PRINTS_INSTRUCTION: 
@@ -807,13 +788,11 @@ void asm_executor(int *memory_array, int memory_index, int start, int end) {
 			break;
 
 			case RMFILE_INSTRUCTION:
-				if (cexists(intermediate_table[i]->string) == 1)
-					rmcontent(intermediate_table[i]->string_params[1]);
+				if (cexists(intermediate_table[i]->string) == 1) rmcontent(intermediate_table[i]->string_params[1]);
 			break;
 
 			case WFILE_INSTRUCTION:
-				if (cexists(intermediate_table[i]->string_params[0]) == 1)
-						fwrite(intermediate_table[i]->string_params[0], intermediate_table[i]->string_params[1]);
+				if (cexists(intermediate_table[i]->string_params[0]) == 1) fwrite(intermediate_table[i]->string_params[0], intermediate_table[i]->string_params[1]);
 			break;
 
 			case RFILE_INSTRUCTION:
@@ -827,7 +806,7 @@ void asm_executor(int *memory_array, int memory_index, int start, int end) {
 			break;
 
 			case IF_INSTRUCTION: 
-                if (check_condition(memory_array[intermediate_table[i]->parameters[0]], memory_array[intermediate_table[i]->parameters[1]],
+                if (_check_condition(memory_array[intermediate_table[i]->parameters[0]], memory_array[intermediate_table[i]->parameters[1]],
                     intermediate_table[i]->parameters[2]) == 0) {
                     i = intermediate_table[i]->parameters[3] - 1;  // IF Instruction //
                     continue;
@@ -836,15 +815,15 @@ void asm_executor(int *memory_array, int memory_index, int start, int end) {
 
 			case FOR_INSTRUCTION:
 				for (int j = 0; j < memory_array[intermediate_table[i]->parameters[0]]; j++) 
-					asm_executor(memory_array, memory_index, i + 1, intermediate_table[i]->parameters[3] - 1);
+					_asm_executor(memory_array, memory_index, i + 1, intermediate_table[i]->parameters[3] - 1);
 
 				i = intermediate_table[i]->parameters[3] - 1;
 			break;
 
 			case WHILE_INSTRUCTION:
-				while (check_condition(memory_array[intermediate_table[i]->parameters[0]], memory_array[intermediate_table[i]->parameters[1]],
+				while (_check_condition(memory_array[intermediate_table[i]->parameters[0]], memory_array[intermediate_table[i]->parameters[1]],
                     intermediate_table[i]->parameters[2]) != 0) 
-					asm_executor(memory_array, memory_index, i + 1, intermediate_table[i]->parameters[3] - 1);
+					_asm_executor(memory_array, memory_index, i + 1, intermediate_table[i]->parameters[3] - 1);
 
 				i = intermediate_table[i]->parameters[3] - 1;
 			break;

@@ -14,23 +14,9 @@
 #define EXT2_FS     1
 
 
-typedef char* (*file_read)(Content*);
-typedef char* (*file_read_stop)(Content*, uint8_t*);
-typedef void (*file_read_offset)(Content*, uint8_t*, uint32_t, uint32_t);
-typedef void (*file_read_offset_stop)(Content*, uint8_t*, uint32_t, uint32_t, uint8_t*);
-typedef int (*file_write)(Content*, char*);
-typedef void (*file_write_offset)(Content*, uint8_t*, uint32_t, uint32_t);
-typedef Directory* (*open_dir)(const unsigned int, unsigned char, int);
-typedef Content* (*get_object)(const char*);
-typedef int (*object_exists)(const char*);
-typedef int (*put_object)(const char*, Content*);
-typedef int (*delete_object)(const char*);
-typedef int (*object_execute)(char*, int, char**, int);
-typedef int (*object_meta_change)(const char*, directory_entry_t*);
-
 typedef struct vfs_node {
-    char name[256];
-    uint32_t fs_type;
+    char name[25];
+    uint8_t fs_type;
     struct ata_dev* device;
 
     //===========
@@ -39,54 +25,54 @@ typedef struct vfs_node {
 
         // Read content and return char*
         // Content
-        file_read read;
+        char* (*read)(Content*);
 
         // Read content and return char* (stop reading when meets stop symbols)
         // Content, stop
-        file_read_stop read_stop;
+        void (*read_stop)(Content*, uint8_t*);
 
         // Read content to buffer with file seek
         // Content, buffer, seek, size
-        file_read_offset readoff;
+        void (*readoff)(Content*, uint8_t*, uint32_t, uint32_t);
 
         // Read content to buffer with file seek (stop reading when meets stop symbols)
         // Content, buffer, seek, size, stop
-        file_read_offset_stop readoff_stop;
+        void (*readoff_stop)(Content*, uint8_t*, uint32_t, uint32_t, uint8_t*);
 
         // Write data to content (Change FAT table for allocate \ deallocate clusters)
         // Content, data
-        file_write write;
+        int (*write)(Content*, char*);
 
         // Write data to content with offset (Change FAT table for allocate \ deallocate clusters)
         // Content, buffer, seek, size
-        file_write_offset writeoff;
+        void (*writeoff)(Content*, uint8_t*, uint32_t, uint32_t);
 
         // Return Directory of current cluster
-        open_dir dir;
+        Directory* (*dir)(const unsigned int, unsigned char, int);
 
         // Get Content by path
         // Path
-        get_object getobj;
+        Content* (*getobj)(const char*);
 
         // Check if content exists (0 - nexists)
         // Path
-        object_exists objexist;
+        int (*objexist)(const char*);
 
         // Put content to directory by path
         // Path, content
-        put_object putobj;
+        int (*putobj)(const char*, Content*);
 
         // Delete content from directory by path
         // Path, name
-        delete_object delobj;
+        int (*delobj)(const char*);
 
         // Execute content in specified address space (this function don`t create new page directory)
         // Path, argc, argv, address space
-        object_execute objexec;
+        int (*objexec)(char*, int, char**, int);
 
         // Change meta of content
         // Path, new meta
-        object_meta_change objmetachg;
+        int (*objmetachg)(const char*, directory_entry_t*);
 
     //===========
     // Functions
@@ -97,13 +83,11 @@ typedef struct vfs_node {
 } vfs_node_t;
 
 
-extern vfs_node_t* vfs_list;
 extern vfs_node_t* current_vfs;
 
 
 void VFS_initialize(struct ata_dev* dev, uint32_t fs_type);
 void VFS_add_node(struct ata_dev* dev, uint32_t fs_type);
 void VFS_switch_device(int index);
-
 
 #endif

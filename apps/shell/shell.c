@@ -7,7 +7,7 @@ int current_command = 0;
 
 
 void main(int argc, char* argv[]) {
-    // switch2user();
+    //switch2user();
     clrscr();
     shell_start_screen();
 
@@ -17,8 +17,6 @@ void main(int argc, char* argv[]) {
     //  SET INIT ENVARS
 
         if (envar_exists("clc") == -1) envar_add("clc", "\\HOME\\APPS\\STD\\CALC\\CALC.ELF");
-        if (envar_exists("mng") == -1) envar_add("mng", "\\HOME\\APPS\\STD\\MNG\\MNG.ELF");
-        if (envar_exists("edt") == -1) envar_add("edt", "\\HOME\\APPS\\STD\\EDITOR\\EDITOR.ELF");
         if (envar_exists("asm") == -1) envar_add("asm", "\\HOME\\APPS\\STD\\ASM\\ASM.ELF");
 
     //  SET INIT ENVARS
@@ -85,7 +83,7 @@ void main(int argc, char* argv[]) {
 
 void shell_start_screen() {
     printf("\n");
-    printf("Cordell Shell [ver. 0.6b | 25.03.2024]\n");
+    printf("Cordell Shell [ver. 0.6c | 23.11.2024]\n");
     printf("Stai entrando nella shell del kernel leggero. Usa [aiuto] per ottenere aiuto.\n\n");
 }
 

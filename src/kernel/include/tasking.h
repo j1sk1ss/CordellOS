@@ -16,6 +16,7 @@
 #include "../util/binary.h"
 
 
+#define TASK_VIRT_ADDRESS     0x00C00000
 #define TASKS_MAX             10
 #define TASK_SWITCH_DELAY     10
 

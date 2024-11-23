@@ -117,11 +117,11 @@ TaskManager taskManager = { // Task manager placed in kernel space
                 VMM_set_directory(task->page_directory);
 				
 				// Allocate page in pd, link it to v_addr
-				type == USER ? _umallocp(0x00C00000) : _kmallocp(0x00C00000);
-                memset((void*)0x00C00000, 0, PAGE_SIZE);
+				ALC_mallocp(TASK_VIRT_ADDRESS, type);
+                memset((void*)TASK_VIRT_ADDRESS, 0, PAGE_SIZE);
                 
 				// Set stack pointer to allocated region
-				task->cpuState->esp     = VMM_virtual2physical((void*)0x00C00000);
+				task->cpuState->esp     = VMM_virtual2physical((void*)TASK_VIRT_ADDRESS);
 				task->virtual_address   = task->cpuState->esp;
 				uint32_t* stack_pointer = (uint32_t*)(task->cpuState->esp + PAGE_SIZE);
 

@@ -1,12 +1,12 @@
 #include "../../include/vfs.h"
 
 
-vfs_node_t* vfs_list = NULL;
+static vfs_node_t* vfs_list = NULL;
 vfs_node_t* current_vfs = NULL;
 
 
 void VFS_initialize(ata_dev_t* dev, uint32_t fs_type) {
-    vfs_list = _kmalloc(sizeof(vfs_node_t));
+    vfs_list = (char*)_kmalloc(sizeof(vfs_node_t));
     vfs_list->fs_type = fs_type;
     vfs_list->device  = dev;
 

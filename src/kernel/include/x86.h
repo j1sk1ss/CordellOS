@@ -38,7 +38,7 @@ void i386_io_wait();
 void i386_reboot();
 
 
-#define kernel_panic(data) kprintf(data); i386_panic();
+#define kernel_panic(data) kprintf("\n%s\n", data); i386_panic();
 
 
 #endif

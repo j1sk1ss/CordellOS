@@ -27,7 +27,8 @@ typedef struct malloc_head {
 	uint32_t virt_address;
 	uint32_t phys_address;
 	uint32_t total_pages;
-    bool (*map_page)(void* virt, void* phys);
+    bool (*map_page)(void*, void*);
+    void* (*mkpage)(uint32_t*, uint8_t);
 } malloc_head_t;
 
 
@@ -50,9 +51,9 @@ int _ufree(void* ptr);
 void _kfreep(void* v_addr);
 
 int __mm_init(size_t bytes, malloc_head_t* head);
-void* __kmalloc(size_t size, malloc_head_t* head);
-int __kmallocp(uint32_t virt, malloc_head_t* head);
-void* __krealloc(void* ptr, size_t size, malloc_head_t* head);
+void* __kmalloc(size_t size, malloc_head_t* head, uint8_t type);
+int __kmallocp(uint32_t virt, malloc_head_t* head, uint8_t type);
+void* __krealloc(void* ptr, size_t size, malloc_head_t* head, uint8_t type);
 int __kfree(void* ptr, malloc_head_t* head);
 int __block_split(malloc_block_t *node, size_t size);
 int __merge_free_blocks(malloc_block_t* block);

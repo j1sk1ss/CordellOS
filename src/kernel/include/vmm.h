@@ -94,10 +94,11 @@ physical_address VMM_virtual2physical(void* virt_address);
 
 page_directory* _mkpdir();
 page_directory* _mkupdir();
+uint32_t _mkpage(physical_address p_addr, uint8_t type);
 page_table* _mkptable(uint32_t p_addr, uint8_t type);
-void* _create_page(pt_entry* page);
-bool _map_page(void* p_addr, void* v_addr, uint8_t type);
 void _free_pdir(page_directory* pd);
+void _map_table(page_directory* pd, page_table* table, uint8_t type, size_t index);
+bool _map_page(void* p_addr, void* v_addr, uint8_t type);
 void _flush_tlb_entry(virtual_address address);
 void _copy_dir2dir(page_directory* src, page_directory* dest);
 

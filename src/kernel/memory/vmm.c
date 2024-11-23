@@ -7,21 +7,8 @@ page_directory* kernel_page_directory = NULL;
 
 bool VMM_init(uint32_t memory_start) {
     page_directory* dir = _mkpdir();
-    page_table* table3G = _mkptable(0x0, KERNEL);
-    if (!table3G || !dir) return false;
-
-    pd_entry* entry = &dir->entries[0];
-    SET_ATTRIBUTE(entry, PDE_PRESENT);
-    SET_ATTRIBUTE(entry, PDE_READ_WRITE);
-    SET_FRAME(entry, (physical_address)table3G); 
-
-    page_table* table = _mkptable(memory_start, KERNEL);
-    if (!table) return false;
-    
-    entry = &dir->entries[PD_INDEX(0xC0000000)];
-    SET_ATTRIBUTE(entry, PDE_PRESENT);
-    SET_ATTRIBUTE(entry, PDE_READ_WRITE);
-    SET_FRAME(entry, (physical_address)table);
+    _map_table(dir, _mkptable(0x0, KERNEL), KERNEL, 0);    
+    _map_table(dir, _mkptable(memory_start, KERNEL), KERNEL, PD_INDEX(0xC0000000));
 
     if (!VMM_set_directory(dir)) return false;
     kernel_page_directory = dir;
@@ -36,11 +23,7 @@ bool VMM_init(uint32_t memory_start) {
 }
 
 bool VMM_set_directory(page_directory* pd) {
-    if (!pd) {
-        kprintf("[%s %i] Can`t set page directory!\n", __FILE__, __LINE__);
-        return false;
-    }
-
+    if (!pd) return false;
     current_page_directory = pd;
     asm ("mov %0, %%cr3":: "r"(current_page_directory));
     return true;
@@ -86,34 +69,16 @@ physical_address VMM_virtual2physical(void* virt_address) {
     return phys_address;
 }
 
-void* _create_page(pt_entry* page) {
-    void* block = PMM_allocate_blocks(1);
-    if (block) {
-        SET_FRAME(page, (physical_address)block);
-        SET_ATTRIBUTE(page, PTE_PRESENT);
-    } 
-    else {
-        return NULL;
-    }
-    
-    return block;
-}
-
 bool _map_page(void* p_addr, void* v_addr, uint8_t type) {
     page_directory* pd = current_page_directory;
     pd_entry* entry = &pd->entries[PD_INDEX((uint32_t)v_addr)];
 
+    // Create table, if table not present
     if ((*entry & PTE_PRESENT) != PTE_PRESENT) {
         page_table* table = (page_table*)PMM_allocate_blocks(1);
         if (!table) return false;
-
         memset(table, 0, sizeof(page_table));
-        pd_entry* entry = &pd->entries[PD_INDEX((uint32_t)v_addr)];
-        
-        SET_ATTRIBUTE(entry, PDE_PRESENT);
-        if (type == USER) { SET_ATTRIBUTE(entry, PDE_USER); }
-        SET_ATTRIBUTE(entry, PDE_READ_WRITE);
-        SET_FRAME(entry, (physical_address)table);
+        _map_table(pd, table, type, PD_INDEX((uint32_t)v_addr));
     }
 
     page_table* table = (page_table*)PAGE_PHYS_ADDRESS(entry);
@@ -125,12 +90,21 @@ bool _map_page(void* p_addr, void* v_addr, uint8_t type) {
     return true;    
 }
 
+uint32_t _mkpage(physical_address p_addr, uint8_t type) {
+    pt_entry page = 0;
+    SET_ATTRIBUTE(&page, PTE_PRESENT);
+    if (type == USER) { SET_ATTRIBUTE(&page, PTE_USER); }
+    SET_ATTRIBUTE(&page, PTE_READ_WRITE);
+    SET_FRAME(&page, p_addr);
+    return page;
+}
+
 void _flush_tlb_entry(virtual_address address) {
     asm ("cli; invlpg (%0); sti" : : "r"(address) );
 }
 
 page_directory* _mkpdir() {
-    page_directory* dir = (page_directory*)PMM_allocate_blocks(3);
+    page_directory* dir = (page_directory*)PMM_allocate_blocks(1);
     if (dir == NULL) return NULL;
     
     memset(dir, 0, sizeof(page_directory));
@@ -146,16 +120,11 @@ page_directory* _mkupdir() {
 
     page_table* user_table = _mkptable(USER_MEMORY_START, USER);
     if (user_table == NULL) {
-        PMM_free_blocks((uint32_t*)dir, 3);
+        PMM_free_blocks((uint32_t*)dir, 1);
         return NULL;
     }
 
-    pd_entry* user_entry = &dir->entries[USER_TABLE_INDEX];
-    SET_ATTRIBUTE(user_entry, PDE_PRESENT);
-    SET_ATTRIBUTE(user_entry, PDE_READ_WRITE);
-    SET_ATTRIBUTE(user_entry, PDE_USER);
-    SET_FRAME(user_entry, (uint32_t)user_table);
-
+    _map_table(dir, user_table, USER, USER_TABLE_INDEX);
     return dir;
 }
 
@@ -166,16 +135,19 @@ page_table* _mkptable(uint32_t p_addr, uint8_t type) {
     memset(table, 0, sizeof(page_table));
     // Fill table with pages PTE_PRESENT | PRE_READ_WRITE
     for (uint32_t i = 0, frame = p_addr; i < PAGES_PER_TABLE; i++, frame += PAGE_SIZE) {
-        pt_entry page = 0;
-        SET_ATTRIBUTE(&page, PTE_PRESENT);
-        SET_ATTRIBUTE(&page, PTE_READ_WRITE);
-        if (type == USER) { SET_ATTRIBUTE(&page, PTE_USER); }
-        SET_FRAME(&page, frame);
-
-        table->entries[i] = page;
+        table->entries[i] = _mkpage(frame, type);
     }
 
     return table;
+}
+
+void _map_table(page_directory* pd, page_table* table, uint8_t type, size_t index) {
+    if (!pd || !table) return;
+    pd_entry* entry = &pd->entries[index];
+    SET_ATTRIBUTE(entry, PDE_PRESENT);
+    SET_ATTRIBUTE(entry, PDE_READ_WRITE);
+    if (type == USER) { SET_ATTRIBUTE(entry, PDE_USER); }
+    SET_FRAME(entry, (uint32_t)table);
 }
 
 void _free_pdir(page_directory* pd) {
@@ -199,7 +171,7 @@ void _free_pdir(page_directory* pd) {
         }
     }
 
-    PMM_free_blocks((uint32_t*)pd, 3);
+    PMM_free_blocks((uint32_t*)pd, 1);
 }
 
 void _copy_dir2dir(page_directory* src, page_directory* dest) {
@@ -208,7 +180,7 @@ void _copy_dir2dir(page_directory* src, page_directory* dest) {
         if (src->entries[i] & PDE_PRESENT) {
             page_table* new_table = (page_table*)PMM_allocate_blocks(1);
             if (!new_table) {
-                PMM_free_blocks((uint32_t*)dest, 3);
+                PMM_free_blocks((uint32_t*)dest, 1);
                 return;
             }
 
@@ -224,23 +196,19 @@ void _page_fault(struct Registers* regs) {
 	uint32_t faulting_address = 0;
 	asm ("mov %%cr2, %0" : "=r" (faulting_address));
 
-	int present	 = !(regs->error & 0x1);	// When set, the page fault was caused by a page-protection violation. When not set, it was caused by a non-present page.
-	int rw		 = regs->error & 0x2;		// When set, the page fault was caused by a write access. When not set, it was caused by a read access.
-	int us		 = regs->error & 0x4;		// When set, the page fault was caused while CPL = 3. This does not necessarily mean that the page fault was a privilege violation.
-	int reserved = regs->error & 0x8;		// When set, one or more page directory entries contain reserved bits which are set to 1. This only applies when the PSE or PAE flags in CR4 are set to 1.
-	int id		 = regs->error & 0x10;		// When set, the page fault was caused by an instruction fetch. This only applies when the No-Execute bit is supported and enabled.
+	int present	 = !(regs->error & 0x1); // When set, the page fault was caused by a page-protection violation. When not set, it was caused by a non-present page.
+	int rw		 = regs->error & 0x2;	 // When set, the page fault was caused by a write access. When not set, it was caused by a read access.
+	int us		 = regs->error & 0x4;	 // When set, the page fault was caused while CPL = 3. This does not necessarily mean that the page fault was a privilege violation.
+	int reserved = regs->error & 0x8;	 // When set, one or more page directory entries contain reserved bits which are set to 1. This only applies when the PSE or PAE flags in CR4 are set to 1.
+	int id		 = regs->error & 0x10;	 // When set, the page fault was caused by an instruction fetch. This only applies when the No-Execute bit is supported and enabled.
 
 	kprintf("\nWHOOOPS..\nPAGE FAULT! (\t");
 
     //=======
     // PARAMS
 
-        if (present) kprintf("NOT PRESENT\t");
-        else kprintf("PAGE PROTECTION\t");
-        
-        if (rw) kprintf("READONLY\t");
-        else kprintf("WRITEONLY\t");
-
+        if (present) kprintf("NOT PRESENT\t"); else kprintf("PAGE PROTECTION\t");
+        if (rw) kprintf("READONLY\t"); else kprintf("WRITEONLY\t");
         if (us) kprintf("USERMODE\t");
         if (reserved) kprintf("RESERVED\t");
         if (id) kprintf("INST FETCH\t");
@@ -254,5 +222,5 @@ void _page_fault(struct Registers* regs) {
 
     i386_isr_interrupt_details(faulting_address, regs->ebp, regs->esp);
 
-	kernel_panic("\nPAGE FAULT");
+	kernel_panic("PAGE FAULT");
 }

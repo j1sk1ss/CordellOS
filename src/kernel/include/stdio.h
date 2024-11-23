@@ -23,13 +23,13 @@
 
 typedef struct stdio_mode {
     void (*clrscr)();
-    void (*putc)(char c);
-    void (*fill_color)(uint32_t color);
+    void (*putc)(char);
+    void (*fill_color)(uint32_t);
     uint8_t (*get_cursor_x)();
     uint8_t (*get_cursor_y)();
-    void (*set_cursor)(uint8_t x, uint8_t y);
-    void (*put_chr)(uint8_t x, uint8_t y, char c);
-    char (*get_char)(uint8_t x, uint8_t y);
+    void (*set_cursor)(uint8_t, uint8_t);
+    void (*put_chr)(uint8_t, uint8_t, char);
+    char (*get_char)(uint8_t, uint8_t);
 } stdio_mode_t;
 
 
