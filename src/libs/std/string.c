@@ -381,19 +381,6 @@ char* backspace_string(char* str) {
     return str;  
 }
 
-void fit_string(char* str, size_t size, char character) {
-    char *src, *dst;
-    memset(src, 0, sizeof(str));
-    memset(dst, 0, sizeof(dst));
-    
-    for (src = dst = str; *src != '\0'; src++) {
-        *dst = *src;
-        if (*dst != character) dst++;
-    }
-
-    *dst = '\0';
-}
-
 char place_char_in_text(char* text, char character, int x_position, int y_position) {
     int current_y_position = 0;
     int current_x_position = 0;

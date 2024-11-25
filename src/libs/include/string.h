@@ -27,7 +27,6 @@ char* strcat(char* dest, const char* src);
 
 char* strtok(char* string, const char* delim);
 char* strtok_r(char* s, const char* delim, char** last);
-void fit_string(char* str, size_t size, char character);
 char place_char_in_text(char* text, char character, int x_position, int y_position);
 
 void reverse(char* str, int len);

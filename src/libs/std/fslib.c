@@ -259,7 +259,7 @@ Directory* opendir(const char* path) {
 //  EBX - path
 //  ECX - pointer to directory
 Content* get_content(const char* path) {
-    Content* content;
+    Content* content = NULL;
     __asm__ volatile(
         "movl $30, %%eax\n"
         "movl %1, %%ebx\n"
@@ -279,8 +279,7 @@ Content* get_content(const char* path) {
 //  EBX - path
 //  ECX - result (0 - nexists)
 int cexists(const char* path) {
-    int result;
-
+    int result = 0;
     __asm__ volatile(
         "movl $15, %%eax\n"
         "movl %0, %%ebx\n"

@@ -62,7 +62,7 @@ int get_pixel(int x, int y) {
 // Function get pixel from framebuffer by coordinates
 // EDX - result
 int get_resolution_x() {
-    int result;
+    int result = 0;
     __asm__ volatile(
         "movl $31, %%eax\n"
         "movl $0, %%ebx\n"
@@ -81,7 +81,7 @@ int get_resolution_x() {
 // Function get pixel from framebuffer by coordinates
 // EDX - result
 int get_resolution_y() {
-    int result;
+    int result = 0;
     __asm__ volatile(
         "movl $32, %%eax\n"
         "movl $0, %%ebx\n"

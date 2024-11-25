@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include "isr.h"
-#include "x86.h"
 #include "pmm.h"
 
 
