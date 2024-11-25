@@ -41,7 +41,6 @@ void DHCP_request(uint8_t* request_ip) {
 }
 
 void DHCP_handle_packet(dhcp_packet_t* packet) {
-    uint8_t* options = (uint8_t*)(packet->options + 4);
     if (packet->op == DHCP_REPLY) {
         uint8_t* type    = DHCP_options(packet, 53);
         uint8_t* pointer = type;

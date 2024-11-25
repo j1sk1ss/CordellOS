@@ -29,7 +29,7 @@ typedef struct vfs_node {
 
         // Read content and return char* (stop reading when meets stop symbols)
         // Content, stop
-        void (*read_stop)(Content*, uint8_t*);
+        char* (*read_stop)(Content*, uint8_t*);
 
         // Read content to buffer with file seek
         // Content, buffer, seek, size

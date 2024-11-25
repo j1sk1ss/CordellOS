@@ -14,7 +14,7 @@ int srand_r(int fseed) {
 	return ((fseed * seed) & 2147483647);
 }
 
-static int rand(unsigned long *ctx) {
+int rand(unsigned long *ctx) {
 	long hi, lo, x;
 
 	hi = *ctx / 127773;

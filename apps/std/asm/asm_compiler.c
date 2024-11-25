@@ -327,6 +327,7 @@ int _generate_operation_code(char *instruction) {
 	if (strcmp(instruction, "endfor") == 0)										return EFOR_INSTRUCTION;
 	if (strcmp(instruction, "while") == 0)										return WHILE_INSTRUCTION;
 	if (strcmp(instruction, "endwhile") == 0)									return EWHILE_INSTRUCTION;
+	return 1;
 }
 
 int _get_address(char* variable_name) {
@@ -368,13 +369,13 @@ int _get_address(char* variable_name) {
 	}
 
 	strcpy(variable_name, temp);
-	for (int i = 0; i < symbol_index; i++)
-		if (strcmp(symbol_tab[i]->variable_name, variable_name) == 0) 
-			if (is_array)
-				return symbol_tab[i]->address + array_index;
-			else
-				return symbol_tab[i]->address;
-		
+	for (int i = 0; i < symbol_index; i++) {
+		if (strcmp(symbol_tab[i]->variable_name, variable_name) == 0) {
+			if (is_array) return symbol_tab[i]->address + array_index;
+			else return symbol_tab[i]->address;
+		}
+	}
+
 	return -1;
 }
 
@@ -550,8 +551,7 @@ void _endfor_func(int instruction_number, int *stack, int *top) {
 }
 
 void _while_func(char *param, int instruction_number, int *stack, int *top) {
-	char operand1[VARIABLE_LENGTH], oper[4], operand2[VARIABLE_LENGTH];
-	char *token;
+	char operand1[VARIABLE_LENGTH] = { 0 }, oper[4] = { 0 }, operand2[VARIABLE_LENGTH] = { 0 };
 
 	int i = 0;
     int j = 0;
@@ -596,9 +596,7 @@ void _endwhile_func(int instruction_number, int *stack, int *top) {
 }
 
 void _if_func(char *param, int instruction_number, int *stack, int *top) {
-	char operand1[VARIABLE_LENGTH], oper[4], operand2[VARIABLE_LENGTH];
-	char *token;
-
+	char operand1[VARIABLE_LENGTH] = { 0 }, oper[4] = { 0 }, operand2[VARIABLE_LENGTH] = { 0 };
 	int i = 0;
     int j = 0;
 

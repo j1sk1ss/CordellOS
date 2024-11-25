@@ -17,7 +17,7 @@
 *  whatever you want using a macro, if you wish! 
 */
 
-unsigned char alphabet[128] = {
+static unsigned char _alphabet[128] = {
     0,  27, '1', '2', '3', '4', '5', '6', '7', '8',	                    /* 9 */
     '9', '0', '-', '=', '\b',	                                        /* Backspace */
     '\t',			                                                    /* Tab */
@@ -56,7 +56,7 @@ unsigned char alphabet[128] = {
     0,	                                                                /* All other keys are undefined */
 };
 
-unsigned char shift_alphabet[128] = {
+static unsigned char _shift_alphabet[128] = {
     0,  27, '!', '@', '#', '$', '%', '^', '&', '*',	                    /* 9 */
     '(', ')', '_', '+', '\b',	                                        /* Backspace */
     '\t',			                                                    /* Tab */
@@ -95,16 +95,14 @@ unsigned char shift_alphabet[128] = {
     0,	                                                                /* All other keys are undefined */
 };
 
-uint8_t* char_buffer = NULL;
-uint8_t* stop_buffer = NULL;
-int mode  = HIDDEN_KEYBOARD;
-int color = WHITE;
-int pos   = 0;
-
-bool lshift_pressed;
-bool rshift_pressed;
-bool extended_scan_code;
-bool key_pressed[128];
+static keyboard_data_t _keyboard_data = {
+    .char_buffer = NULL,
+    .stop_buffer = NULL,
+    .mode = HIDDEN_KEYBOARD,
+    .color = WHITE,
+    .pos = 0,
+    .key_pressed = { false }
+};
 
 
 void i386_init_keyboard() {
@@ -112,18 +110,20 @@ void i386_init_keyboard() {
     uint8_t status = i386_inb(0x64);
     status = i386_inb(0x64);
 
-    if (status & (1 << 0)) kprintf("Output buffer full.\n");
-    else kprintf("Output buffer empty.\n");
-    if (status & (1 << 1)) kprintf("Input buffer full.\n");
-    else kprintf("Input buffer empty.\n");
-    if (status & (1 << 2)) kprintf("System flag set.\n");
-    else kprintf("System flag unset.\n");
-    if (status & (1 << 3)) kprintf("Command/Data -> PS/2 device.\n");
-    else kprintf("Command/Data -> PS/2 controller.\n");
-    if (status & (1 << 6)) kprintf("Timeout error.\n");
-    else kprintf("No timeout error.\n");
-    if (status & (1 << 7)) kprintf("Parity error.\n");
-    else kprintf("No parity error.\n");
+    kprintf("[KEYBOARD INFO]: ( ");
+    if (status & (1 << 0)) kprintf("Output buffer full.\t");
+    else kprintf("Output buffer empty.\t");
+    if (status & (1 << 1)) kprintf("Input buffer full.\t");
+    else kprintf("Input buffer empty.\t");
+    if (status & (1 << 2)) kprintf("System flag set.\t");
+    else kprintf("System flag unset.\t");
+    if (status & (1 << 3)) kprintf("Command/Data -> PS/2 device.\t");
+    else kprintf("Command/Data -> PS/2 controller.\t");
+    if (status & (1 << 6)) kprintf("Timeout error.\t");
+    else kprintf("No timeout error.\t");
+    if (status & (1 << 7)) kprintf("Parity error. ");
+    else kprintf("No parity error.");
+    kprintf(")\n");
     
     i386_outb(0x64, 0xAA);
     uint8_t result = i386_inb(0x60);
@@ -141,13 +141,13 @@ void i386_init_keyboard() {
     i386_irq_registerHandler(1, i386_keyboard_handler);
 }
 
-int key_press() {
+int _key_press() {
     if (i386_inb(0x64) & 0x1) return 1;
     return 0;
 }
 
-char get_character(char character) {
-    return alphabet[(int)character];
+char _get_character(char character) {
+    return _alphabet[(int)character];
 }
 
 //==================================================================================
@@ -157,41 +157,41 @@ char get_character(char character) {
 //  | . \| |___  | | | |_) | |_| / ___ \|  _ <| |_| |
 //  |_|\_\_____| |_| |____/ \___/_/   \_\_| \_\____/ 
 
-        void enable_keyboard(uint8_t* buffer, int keyboard_mode, int keyboard_color, uint8_t* stop) {
-            char_buffer = buffer;
-            stop_buffer = stop;            
-            mode  = keyboard_mode;
-            color = keyboard_color;
-            pos   = 0;
+        void _enable_keyboard(uint8_t* buffer, int keyboard_mode, int keyboard_color, uint8_t* stop) {
+            _keyboard_data.char_buffer = buffer;
+            _keyboard_data.stop_buffer = stop;            
+            _keyboard_data.mode  = keyboard_mode;
+            _keyboard_data.color = keyboard_color;
+            _keyboard_data.pos   = 0;
         }
 
         void i386_keyboard_handler(struct Registers* regs) {
             char character = i386_inb(0x60);
             if (character < 0 || character >= 128) return;
-            if (char_buffer == NULL || stop_buffer == NULL) return;
+            if (_keyboard_data.char_buffer == NULL || _keyboard_data.stop_buffer == NULL) return;
 
-            char* input = (char*)char_buffer;
-            input[pos] = '\0';
+            char* input = (char*)_keyboard_data.char_buffer;
+            input[_keyboard_data.pos] = '\0';
 
-            key_pressed[(int)character] = false;
+            _keyboard_data.key_pressed[(int)character] = false;
             if (!(character & 0x80)) {
-                key_pressed[(int)character] = true;
-                char currentCharacter = alphabet[(char)character];
+                _keyboard_data.key_pressed[(int)character] = true;
+                char currentCharacter = _alphabet[(int)character];
 
                 //==============
                 //  Work with stop symbols
 
                 int chr_pos = 0;
-                while (stop_buffer[chr_pos] != '\0') {
-                    if (stop_buffer[chr_pos] == currentCharacter || stop_buffer[chr_pos] == STOP_KEYBOARD) {
-                        input[max(0, strlen(input))] = stop_buffer[chr_pos] == STOP_KEYBOARD ? currentCharacter : stop_buffer[chr_pos];
-                        stop_buffer[0] = '\250';
+                while (_keyboard_data.stop_buffer[chr_pos] != '\0') {
+                    if (_keyboard_data.stop_buffer[chr_pos] == currentCharacter || _keyboard_data.stop_buffer[chr_pos] == STOP_KEYBOARD) {
+                        input[max(0, strlen(input))] = _keyboard_data.stop_buffer[chr_pos] == STOP_KEYBOARD ? currentCharacter : _keyboard_data.stop_buffer[chr_pos];
+                        _keyboard_data.stop_buffer[0] = '\250';
 
-                        char_buffer = NULL;
-                        stop_buffer = NULL;
-                        mode  = HIDDEN_KEYBOARD;
-                        color = -1;
-                        pos   = 0;
+                        _keyboard_data.char_buffer = NULL;
+                        _keyboard_data.stop_buffer = NULL;
+                        _keyboard_data.mode  = HIDDEN_KEYBOARD;
+                        _keyboard_data.color = -1;
+                        _keyboard_data.pos   = 0;
 
                         return;
                     }
@@ -202,11 +202,11 @@ char get_character(char character) {
                 //  Work with stop symbols
                 //==============
 
-                if (key_pressed[LSHIFT] || key_pressed[RSHIFT]) currentCharacter = shift_alphabet[(int)character];
+                if (_keyboard_data.key_pressed[LSHIFT] || _keyboard_data.key_pressed[RSHIFT]) currentCharacter = _shift_alphabet[(int)character];
                 if (currentCharacter == LSHIFT_BUTTON || currentCharacter == RSHIFT_BUTTON) return;
                 if (currentCharacter == BACKSPACE_BUTTON) {
                     if (strlen(input) <= 0) return;
-                    input[pos--] = '\0';
+                    input[_keyboard_data.pos--] = '\0';
 
                     KSTDIO_data.set_cursor(KSTDIO_data.get_cursor_x() - 1, KSTDIO_data.get_cursor_y());
                     KSTDIO_data.put_chr(KSTDIO_data.get_cursor_x(), KSTDIO_data.get_cursor_y(), ' ');
@@ -214,16 +214,16 @@ char get_character(char character) {
                     return;
                 }
 
-                if (mode == VISIBLE_KEYBOARD) {
+                if (_keyboard_data.mode == VISIBLE_KEYBOARD) {
                     kprintf("%c", currentCharacter);
                 }
 
-                input[pos++] = currentCharacter;
+                input[_keyboard_data.pos++] = currentCharacter;
             }
 
-            if (key_pressed[LSHIFT] || key_pressed[RSHIFT]) {
-                key_pressed[LSHIFT] = false;
-                key_pressed[RSHIFT] = false;
+            if (_keyboard_data.key_pressed[LSHIFT] || _keyboard_data.key_pressed[RSHIFT]) {
+                _keyboard_data.key_pressed[LSHIFT] = false;
+                _keyboard_data.key_pressed[RSHIFT] = false;
             }
         }
 

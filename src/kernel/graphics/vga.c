@@ -24,31 +24,31 @@ void VGA_init(uint8_t* buffer) {
     VGA_data.buffer = buffer;
 }
 
-int VGA_cursor_get_x() {
+uint8_t VGA_cursor_get_x() {
     return VGA_data.cursor_x;
 }
 
-int VGA_cursor_get_y() {
+uint8_t VGA_cursor_get_y() {
     return VGA_data.cursor_y;
 }
 
-char VGA_getchr(int x, int y) {
+char VGA_getchr(uint8_t x, uint8_t y) {
     return (char)VGA_data.buffer[2 * (y * VGA_data.width + x)];
 }
 
-void VGA_putchr(int x, int y, char c) {
+void VGA_putchr(uint8_t x, uint8_t y, char c) {
     VGA_data.buffer[2 * (y * VGA_data.width + x)] = c;
 }
 
-uint8_t VGA_getcolor(int x, int y) {
+uint8_t VGA_getcolor(uint8_t x, uint8_t y) {
     return VGA_data.buffer[2 * (y * VGA_data.width + x) + 1];
 }
 
-void VGA_putcolor(int x, int y, uint8_t color) {
+void VGA_putcolor(uint8_t x, uint8_t y, uint8_t color) {
     VGA_data.buffer[2 * (y * VGA_data.width + x) + 1] = color;
 }
 
-void VGA_setcursor(int x, int y) {
+void VGA_setcursor(uint8_t x, uint8_t y) {
     uint16_t pos = y * VGA_data.width + x;
 
     i386_outb(0x3D4, 0x0F);                          // First value is port on VGA, second - value 

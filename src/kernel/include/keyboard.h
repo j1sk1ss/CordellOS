@@ -42,12 +42,22 @@
 #define RSHIFT                  0x36
 
 
+typedef struct keyboard_data {
+    uint8_t* char_buffer;
+    uint8_t* stop_buffer;
+    int mode;
+    int color;
+    int pos;
+    bool key_pressed[128];
+} keyboard_data_t;
+
+
 struct Registers;
 void i386_keyboard_handler(struct Registers* regs);
-int key_press();
-char get_character(char character);
+int _key_presss();
+char _get_character(char character);
 
-void enable_keyboard(uint8_t* buffer, int keyboard_mode, int keyboard_color, uint8_t* stop);
+void _enable_keyboard(uint8_t* buffer, int keyboard_mode, int keyboard_color, uint8_t* stop);
 char keyboard_navigation();
 void keyboard_wait(char symbol);
 

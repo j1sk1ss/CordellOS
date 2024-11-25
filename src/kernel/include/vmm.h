@@ -83,24 +83,27 @@ extern page_directory* current_page_directory;
 extern page_directory* kernel_page_directory;
 
 
-bool VMM_init(uint32_t kernell_address);
-bool VMM_set_directory(page_directory* pd);
+int VMM_init(uint32_t kernell_address);
+
+page_directory* VMM_mkpdir();
+int VMM_set_directory(page_directory* pd);
+void VMM_free_pdir(page_directory* pd);
+void _copy_dir2dir(page_directory* src, page_directory* dest);
+
+page_table* VMM_mkptable(uint32_t p_addr, uint8_t type);
+void _map_table(page_directory* pd, page_table* table, uint8_t type, size_t index);
+void VMM_free_table(page_table* table);
+
+uint32_t VMM_mkpage(physical_address p_addr, uint8_t type);
 pt_entry* VMM_get_page(const virtual_address address);
 void VMM_free_page(pt_entry* page);
-bool VMM_kmap_page(void* phys_address, void* virt_address);
-bool VMM_umap_page(void* phys_address, void* virt_address);
+int VMM_kmap_page(void* phys_address, void* virt_address);
+int VMM_umap_page(void* phys_address, void* virt_address);
+int _map_page(void* p_addr, void* v_addr, uint8_t type);
 void VMM_unmap_page(void* virt_address);
-physical_address VMM_virtual2physical(void* virt_address);
 
-page_directory* _mkpdir();
-page_directory* _mkupdir();
-uint32_t _mkpage(physical_address p_addr, uint8_t type);
-page_table* _mkptable(uint32_t p_addr, uint8_t type);
-void _free_pdir(page_directory* pd);
-void _map_table(page_directory* pd, page_table* table, uint8_t type, size_t index);
-bool _map_page(void* p_addr, void* v_addr, uint8_t type);
+physical_address VMM_virtual2physical(void* virt_address);
 void _flush_tlb_entry(virtual_address address);
-void _copy_dir2dir(page_directory* src, page_directory* dest);
 
 struct Registers;
 void _page_fault(struct Registers* regs);

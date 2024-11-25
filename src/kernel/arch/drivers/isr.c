@@ -1,8 +1,8 @@
 #include "../../include/isr.h"
 
 
-ISRHandler _isrHandlers[256];
-struct ELF32_symbols_desctiptor* currentDescriptor = NULL;
+static ISRHandler _isrHandlers[256];
+static struct ELF32_symbols_desctiptor* currentDescriptor = NULL;
 
 
 static const char* const _exceptions[] = {

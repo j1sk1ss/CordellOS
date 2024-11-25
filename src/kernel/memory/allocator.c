@@ -130,7 +130,7 @@
 		void* block = PMM_allocate_blocks(1);
 		memset(block, 0, PAGE_SIZE);
 
-		_mkpage((physical_address)PMM_allocate_blocks(1), type);
+		VMM_mkpage((physical_address)PMM_allocate_blocks(1), type);
 		head->map_page(block, (void*)virt);
 		return 1;
 	}
@@ -236,6 +236,8 @@
 				break;
 			}
 		}
+
+		return 1;
 	}
 
 	int __block_split(malloc_block_t* node, size_t size) {

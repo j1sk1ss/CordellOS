@@ -1,7 +1,7 @@
 #include "../../include/pci.h"
 
 
-uint32_t pci_size_map[100];
+uint32_t pci_size_map[100] = { 0 };
 pci_dev_t dev_zero = { 0 };
 
 
@@ -78,7 +78,7 @@ uint32_t pci_reach_end(pci_dev_t dev) {
  * Scan function
  * */
 pci_dev_t pci_scan_function(uint16_t vendor_id, uint16_t device_id, uint32_t bus, uint32_t device, uint32_t function, int device_type) {
-	pci_dev_t dev    = {0};
+	pci_dev_t dev    = { 0 };
 	dev.bus_num      = bus;
 	dev.device_num   = device;
 	dev.function_num = function;

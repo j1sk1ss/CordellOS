@@ -13,6 +13,9 @@
 #include "../util/arrays.h"
 
 
+#define PIC_REMAP_OFFSET 0x20
+
+
 struct Registers;
 typedef void (*IRQHandler)(struct Registers* regs);
 

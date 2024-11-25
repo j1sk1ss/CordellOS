@@ -2,12 +2,12 @@
 
 
 char* current_path = "HOME";
-int exit = 1;
 int current_command = 0;
+int exit = 1;
 
 
 void main(int argc, char* argv[]) {
-    //switch2user();
+    // switch2user();
     clrscr();
     shell_start_screen();
 
@@ -295,7 +295,7 @@ void shell_start_screen() {
                     int copy_size = min(content->file->file_meta.file_size - data_size, 128);
                     char* data = (char*)clralloc(copy_size);
 
-                    fread_off(content, data_size, data, copy_size);
+                    fread_off(content, data_size, (uint8_t*)data, copy_size);
                     printf("%s", data);
 
                     free(data);

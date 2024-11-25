@@ -70,17 +70,17 @@ void VGA_init(uint8_t* buffer);
 void VGA_clrscr();
 void VGA_scrollback(int lines);
 void VGA_set_color(uint8_t color);
-void VGA_setcursor(int x, int y);
+void VGA_setcursor(uint8_t x, uint8_t y);
 
-char VGA_getchr(int x, int y);
-uint8_t VGA_getcolor(int x, int y);
+char VGA_getchr(uint8_t x, uint8_t y);
+uint8_t VGA_getcolor(uint8_t x, uint8_t y);
 
-void VGA_putchr(int x, int y, char c);
+void VGA_putchr(uint8_t x, uint8_t y, char c);
 void VGA_cputc(char c, uint8_t color);
 void VGA_putc(char c);
-void VGA_putcolor(int x, int y, uint8_t color);
+void VGA_putcolor(uint8_t x, uint8_t y, uint8_t color);
 
-int VGA_cursor_get_x();
-int VGA_cursor_get_y();
+uint8_t VGA_cursor_get_x();
+uint8_t VGA_cursor_get_y();
 
 #endif

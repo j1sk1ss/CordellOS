@@ -27,7 +27,7 @@ typedef struct malloc_head {
 	uint32_t virt_address;
 	uint32_t phys_address;
 	uint32_t total_pages;
-    bool (*map_page)(void*, void*);
+    int (*map_page)(void*, void*);
     void* (*mkpage)(uint32_t*, uint8_t);
 } malloc_head_t;
 

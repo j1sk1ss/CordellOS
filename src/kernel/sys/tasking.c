@@ -110,9 +110,7 @@ TaskManager taskManager = { // Task manager placed in kernel space
 			//=============================
 
 				// Create empty pd and fill it by tables from kernel pd
-				if (type == USER) task->page_directory = _mkupdir();
-				else if (type == KERNEL) task->page_directory = _mkpdir();
-
+				task->page_directory = VMM_mkpdir();
 				_copy_dir2dir(kernel_page_directory, task->page_directory);
                 VMM_set_directory(task->page_directory);
 				
@@ -186,7 +184,7 @@ TaskManager taskManager = { // Task manager placed in kernel space
 	void destroy_task(Task* task) {
 		page_directory* task_pagedir = (page_directory*)VMM_virtual2physical(task->page_directory);
 		VMM_set_directory(kernel_page_directory);
-		_free_pdir(task_pagedir);
+		VMM_free_pdir(task_pagedir);
 		_kfree(task->cpuState);
 		_kfree(task);
 	}

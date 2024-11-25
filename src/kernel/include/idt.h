@@ -11,6 +11,19 @@
 #define i386_GDT_DATA_SEGMENT 0x10
 
 
+typedef struct {
+    uint16_t BaseLow;
+    uint16_t SegmentSelector;
+    uint8_t Reserved;
+    uint8_t Flags;
+    uint16_t BaseHigh;
+} __attribute__((packed)) IDTEntry;
+
+typedef struct {
+    uint16_t Limit;
+    IDTEntry* Ptr;
+} __attribute__((packed)) IDTDescriptor;
+
 typedef enum {
     IDT_FLAG_GATE_TASK                      = 0x05,
 
@@ -28,6 +41,8 @@ typedef enum {
     IDT_FLAG_PRESENT                        = 0x80,
 } IDT_FLAGS;
 
+
+void __attribute__((cdecl)) i386_idt_load(IDTDescriptor* idtDescriptor);
 
 void i386_idt_initialize();
 void i386_idt_disableGate(int interrupt);

@@ -59,7 +59,7 @@ void input_read_stop(int mode, uint8_t color, char* stop_list, char* buffer) {
         "int $0x80\n"
         :
         : "m"(color), "m"(mode), "m"(stop_list), "m"(buffer)
-        : "eax", "ebx", "edx", "esi"
+        : "eax", "ebx", "edx", "esi", "ecx"
     );
 }
 
@@ -67,14 +67,14 @@ void input_read_stop(int mode, uint8_t color, char* stop_list, char* buffer) {
 // Function take a value from keyboard
 // ECX - pointer to character
 char get_char() {
-    char key;
+    char key = 0;
     __asm__ volatile(
         "movl $5, %%eax\n"
         "movl %0, %%ecx\n"
         "int %1\n"
         :
         : "r"(&key), "i"(SYSCALL_INTERRUPT)
-        : "eax", "ebx", "ecx", "edx"
+        : "eax", "ecx"
     );
 
     return key;

@@ -2,7 +2,7 @@
 #include "../../include/ata.h"
 
 
-pci_dev_t ata_device;
+pci_dev_t ata_device = { 0 };
 struct ata_dev* current_ata_device = NULL;
 
 ata_dev_t primary_master   = {.slave = 0};
@@ -103,7 +103,7 @@ ata_dev_t secondary_slave  = {.slave = 1};
             pci_write(ata_device, PCI_COMMAND, pci_command_reg);
         }
 
-        kprintf("DRIVE [%i] FOUND\n", dev->data);
+        kprintf("DRIVE [%i] FOUND\n", dev->drive);
     }
 
     void ATA_device_init(ata_dev_t* dev, int primary) {
@@ -271,8 +271,7 @@ ata_dev_t secondary_slave  = {.slave = 1};
     uint8_t* ATA_read_sectors(uint32_t lba, uint32_t sector_count) {
         ATA_ata_wait();
         uint8_t* buffer = (uint8_t*)_kmalloc(SECTOR_SIZE * sector_count);
-        if (buffer == NULL) 
-            return NULL;
+        if (buffer == NULL) return NULL;
 
         memset(buffer, 0, SECTOR_SIZE * sector_count);
         for (uint32_t i = 0; i < sector_count; i++) {
@@ -294,8 +293,7 @@ ata_dev_t secondary_slave  = {.slave = 1};
         uint32_t size         = (SECTOR_SIZE * (sector_count - 1)) + (SECTOR_SIZE - data_seek);
 
         uint8_t* buffer = (uint8_t*)_kmalloc(size);
-        if (buffer == NULL) 
-            return NULL;
+        if (buffer == NULL) return NULL;
 
         memset(buffer, 0, size);
         for (uint32_t i = sectors_seek; i < sector_count; i++) {
@@ -318,8 +316,7 @@ ata_dev_t secondary_slave  = {.slave = 1};
         ATA_ata_wait();
 
         uint8_t* buffer = (uint8_t*)_kmalloc(SECTOR_SIZE * sector_count);
-        if (buffer == NULL) 
-            return NULL;
+        if (buffer == NULL) return NULL;
 
         memset(buffer, 0, SECTOR_SIZE * sector_count);
         for (uint32_t i = 0; i < sector_count; i++) {
@@ -345,8 +342,7 @@ ata_dev_t secondary_slave  = {.slave = 1};
         uint32_t size         = (SECTOR_SIZE * (sector_count - 1)) + (SECTOR_SIZE - data_seek);
 
         uint8_t* buffer = (uint8_t*)_kmalloc(size);
-        if (buffer == NULL) 
-            return NULL;
+        if (buffer == NULL) return NULL;
 
         memset(buffer, 0, size);
         for (uint32_t i = sectors_seek; i < sector_count; i++) {
@@ -519,9 +515,7 @@ ata_dev_t secondary_slave  = {.slave = 1};
     uint32_t ATA_find_empty_sector(uint32_t offset) {
         for (uint32_t lba = offset; lba <= SECTOR_COUNT; lba++) {
             uint8_t* sector_data = ATA_read_sector(lba);
-            if (sector_data == NULL) 
-                continue;
-
+            if (sector_data == NULL) continue;
             if (ATA_is_sector_empty((const uint8_t*)sector_data)) {
                 _kfree(sector_data);
                 return lba;
@@ -543,9 +537,7 @@ ata_dev_t secondary_slave  = {.slave = 1};
     int ATA_ata_ready() {
         int timeout = 9000000;
         while ((i386_inb(STATUS_REGISTER) & ATA_SR_BSY) == 0) 
-            if (--timeout < 0) {
-                return -1;
-            } else continue;
+            if (--timeout < 0) return -1;
 
         return 1;
     }
@@ -570,9 +562,7 @@ ata_dev_t secondary_slave  = {.slave = 1};
         for (uint32_t lba = 0; lba < SECTOR_COUNT; lba++) {
             uint8_t* sector_data = ATA_read_sector(lba);
             if (sector_data != NULL) {
-                if (ATA_is_sector_empty((const uint8_t*)sector_data))
-                    sectors++;
-
+                if (ATA_is_sector_empty((const uint8_t*)sector_data)) sectors++;
                 _kfree(sector_data);
             }
         }

@@ -261,7 +261,7 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
 
         PMM_deinitialize_memory_region(0x1000, 0x11000);
         PMM_deinitialize_memory_region(MMAP_LOCATION, PMM_map.max_blocks / BLOCKS_PER_BYTE);
-        if (VMM_init(0x100000) == false) {
+        if (VMM_init(0x100000) == 0) {
             kprintf("[%s %i] VMM INIT ERROR!\n",__FILE__ ,__LINE__);
             goto end;
         }

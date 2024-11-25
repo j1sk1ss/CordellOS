@@ -1,25 +1,9 @@
 #include "../../include/idt.h"
 
 
-typedef struct {
-    uint16_t BaseLow;
-    uint16_t SegmentSelector;
-    uint8_t Reserved;
-    uint8_t Flags;
-    uint16_t BaseHigh;
-} __attribute__((packed)) IDTEntry;
+static IDTEntry _idt[256];
+static IDTDescriptor _IDTDescriptor = { sizeof(_idt) - 1, _idt };
 
-typedef struct {
-    uint16_t Limit;
-    IDTEntry* Ptr;
-} __attribute__((packed)) IDTDescriptor;
-
-
-IDTEntry _idt[256];
-IDTDescriptor _IDTDescriptor = { sizeof(_idt) - 1, _idt };
-
-
-void __attribute__((cdecl)) i386_idt_load(IDTDescriptor* idtDescriptor);
 
 void i386_idt_setGate(int interrupt, void* base, uint16_t segmentDescriptor, uint8_t flags) {
     _idt[interrupt].BaseLow         = ((uint32_t)base) & 0xFFFF;

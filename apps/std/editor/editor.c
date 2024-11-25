@@ -81,7 +81,7 @@ int display_text() {
         char buffer[CHARS_ON_LINE] = { '\0' };
         char stop[1] = { '\n' };
 
-        fread_off_stop(edit_content, offset, buffer, CHARS_ON_LINE, stop);
+        fread_off_stop(edit_content, offset, (uint8_t*)buffer, CHARS_ON_LINE, stop);
         offset += strlen(buffer);
     }
 
@@ -89,7 +89,7 @@ int display_text() {
         char text2display[CHARS_ON_LINE] = { '\0' };
         char stop[1] = { '\n' };
 
-        fread_off_stop(edit_content, offset, text2display, CHARS_ON_LINE, stop);
+        fread_off_stop(edit_content, offset, (uint8_t*)text2display, CHARS_ON_LINE, stop);
         offset += strlen(text2display);
         
         printf(text2display);

@@ -1,13 +1,13 @@
 #include "snake.h"
 
 
-snake snk[N];
-fruit frt;
+static snake snk[N];
+static fruit frt;
 
-int hardnes_level = 20000000;
-int snake_size    = 0;
-int max_score     = 0;
-int dead          = 0;
+static int hardnes_level = 20000000;
+static int snake_size    = 0;
+static int max_score     = 0;
+static int dead          = 0;
 
 
 int main(int args, char* argv[]) {
@@ -164,6 +164,8 @@ int input(char map[V][H]) {
 			return -1;
 		}
 	}
+
+	return 1;
 }
 
 void update(char map[V][H]) {

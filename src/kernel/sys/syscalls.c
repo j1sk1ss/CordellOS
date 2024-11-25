@@ -83,7 +83,7 @@ void syscall(struct Registers* regs) {
 
                 if (i386_inb(0x64) & 0x1) {
                     key = i386_inb(0x60);
-                    key = get_character(key);
+                    key = _get_character(key);
                 }
 
                 key_buffer[0] = key;
@@ -94,15 +94,15 @@ void syscall(struct Registers* regs) {
                 int keyboard_mode      = (int)regs->ebx;
                 uint8_t* buffer        = (uint8_t*)regs->ecx;
                 uint8_t stop_list[2]   = { '\n', '\0' };
-                enable_keyboard(buffer, keyboard_mode, keyborad_color, stop_list);
+                _enable_keyboard(buffer, keyboard_mode, keyborad_color, stop_list);
             } 
             
             else if (regs->eax == SYS_AREAD_KEYBOARD_STP) {
                 uint8_t keyborad_color = (uint8_t)regs->edx;
                 int keyboard_mode      = (int)regs->ebx;
-                char* stop_list        = (char*)regs->ecx;
+                uint8_t* stop_list        = (uint8_t*)regs->ecx;
                 uint8_t* buffer        = (uint8_t*)regs->esi;
-                enable_keyboard(buffer, keyboard_mode, keyborad_color, stop_list);
+                _enable_keyboard(buffer, keyboard_mode, keyborad_color, stop_list);
             } 
 
         //=======================

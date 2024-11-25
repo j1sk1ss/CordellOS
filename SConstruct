@@ -117,7 +117,7 @@ TARGET_ENVIRONMENT.Append(
     CCFLAGS = [
         '-ffreestanding',
         '-nostdlib',
-        '-Wall'
+        '-Wall', '-Wno-comment', '-Wno-unknown-pragmas'
     ],
 
     CXXFLAGS = [
