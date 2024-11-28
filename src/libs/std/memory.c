@@ -1,53 +1,37 @@
 #include "../include/memory.h"
 
-
-void* memcpy(void* destination, const void* source, uint16_t num) {
-    uint8_t* u8Dst = (uint8_t*)destination;
-    const uint8_t* u8Src = (const uint8_t*)source;
-    for (uint16_t i = 0; i < num; i++)
-        u8Dst[i] = u8Src[i];
-
-    return destination;
-}
-
-void* memcpy_off(void* destination, const void* source, uint16_t offset, uint16_t num) {
-    uint8_t* u8Dst = (uint8_t*)destination;
-    const uint8_t* u8Src = (const uint8_t*)source;
-    for (uint16_t i = offset; i < offset + num; i++)
-        u8Dst[i] = u8Src[i];
-
-    return destination;
-}
-
-void* memcpy32(void* dst, const void* src, const uint32_t len) {
+// https://forum.osdev.org/viewtopic.php?t=18119
+void* memcpy(void* destination, const void* source, size_t num) {
+    uint32_t num_dwords = num / 4;
+    uint32_t num_bytes = num % 4;
+    uint32_t* dest32 = (uint32_t*)destination;
+    uint32_t* src32 = (uint32_t*)source;
+    uint8_t* dest8 = ((uint8_t*)destination) + num_dwords * 4;
+    uint8_t* src8 = ((uint8_t*)source) + num_dwords * 4;
     uint32_t i = 0;
-    for (i = 0; i < len / 4; i++)
-        ((uint32_t *)dst)[i] = ((uint32_t *)src)[i];
 
-    i *= 4;
-    for (uint32_t j = 0; j < len % 4; i++, j++)
-        ((uint8_t *)dst)[i] = ((uint8_t *)src)[i];
+    for (i = 0; i < num_dwords; i++) dest32[i] = src32[i];
+    for (i = 0; i < num_bytes; i++) dest8[i] = src8[i];
 
-    return dst;
+    return destination;
 }
 
-void* memset(void* pointer, uint8_t value, uint16_t num) {
-    uint8_t* u8Ptr = (uint8_t*)pointer;
-    for (uint16_t i = 0; i < num; i++)
-        u8Ptr[i] = value;
+void* memset(void* destination, int value, size_t num) {
+    uint32_t num_dwords = num / 4;
+    uint32_t num_bytes = num % 4;
+    uint32_t *dest32 = (uint32_t*)destination;
+    uint8_t *dest8 = ((uint8_t*)destination)+num_dwords*4;
+    uint8_t val8 = (uint8_t)value;
+    uint32_t val32 = value | (value << 8) | (value << 16) | (value << 24);
+    uint32_t i = 0;
 
-    return pointer;
+    for (i = 0; i < num_dwords; i++) dest32[i] = val32;
+    for (i = 0; i < num_bytes; i++) dest8[i] = val8;
+    
+    return destination;
 }
 
-void* memset32(void* pointer, uint32_t value, uint32_t num) {
-    uint32_t* u32Ptr = (uint32_t*)pointer;
-    for (size_t i = 0; i < num; i++)
-        u32Ptr[i] = value;
-
-    return pointer;
-}
-
-int memcmp(const void* firstPointer, const void* secondPointer, uint16_t num) {
+int memcmp(const void* firstPointer, const void* secondPointer, size_t num) {
     const uint8_t* u8Ptr1 = (const uint8_t *)firstPointer;
     const uint8_t* u8Ptr2 = (const uint8_t *)secondPointer;
     for (uint16_t i = 0; i < num; i++)

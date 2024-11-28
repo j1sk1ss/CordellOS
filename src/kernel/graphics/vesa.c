@@ -14,7 +14,7 @@ void VESA_init() {
     KSTDIO_data.get_cursor_y = VESA_get_cursor_y;
     KSTDIO_data.set_cursor = VESA_set_cursor;
     KSTDIO_data.put_chr = VESA_putchr;
-    KSTDIO_data.get_char = __vmem_getc;
+    KSTDIO_data.get_char = __pmem_getc;
 
     for (uint8_t c = ' '; c < '~'; c++) {
         uint16_t offset = (c - 31) * 16 ;
@@ -37,7 +37,7 @@ void VESA_scrollback(int lines) {
     uint8_t* screenBuffer = (uint8_t*)GFX_data.physical_base_pointer;
 
     memmove(screenBuffer, screenBuffer + scrollBytes, screenSize - scrollBytes);
-    __vmem_fill(BLACK, 0, VESA_get_max32_y() - lines, VESA_get_max32_x(), VESA_get_max32_y());
+    __pmem_fill(BLACK, 0, VESA_get_max32_y() - lines, VESA_get_max32_x(), VESA_get_max32_y());
 }
 
 void VESA_newline() {
@@ -50,11 +50,11 @@ void VESA_newline() {
 }
 
 void VESA_putchr(uint8_t x, uint8_t y, char c) {
-    __vmem_putc(x * CHAR_X, y * CHAR_Y, c, WHITE, BLACK);
+    __pmem_putc(x * CHAR_X, y * CHAR_Y, c, WHITE, BLACK);
 }
 
 void VESA_cputchr(uint8_t x, uint8_t y, char c, uint32_t fcolor, uint32_t bcolor) {
-    __vmem_putc(x * CHAR_X, y * CHAR_Y, c, fcolor, bcolor);
+    __pmem_putc(x * CHAR_X, y * CHAR_Y, c, fcolor, bcolor);
 }
 
 void VESA_putc(char c) {
@@ -77,7 +77,7 @@ void VESA_cputc(char c, uint32_t fcolor, uint32_t bcolor) {
             break;
 
         default:
-            __vmem_putc(_cursor_x, _cursor_y, c, fcolor, bcolor);
+            __pmem_putc(_cursor_x, _cursor_y, c, fcolor, bcolor);
             _cursor_x += CHAR_X;
             break;
     }
@@ -102,11 +102,18 @@ void VESA_clrscr() {
 
 void VESA_fill(uint32_t color) {
     __vmem_fill(BLACK, 0, 0, VESA_get_max32_x(), VESA_get_max32_y());
+    GFX_swap_buffers();
     _cursor_x = 0;
     _cursor_y = 0;
 }
 
 void __vmem_fill(uint32_t color, uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
+    for (uint16_t x = a; x < c; x++)
+        for (uint16_t y = b; y < d; y++)
+            GFX_vdraw_pixel(x, y, color);
+}
+
+void __pmem_fill(uint32_t color, uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
     for (uint16_t x = a; x < c; x++)
         for (uint16_t y = b; y < d; y++)
             GFX_pdraw_pixel(x, y, color);
@@ -158,7 +165,7 @@ uint8_t VESA_get_max_y() {
     return GFX_data.y_resolution / CHAR_Y;
 }
 
-void __vmem_putc(int x, int y, char c, uint32_t foreground, uint32_t background) {
+void __pmem_putc(int x, int y, char c, uint32_t foreground, uint32_t background) {
     uint32_t step = GFX_data.pitch / 4;
     uint32_t* chardat = _chars + CHAROFF(c);
     uint32_t* abs_row = (uint32_t*)(((unsigned char*)GFX_data.physical_base_pointer) + (y * GFX_data.pitch));
@@ -173,7 +180,7 @@ void __vmem_putc(int x, int y, char c, uint32_t foreground, uint32_t background)
     }
 }
 
-char __vmem_getc(int x, int y) {
+char __pmem_getc(int x, int y) {
     uint32_t step = GFX_data.pitch / 4;
     uint32_t* abs_row = (uint32_t*)(((unsigned char*)GFX_data.physical_base_pointer) + (y * GFX_data.pitch));
     abs_row += x;

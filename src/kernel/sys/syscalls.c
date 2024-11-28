@@ -398,7 +398,7 @@ void syscall(struct Registers* regs) {
         } 
 
         else if (regs->eax == SYS_FBUFFER_SWIPE) {
-            // TODO: Cleanup
+            GFX_swap_buffers();
         }
 
         else if (regs->eax == SYS_GET_RESOLUTION_X) {

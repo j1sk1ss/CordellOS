@@ -5,7 +5,9 @@
 #include <math.h>
 #include <font.h>
 
+#include "allocator.h"
 #include "x86.h"
+
 #include "../multiboot/multiboot.h"
 
 
@@ -120,5 +122,6 @@ void __draw_pixel(uint16_t x, uint16_t y, uint32_t color, uint32_t buffer);
 uint32_t GFX_get_pixel(uint16_t X, uint16_t Y);
 
 uint32_t GFX_convert_color(const uint32_t color);
+void GFX_swap_buffers();
 
 #endif

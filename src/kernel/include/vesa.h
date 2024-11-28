@@ -35,7 +35,8 @@ int VESA_get_max32_y();
 uint8_t VESA_get_max_y();
 
 void __vmem_fill(uint32_t color, uint32_t a, uint32_t b, uint32_t c, uint32_t d);
-void __vmem_putc(int x, int y, char c, uint32_t foreground, uint32_t background);
-char __vmem_getc(int x, int y);
+void __pmem_fill(uint32_t color, uint32_t a, uint32_t b, uint32_t c, uint32_t d);
+void __pmem_putc(int x, int y, char c, uint32_t foreground, uint32_t background);
+char __pmem_getc(int x, int y);
 
 #endif

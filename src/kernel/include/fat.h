@@ -1,10 +1,6 @@
 #ifndef FAT_H_
 #define FAT_H_
 
-#include "ata.h"       // Lib for reading and writing ATA PIO sectors
-#include "elf.h"       // Not important for base implementation. ELF executer
-#include "datetime.h" // Not important for base implementation. Date time getter from CMOS
-
 #include <stddef.h>
 #include <memory.h>
 #include <stdlib.h>  // Allocators (basic malloc required)
@@ -12,6 +8,11 @@
 #include <fslib.h>
 #include <ctype.h>
 #include <assert.h>
+#include <stdint.h>
+
+#include "ata.h"      // Lib for reading and writing ATA PIO sectors
+#include "elf.h"      // Not important for base implementation. ELF executer
+#include "datetime.h" // Not important for base implementation. Date time getter from CMOS
 
 
 #define SECTOR_OFFSET		23000
@@ -108,37 +109,9 @@ typedef struct fat_BS {
 	unsigned int 		total_sectors_32;
 
 	unsigned char		extended_section[54];
-
 } __attribute__((packed)) fat_BS_t;
 
 /* from http://wiki.osdev.org/FAT */
-
-typedef struct fsInfo {
-	unsigned int  lead_signature;      //should contain 0x41615252
-	unsigned char reserved1[480];
-	
-	unsigned int  structure_signature; //should contain 0x61417272
-	unsigned int  free_space;          //contains last known free cluster count. 0xFFFFFFFF indicates count is unknown.
-	unsigned int  last_written;        //contains last-written cluster number to help FAT drivers find a free cluster. 0xFFFFFFFF indicates that cluster number is unknown.
-	
-	unsigned char reserved2[12];
-	unsigned int  trail_signature;     //should contain 0xAA550000
-
-} __attribute__((packed)) FSInfo_t;
-
-typedef struct long_entry {
-	unsigned char order;
-	unsigned char first_five[10];      //first 5, 2-byte characters
-	unsigned char attributes;          //MUST BE FILE_LONG_NAME
-	unsigned char type;                //indicates a sub-component of a long name (leave as 0)
-	unsigned char checksum;
-	unsigned char next_six[12];        //next 6, 2-byte characters
-
-	unsigned short zero;               //must be zero - otherwise meaningless
-	unsigned char last_two[4];         //last 2, 2-byte characters
-
-} __attribute__((packed)) long_entry_t;
-
 /* From file_system.h (CordellOS brunch FS_based_on_FAL) */
 
 typedef struct fat_data {
@@ -186,7 +159,7 @@ extern fat_data_t FAT_data;
 	int FAT_cluster_writeoff(void* contentsToWrite, unsigned int clusterNum, uint32_t offset, uint32_t size);
 	int FAT_cluster_clear(unsigned int clusterNum);
 	void FAT_add_cluster2content(Content* content);
-	int FAT_cpy_cluster2cluster(unsigned int firstCluster, unsigned int secondCluster);
+	int FAT_copy_cluster2cluster(unsigned int firstCluster, unsigned int secondCluster);
 
 //===================================
 //   _____ _   _ _____ ______   __

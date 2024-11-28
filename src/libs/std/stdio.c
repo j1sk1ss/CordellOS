@@ -106,7 +106,7 @@ void cursor_get(int* result) {
         "int %1\n"
         :
         : "r"(result), "i"(SYSCALL_INTERRUPT)
-        : "eax", "ebx", "ecx", "edx"
+        : "eax", "ecx"
     );
 }
 
@@ -118,7 +118,7 @@ void clrscr() {
         "int %0\n"
         :
         : "i"(SYSCALL_INTERRUPT)
-        : "eax", "ebx", "ecx", "edx"
+        : "eax"
     );
 }
 
@@ -133,7 +133,7 @@ void fputc(char c, uint32_t file, int color) {
             "int %1\n"
             :
             : "r"((int)c), "i"(SYSCALL_INTERRUPT)
-            : "eax", "ebx", "ecx", "edx"
+            : "eax", "ecx"
         );
     }
     else cputc(c, file);
@@ -151,7 +151,7 @@ void cputc(char c, uint32_t color) {
         "int %2\n"
         :
         : "r"((int)color), "r"((int)c), "i"(SYSCALL_INTERRUPT)
-        : "eax", "ebx", "ecx", "edx"
+        : "eax", "ebx", "ecx"
     );
 }
 
@@ -172,7 +172,7 @@ void set_color(int color) {
         "int %1\n"
         :
         : "r"((int)color), "i"(SYSCALL_INTERRUPT)
-        : "eax", "ebx", "ecx", "edx"
+        : "eax", "ecx"
     );
 }
 

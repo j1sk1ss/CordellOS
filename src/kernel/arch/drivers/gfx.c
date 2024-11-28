@@ -21,7 +21,7 @@ void GFX_init(struct multiboot_info* mb_info) {
     GFX_data.linear_blue_field_position = mb_info->framebuffer_blue_field_position;
 
     GFX_data.buffer_size = GFX_data.y_resolution * GFX_data.x_resolution * (GFX_data.bits_per_pixel | 7) >> 3;
-    GFX_data.virtual_second_buffer = 0x5000000;
+    GFX_data.virtual_second_buffer = GFX_data.physical_base_pointer + GFX_data.buffer_size;
 }
 
 void GFX_vdraw_pixel(uint16_t X, uint16_t Y, uint32_t color) {
@@ -57,7 +57,7 @@ uint32_t GFX_get_pixel(uint16_t X, uint16_t Y) {
 }
 
 uint32_t GFX_convert_color(const uint32_t color) {
-    uint8_t convert_r, convert_g, convert_b;
+    uint8_t convert_r = 0, convert_g = 0, convert_b = 0;
     uint32_t converted_color = 0;
 
     const uint8_t orig_r = (color >> 16) & 0xFF;
@@ -83,4 +83,8 @@ uint32_t GFX_convert_color(const uint32_t color) {
                       (convert_b << GFX_data.linear_blue_field_position);
 
     return converted_color;
+}
+
+void GFX_swap_buffers() {
+    memcpy(GFX_data.physical_base_pointer, GFX_data.virtual_second_buffer, GFX_data.buffer_size);
 }

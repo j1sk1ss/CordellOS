@@ -14,7 +14,7 @@ void PMM_init(const uint32_t start_address, size_t size) {
     PMM_map.memory_map = (uint32_t*)start_address;
     PMM_map.max_blocks = size / BLOCK_SIZE;
     PMM_map.used_blocks = PMM_map.max_blocks;
-    memset32(PMM_map.memory_map, 0xFFFFFFFF, PMM_map.max_blocks / BLOCKS_PER_BYTE);
+    memset(PMM_map.memory_map, 0xFFFFFFFF, PMM_map.max_blocks / BLOCKS_PER_BYTE);
 }
 
 void PMM_initialize_memory_region(const uint32_t base_address, size_t size) {

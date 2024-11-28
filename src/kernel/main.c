@@ -2,48 +2,47 @@
 #include "include/vfs.h"
 #include "include/fat.h"
 #include "include/elf.h"
-#include "include/tasking.h"
 #include "include/x86.h"
 #include "include/pit.h"
 #include "include/pmm.h"
 #include "include/vmm.h"
-#include "include/mouse.h"
-#include "include/keyboard.h"
-#include "include/datetime.h"
-#include "include/allocator.h"
-#include "include/syscalls.h"
-#include "include/speaker.h"
-#include "include/rtl8139.h"
 #include "include/pci.h"
 #include "include/arp.h"
-#include "include/dhcp.h"
 #include "include/udp.h"
 #include "include/tss.h"
-#include "include/vars.h"
 #include "include/elf.h"
+#include "include/dhcp.h"
+#include "include/vars.h"
+#include "include/mouse.h"
+#include "include/tasking.h"
+#include "include/speaker.h"
+#include "include/rtl8139.h"
+#include "include/keyboard.h"
+#include "include/datetime.h"
+#include "include/syscalls.h"
+#include "include/allocator.h"
 
 #include "multiboot/multiboot.h"
 
 
-#define USERMODE
-#define DEBUG_MODE
+// #define USERMODE
+// #define DEBUG_MODE
 
 #define CONFIG_KSHELL   0
 #define CONFIG_MOUSE    1
 #define CONFIG_NETWORK  2
 #define CONFIG_SPEAKER  3
 
-#define CONFIG_ENABLED  49
 #define CONFIG_DISABLED 48
+#define CONFIG_ENABLED  49
 
 #define MMAP_LOCATION   0x30000
 
-#define CONFIG_PATH     "boot\\boot.txt"
-#define SHELL_PATH      "home\\shell\\shell.elf"
+#define CONFIG_PATH     "BOOT\\BOOT.TXT"
+#define SHELL_PATH      "HOME\\SHELL\\SHELL.ELF"
 
 #ifdef DEBUG_MODE
     #define NO_MEM_CHECK
-    #define FAST_MEM_CHECK
 #endif
 
 
@@ -65,7 +64,7 @@
 //      5) VBE / VESA                                             [V]   9) FAT32/16/12 support                                       | |
 //          5.0) VBE kernel                                       [V]   10) Boot config                                              | |
 //              5.0.1) Kshell scrolling                           [ ]   11) Multidisk support                                        | |
-//          5.1) Double buffering                                 [ ]   12) Networking                                               | |
+//          5.1) Double buffering                                 [V]   12) Networking                                               | |
 //      6) Keyboard to int                                        [V]       12.0) DHCP                                               | |
 //      7) Reboot outportb(0x64, 0xFE);                           [V]       12.1) UDP                                                | |
 //      8) Mouse support                                          [V]       12.2) ARP                                                | |
@@ -77,7 +76,7 @@
 //      12) Syscalls to std libs                                  [V]
 //          12.0) Syscalls for content change                     [V]
 //          12.1) Syscalls for content delete                     [V]
-//          12.2) Syscalls for _kmallocp and freep                 [V]
+//          12.2) Syscalls for _kmallocp and freep                [V]
 //      13) VBE userland                                          [?]
 //          13.0) VBE file manager                                [?]
 //          13.1) VBE text editor                                 [?]
@@ -106,8 +105,8 @@
 //      18) User mode switch                                      [?]
 //      19) Keyboard in kernel by syscall that cause mt problems  [V]
 //      20) Tasking problems (again)                              [V]
-//          20.0) Page directory cloning                          [?]
-//          20.1) User page directory                             [?]
+//          20.0) Page directory cloning                          [V]
+//          20.1) User page directory                             [V]
 //      21) Data append \ modify FAT                              [ ]
 //      22) New kernel panic screen (maybe blue screen?)          [V]
 //      23) DOOM?                                                 [ ]
@@ -228,7 +227,6 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
                             ++ptr;
                         }
 
-#ifndef NO_MEM_CHECK
                         ptr = (uint32_t*)(uintptr_t)mmap_entry->addr;
                         while (ptr < end) {
                             if (*ptr != pattern) {
@@ -240,8 +238,6 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
                         }
 
                         kprintf("MEM TEST PASSED!\n");
-#endif
-
                         PMM_initialize_memory_region(mmap_entry->addr, mmap_entry->len);
 
 #ifdef FAST_MEM_CHECK
@@ -280,10 +276,13 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
     
             // multiplication 2 for hardware
             framebuffer_pages *= 2;
+            PMM_deinitialize_memory_region(GFX_data.physical_base_pointer, framebuffer_pages * BLOCK_SIZE);
             for (uint32_t i = 0, fb_start = GFX_data.physical_base_pointer; i < framebuffer_pages; i++, fb_start += PAGE_SIZE)
                 VMM_kmap_page((void*)fb_start, (void*)fb_start);
 
-            PMM_deinitialize_memory_region(GFX_data.physical_base_pointer, framebuffer_pages * BLOCK_SIZE);
+            PMM_deinitialize_memory_region(GFX_data.virtual_second_buffer, framebuffer_pages * BLOCK_SIZE);
+            for (uint32_t i = 0, fb_start = GFX_data.virtual_second_buffer; i < framebuffer_pages; i++, fb_start += PAGE_SIZE)
+                VMM_kmap_page((void*)fb_start, (void*)fb_start);
 
 #pragma endregion
 

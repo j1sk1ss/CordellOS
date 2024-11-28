@@ -43,7 +43,7 @@ void vput_pixel(int x, int y, int color) {
 // ECX - y
 // EDX - result
 int get_pixel(int x, int y) {
-    int result;
+    int result = 0;
     __asm__ volatile(
         "movl $29, %%eax\n"
         "movl %0, %%ebx\n"
@@ -65,13 +65,11 @@ int get_resolution_x() {
     int result = 0;
     __asm__ volatile(
         "movl $31, %%eax\n"
-        "movl $0, %%ebx\n"
-        "movl $1, %%ecx\n"
         "movl %0, %%edx\n"
         "int $0x80\n"
         :
         : "r"(&result)
-        : "eax", "ebx", "ecx"
+        : "eax", "edx"
     );
 
     return result;
@@ -84,13 +82,11 @@ int get_resolution_y() {
     int result = 0;
     __asm__ volatile(
         "movl $32, %%eax\n"
-        "movl $0, %%ebx\n"
-        "movl $1, %%ecx\n"
         "movl %0, %%edx\n"
         "int $0x80\n"
         :
         : "r"(&result)
-        : "eax", "ebx", "ecx"
+        : "eax", "edx"
     );
 
     return result;

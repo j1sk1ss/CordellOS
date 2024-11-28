@@ -348,7 +348,7 @@
 //========================================================================================
 // Copy cluster2cluster
 
-	int FAT_cpy_cluster2cluster(unsigned int source, unsigned int destination) {
+	int FAT_copy_cluster2cluster(unsigned int source, unsigned int destination) {
 		assert(source >= 2 && source < FAT_data.total_clusters);
 		assert(destination >= 2 && destination < FAT_data.total_clusters);
 		unsigned int first = (source - 2) * (unsigned short)FAT_data.sectors_per_cluster + FAT_data.first_data_sector;
@@ -835,9 +835,9 @@
 		fatContent->directory = NULL;
 		fatContent->file 	  = NULL;
 
-		char fileNamePart[256];
+		char fileNamePart[256] = { 0 };
 		unsigned short start = 0;
-		unsigned int active_cluster;
+		unsigned int active_cluster = 0;
 
 		if (FAT_data.fat_type == 32) active_cluster = FAT_data.ext_root_cluster;
 		else {
@@ -879,7 +879,7 @@
 			
 			int cluster = GET_CLUSTER_FROM_ENTRY(content_meta, FAT_data.fat_type);
 			while (cluster < END_CLUSTER_32) {
-				uint32_t* new_content = (uint32_t*)realloc(content, (content_size + 1) * sizeof(uint32_t));
+				uint32_t* new_content = (uint32_t*)_krealloc(content, (content_size + 1) * sizeof(uint32_t));
 				if (new_content == NULL) {
 					_kfree(content);
 					return NULL;
@@ -1414,7 +1414,7 @@
 			FAT_add_cluster2content(dstContent);
 			dst_cluster = FAT_read(dst_cluster);
 
-			FAT_cpy_cluster2cluster(data_cluster, dst_cluster);
+			FAT_copy_cluster2cluster(data_cluster, dst_cluster);
 
 			data_cluster = FAT_read(data_cluster);
 		}
