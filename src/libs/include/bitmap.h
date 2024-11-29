@@ -1,27 +1,24 @@
 #ifndef BITMAP_H
 #define BITMAP_H
 
-#include "graphics.h"
-#include "stdio.h"
 #include "fslib.h"
+#include "stdio.h"
 #include "stdlib.h"
+#include "graphics.h"
 
 
 #define LOAD_PART   256
 
 
 typedef struct tagBITMAPFILEHEADER {
-
     unsigned short bfType;
     unsigned int bfSize;
     unsigned short bfReserved1;
     unsigned short bfReserved2;
     unsigned int bfOffBits;
-
 }__attribute__((packed)) bmp_fileheader_t;
 
 typedef struct tagBITMAPINFOHEADER {
-
     unsigned int biSize;
     long biWidth;
     long biHeight;
@@ -33,25 +30,22 @@ typedef struct tagBITMAPINFOHEADER {
     long biYPelsPerMeter;
     unsigned int biClrUsed;
     unsigned int biClrImportant;
-
 } bmp_infoheader_t;
 
 typedef struct bitmap {
-
     unsigned int x;
     unsigned int y;
 
     unsigned int width;
     unsigned int height;
 
-    Content* file;
+    struct FATContent* file;
     uint32_t header_offset;
 
     unsigned int total_size;
     uint32_t bpp;
 
     void* data_pointer;
-    
 } bitmap_t;
 
 typedef struct palette {

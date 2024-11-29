@@ -73,7 +73,6 @@ typedef struct FATDate {
 typedef struct FATContent {
 	Directory* directory;
 	File* file;
-
 	uint32_t parent_cluster;
 } Content;
 

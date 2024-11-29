@@ -2,13 +2,17 @@
 #define PSF_H_
 
 #include <stdint.h>
-#include <fslib.h>
-#include <stdlib.h>
+
+#include "stdlib.h"
+#include "fslib.h"
 
 // https://wiki.osdev.org/PC_Screen_Font
 
 #define PSF1_FONT_MAGIC 0x0436
-#define PSF_FONT_MAGIC 0x864ab572
+#define PSF_FONT_MAGIC  0x864ab572
+
+#define VERSION_PSF1    0x01
+#define VERSION_PSF2    0x02
 
 
 typedef struct {
@@ -28,9 +32,10 @@ typedef struct {
     uint32_t width;         /* width in pixels */
 } PSF_font;
 
-typedef struct {
-    int8_t* font_data;
-    uint16_t* unicode;
-} PSF_data;
+
+uint8_t* PSF_get_glyph(uint8_t symbolnumber, uint8_t version);
+uint8_t _psf_get_version(char *_font_structure);
+uint32_t _psf_get_width(uint8_t version);
+uint32_t _psf_get_height(uint8_t version);
 
 #endif

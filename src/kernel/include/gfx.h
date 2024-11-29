@@ -5,7 +5,6 @@
 #include <math.h>
 
 #include "allocator.h"
-#include "font.h"
 #include "x86.h"
 
 #include "../multiboot/multiboot.h"

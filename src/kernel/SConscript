@@ -1,7 +1,5 @@
-import os
-
 from SCons.Environment import Environment
-from scons_scripts.utility import glob_recursive, find_index, is_file_name
+from scons_scripts.utility import glob_recursive
 
 
 Import('TARGET_ENVIRONMENT')
@@ -28,6 +26,17 @@ sources = glob_recursive(env, '*.c') + \
           glob_recursive(env, '*.asm')
 
 objects = env.Object(sources)
+
+# Add font processing
+font_file = 'font.psf'  # Specify the path to your PSF font file
+font_obj = env.Command(
+    'font.o',
+    font_file,
+    'objcopy -O elf32-i386 -B i386 -I binary $SOURCE $TARGET'
+)
+
+# Include the font object in the list of objects
+objects.append(font_obj)
 
 Import('libcore')
 

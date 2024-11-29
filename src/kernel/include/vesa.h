@@ -6,6 +6,7 @@
 
 #include "stdio.h"
 #include "gfx.h"
+#include "psf.h"
 
 
 #define CHAR_BODY	0x0000000F

@@ -455,7 +455,7 @@ int ulogin(char* login, char* password) {
     char* lines[40] = { NULL };
     int pos = 0;
 
-    char* content_text = fread("boot\\users.txt");
+    char* content_text = (char*)fread("boot\\users.txt");
     char* token = strtok(content_text, "\n");
     while (token) {
         lines[pos++] = token;

@@ -1,12 +1,13 @@
 #ifndef STDIO_H_
 #define STDIO_H_
 
-#include <string.h>
 #include <stdint.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include <graphics.h>
+
+#include "graphics.h"
+#include "string.h"
 
 
 #define SYSCALL_INTERRUPT 0x80
@@ -94,18 +95,18 @@ void puts(const char* str);
 void printf(const char* fmt, ...);
 void cprintf(uint32_t color, const char* fmt, ...);
 
-void fputc(char c, uint32_t file, int color);
+void fputc(char c, uint32_t color);
 void cputc(char c, uint32_t color);
-void fputs(const char* str, uint32_t file, int color);
+void fputs(const char* str, uint32_t color);
 
 void _fprintf_signed(long long number, int radix, int color);
-void _fprintf_unsigned(uint32_t file, unsigned long long number, int radix, int color);
-void _vfprintf(uint32_t file, const char* fmt, va_list args, int color);
-void fprintf(uint32_t file, const char* fmt, ...);
+void _fprintf_unsigned(unsigned long long number, int radix, int color);
+void _vfprintf(const char* fmt, va_list args, int color);
+void fprintf(const char* fmt, ...);
 
 int _vsprintf_signed(char* buffer, long long number, int radix, int position);
 int _vsprintf_unsigned(char* buffer, unsigned long long number, int radix, int position);
-void _vsprintf(char* buffer, int len, const char* fmt, va_list args);
+void _vsprintf(int type, char* buffer, int len, const char* fmt, uint32_t color, va_list args);
 void sprintf(char* buffer, int len, const char* fmt, ...);
 
 #endif
