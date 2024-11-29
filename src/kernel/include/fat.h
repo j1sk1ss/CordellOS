@@ -32,13 +32,6 @@
 #define CLEAN_EXIT_BMASK_32 0x08000000
 #define HARD_ERR_BMASK_32   0x04000000
 
-#define FILE_READ_ONLY      0x01
-#define FILE_HIDDEN         0x02
-#define FILE_SYSTEM         0x04
-#define FILE_VOLUME_ID      0x08
-#define FILE_DIRECTORY      0x10
-#define FILE_ARCHIVE        0x20
-
 #define FILE_LONG_NAME 			(FILE_READ_ONLY|FILE_HIDDEN|FILE_SYSTEM|FILE_VOLUME_ID)
 #define FILE_LONG_NAME_MASK 	(FILE_READ_ONLY|FILE_HIDDEN|FILE_SYSTEM|FILE_VOLUME_ID|FILE_DIRECTORY|FILE_ARCHIVE)
 
@@ -79,18 +72,7 @@ typedef struct fat_extBS_32 {
 	unsigned int 		volume_id;
 	unsigned char		volume_label[11];
 	unsigned char		fat_type_label[8];
-
 } __attribute__((packed)) fat_extBS_32_t;
-
-typedef struct fat_extBS_16 {
-	unsigned char		bios_drive_num;
-	unsigned char		reserved1;
-	unsigned char		boot_signature;
-	unsigned int		volume_id;
-	unsigned char		volume_label[11];
-	unsigned char		fat_type_label[8];
-
-} __attribute__((packed)) fat_extBS_16_t;
 
 typedef struct fat_BS {
 	unsigned char 		bootjmp[3];
@@ -107,7 +89,6 @@ typedef struct fat_BS {
 	unsigned short		head_side_count;
 	unsigned int 		hidden_sector_count;
 	unsigned int 		total_sectors_32;
-
 	unsigned char		extended_section[54];
 } __attribute__((packed)) fat_BS_t;
 

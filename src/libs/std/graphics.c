@@ -2,13 +2,13 @@
 
 
 //====================================================================
-// Function put pixel by coordinates
+// Function put pixel by coordinates to virtual memory (slow method)
 // EBX - x
 // ECX - y
 // EDX - pixel data
-void put_pixel(int x, int y, int color) {
+void pput_pixel(int x, int y, int color) {
     __asm__ volatile(
-        "movl $28, %%eax\n"
+        "movl $37, %%eax\n"
         "movl %0, %%ebx\n"
         "movl %1, %%ecx\n"
         "movl %2, %%edx\n"
@@ -20,13 +20,13 @@ void put_pixel(int x, int y, int color) {
 }
 
 //====================================================================
-// Function directly in video memory put pixel by coordinates
+// Function directly in virtual second buffer memory put pixel by coordinates
 // EBX - x
 // ECX - y
 // EDX - pixel data
 void vput_pixel(int x, int y, int color) {
     __asm__ volatile(
-        "movl $37, %%eax\n"
+        "movl $28, %%eax\n"
         "movl %0, %%ebx\n"
         "movl %1, %%ecx\n"
         "movl %2, %%edx\n"
@@ -111,7 +111,7 @@ void display_gui_object(GUIobject_t* object) {
     if (object == NULL) return;
     for (int y = object->height - 1; y >= 0; y--)
         for (int x = 0; x < object->width; x++)
-            vput_pixel(x + object->x, y + object->y, object->background_color);
+            pput_pixel(x + object->x, y + object->y, object->background_color);
 
     for (int i = 0; i < object->children_count; i++) 
         display_gui_object(object->childrens[i]);
@@ -228,7 +228,7 @@ void put_text(text_object_t* text) {
         return;
     }
 
-    int cursor[2];
+    int cursor[2] = { 0 };
     cursor_get(cursor);
 
     int prev_x = cursor[0];

@@ -69,7 +69,7 @@ void object_move(GUIobject_t* object, int rel_x, int rel_y);
 void display_gui_object(GUIobject_t* object);
 void unload_gui_object(GUIobject_t* object);
 
-void put_pixel(int x, int y, int color);
+void pput_pixel(int x, int y, int color);
 void vput_pixel(int x, int y, int color);
 int get_pixel(int x, int y);
 

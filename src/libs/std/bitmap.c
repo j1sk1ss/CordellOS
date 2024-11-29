@@ -68,7 +68,7 @@ void BMP_display(bitmap_t* bmp) {
                 uint32_t alpha = bytes[color_index + 3] & 0xff;
 
                 if (x + line_part < bmp->width) 
-                    vput_pixel(
+                    pput_pixel(
                         x + bmp->x + line_part, 
                         (bmp->height - 1 - y) + bmp->y, 
                         ((alpha << 24) | (red << 16) | (green << 8) | (blue))
@@ -84,7 +84,7 @@ void BMP_display(bitmap_t* bmp) {
         }
     }
 
-    // swipe_buffers();
+    swipe_buffers();
 }
 
 void BMP_unload(bitmap_t* bitmap) {

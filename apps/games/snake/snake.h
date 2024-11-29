@@ -4,6 +4,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <keyboard.h>
+#include <graphics.h>
+#include <window.h>
 
 
 #define V 21

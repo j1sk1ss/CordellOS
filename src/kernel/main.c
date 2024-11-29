@@ -71,7 +71,7 @@
 //      9) Std lib for graphics                                   [V]       12.3) RLT8139 driver                                     | |
 //          8.0.0) Objects                                        [V]   13) Windows                                                  | |
 //          8.0.1) Click event                                    [V]   14) Enviroment variables                                     | |
-//      10) Mouse to int                                          [V]   15) Hash crypto libs (_shell login with pass&login hashing)   | |
+//      10) Mouse to int                                          [V]   15) Hash crypto libs (shell login with pass&login hashing)   | |
 //      11) Loading BMP without malloc for fdata                  [V]   16) Speaker driver                                           | |
 //      12) Syscalls to std libs                                  [V]
 //          12.0) Syscalls for content change                     [V]
@@ -109,6 +109,8 @@
 //          20.1) User page directory                             [V]
 //      21) Data append \ modify FAT                              [ ]
 //      22) New kernel panic screen (maybe blue screen?)          [V]
+//      23) Refactor STDIO in userland                            [ ]
+//          23.1) Font lib, draw instead kprint                   [ ]
 //      23) DOOM?                                                 [ ]
 //======================================================================================================================================
 
@@ -164,8 +166,8 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
         ELF_build_symbols_from_multiboot(mb_info->u.elf_sec);
 
         kprintf("\n\t\t =    CORDELL  KERNEL    =");
-        kprintf("\n\t\t =     [ ver.   20 ]     =");
-        kprintf("\n\t\t =     [ 21.11  24 ]     = \n\n");
+        kprintf("\n\t\t =     [ ver.   21 ]     =");
+        kprintf("\n\t\t =     [ 29.11  24 ]     = \n\n");
         kprintf("\n\t\t = INFORMAZIONI GENERALI = \n\n");
         kprintf("\tMB FLAGS:        [0x%p]\n", mb_info->flags);
         kprintf("\tMEM LOW:         [%uKB] => MEM UP: [%uKB]\n", mb_info->mem_lower, mb_info->mem_upper);
@@ -343,7 +345,7 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
 #pragma region [Preparations for user land]
 
         VARS_init(); // Init env vars manager
-        START_PROCESS("_idle", (uint32_t)_idle, KERNEL, 1);
+        START_PROCESS("idle", (uint32_t)_idle, KERNEL, 1);
 
         if (current_vfs->objexist(CONFIG_PATH) == 1) {
             Content* boot_config = current_vfs->getobj(CONFIG_PATH);
@@ -388,13 +390,13 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
             if (config[CONFIG_MOUSE] == CONFIG_ENABLED) show_mouse = 1;
 
 #ifdef USERMODE
-            if (config[CONFIG_KSHELL] == CONFIG_ENABLED) START_PROCESS("_shell", (uint32_t)_shell, USER, 10);
+            if (config[CONFIG_KSHELL] == CONFIG_ENABLED) START_PROCESS("shell", (uint32_t)_shell, USER, 10);
 #else
-            if (config[CONFIG_KSHELL] == CONFIG_ENABLED) START_PROCESS("_shell", (uint32_t)_shell, KERNEL, 10);
+            if (config[CONFIG_KSHELL] == CONFIG_ENABLED) START_PROCESS("shell", (uint32_t)_shell, KERNEL, 10);
 #endif
 
             _kfree(config);
-        } else START_PROCESS("_shell", (uint32_t)_shell, KERNEL, 10);
+        } else START_PROCESS("shell", (uint32_t)_shell, KERNEL, 10);
 
         TASK_start_tasking();
     

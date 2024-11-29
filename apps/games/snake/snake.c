@@ -12,6 +12,11 @@ static int dead          = 0;
 
 int main(int args, char* argv[]) {
 	clrscr();
+
+	text_object_t* logo = create_text(get_resolution_x() / 2, get_resolution_y() / 2, "SNAKE GAME!", WHITE);
+	window_t* main_menu = create_window("SnakeGameMenu", -1, 0, 0, get_resolution_y(), get_resolution_x(), WHITE, NULL);
+	display_window(main_menu);
+
 	printf("\nSNAKE GAME v. 1.0\nPress ENTER to start.\n");
 	while (dead == 0) {
         char key = keyboard_wait();
@@ -61,7 +66,7 @@ void show(char map[V][H]) {
 	int i, j;
 
 	for (i = 0; i < V; i++) {
-		for (j = 0; j < H; j++) 
+		for (j = 0; j < H; j++)
 			printf("%c", map[i][j]);
 		
 		printf("\n");
@@ -174,8 +179,7 @@ void update(char map[V][H]) {
 }
 
 void intro_data2(char map[V][H]) {
-	int i;
-
+	int i = 0;
 	for (i = snake_size - 1; i > 0; i--) {
 		snk[i].x = snk[i - 1].x;
 		snk[i].y = snk[i - 1].y;

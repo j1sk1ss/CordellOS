@@ -73,6 +73,7 @@ TaskManager taskManager = { // Task manager placed in kernel space
 			// Allocate memory for new task body
 			Task* task     = (Task*)_kmalloc(sizeof(Task));
 			task->cpuState = (struct Registers*)_kmalloc(sizeof(struct Registers));
+			task->space    = type;
 
 			//=============================
 			// Find new pid
@@ -181,7 +182,7 @@ TaskManager taskManager = { // Task manager placed in kernel space
 		return task;
 	}
 
-	void destroy_task(Task* task) {
+	void _destroy_task(Task* task) {
 		page_directory* task_pagedir = (page_directory*)VMM_virtual2physical(task->page_directory);
 		VMM_set_directory(kernel_page_directory);
 		VMM_free_pdir(task_pagedir);
@@ -189,7 +190,7 @@ TaskManager taskManager = { // Task manager placed in kernel space
 		_kfree(task);
 	}
 
-	Task* get_task(int pid) {
+	Task* _get_task(int pid) {
 		for (int i = 0; i < TASKS_MAX; i++) 
 			if (taskManager.tasks[i]->pid == pid) return taskManager.tasks[i];
 
@@ -211,7 +212,7 @@ TaskManager taskManager = { // Task manager placed in kernel space
 				}
 	}
 
-	int _TASK_add_task(Task* task) {
+	int _add_task(Task* task) {
 		if (taskManager.tasksCount >= 256) return -1;
 		taskManager.tasks[taskManager.tasksCount++] = task;
 		
@@ -220,7 +221,7 @@ TaskManager taskManager = { // Task manager placed in kernel space
 
 	int TASK_add_task(Task* task) {
 		TASK_stop_tasking();
-		_TASK_add_task(task);
+		_add_task(task);
 		TASK_continue_tasking();
 
 		return task->pid;
@@ -266,6 +267,7 @@ TaskManager taskManager = { // Task manager placed in kernel space
             if (new_task->page_directory != task->page_directory)
 		        VMM_set_directory(new_task->page_directory);
 
+		// if (new_task->space == USER) i386_switch2user(new_task->cpuState->eip, new_task->virtual_address, &new_task->cpuState->esp);
         i386_enableInterrupts();
 	}
 

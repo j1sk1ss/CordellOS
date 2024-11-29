@@ -88,3 +88,15 @@ uint32_t GFX_convert_color(const uint32_t color) {
 void GFX_swap_buffers() {
     memcpy(GFX_data.physical_base_pointer, GFX_data.virtual_second_buffer, GFX_data.buffer_size);
 }
+
+void GFX_set_pbuffer(uint32_t value) {
+    __set_buffer(value, GFX_data.physical_base_pointer, GFX_data.buffer_size);
+}
+
+void GFX_set_vbuffer(uint32_t value) {
+    __set_buffer(value, GFX_data.virtual_second_buffer, GFX_data.buffer_size);
+}
+
+void __set_buffer(uint32_t value, uint32_t addr, size_t size) {
+    for (size_t i = 0; i < size; i++) ((uint32_t*)addr)[i] = value;
+}

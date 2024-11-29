@@ -36,10 +36,10 @@ typedef struct {
 
     uint8_t delay;
     uint32_t exec_time;
+    uint8_t space;
 
     uint32_t virtual_address;
     page_directory* page_directory;
-
 } Task;
 
 typedef struct {
