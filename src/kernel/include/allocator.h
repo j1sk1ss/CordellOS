@@ -2,6 +2,7 @@
 #define ALLOCATOR_H_
 
 #include <stdint.h>
+#include <stdint.h>
 #include <stddef.h>
 #include <memory.h>
 #include <assert.h>

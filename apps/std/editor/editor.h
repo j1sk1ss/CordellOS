@@ -6,7 +6,6 @@
 #include <fslib.h>
 #include <memory.h>
 #include <keyboard.h>
-#include <font.h>
 
 
 #define SCREEN_HEIGHT   29

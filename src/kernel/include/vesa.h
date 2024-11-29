@@ -1,10 +1,12 @@
 #ifndef VESA_H_
 #define VESA_H_
 
+#include <stdint.h>
 #include <memory.h>
 
 #include "stdio.h"
 #include "gfx.h"
+#include "psf.h"
 
 
 #define CHAR_BODY	0x0000000F

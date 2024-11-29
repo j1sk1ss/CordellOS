@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 #include <math.h>
-#include <font.h>
 
 #include "allocator.h"
 #include "x86.h"

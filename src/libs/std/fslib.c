@@ -122,7 +122,7 @@ char* FSLIB_change_path(const char* currentPath, const char* content) {
 //  Read file content by path
 //  ECX - path
 //  EAX - returned data
-char* fread(const char* path) {
+uint8_t* fread(const char* path) {
     void* pointed_data;
     __asm__ volatile(
         "movl $9, %%eax\n"
@@ -142,7 +142,7 @@ char* fread(const char* path) {
 //  Read file content by path
 //  ECX - path
 //  EAX - returned data
-char* fread_stop(const char* path, char* stop) {
+uint8_t* fread_stop(const char* path, char* stop) {
     void* pointed_data;
     __asm__ volatile(
         "movl $59, %%eax\n"

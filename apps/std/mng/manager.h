@@ -4,7 +4,6 @@
 #include <stdint.h>
 #include <keyboard.h>
 #include <graphics.h>
-#include <font.h>
 
 
 #define ROWS            14

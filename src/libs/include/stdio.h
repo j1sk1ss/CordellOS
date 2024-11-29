@@ -1,17 +1,19 @@
 #ifndef STDIO_H_
 #define STDIO_H_
 
-
 #include <stdint.h>
 #include <stdarg.h>
-#include <stdbool.h>
 #include <stddef.h>
+#include <stdbool.h>
 
+#include "graphics.h"
 #include "string.h"
 
 
 #define SYSCALL_INTERRUPT 0x80
 
+#define STDOUT  0x00
+#define MEMORY  0x01
 
 //=======================================
 //  COLORS
@@ -53,6 +55,8 @@
     #define BACKGROUND_YELLOW       0x60
     #define BACKGROUND_WHITE        0x70
 
+    #define NO_COLOR                0xFF
+
 //  COLORS
 //=======================================
 //  MODS
@@ -83,34 +87,26 @@ char directly_getchar(int x, int y);
 void cursor_set(int x, int y);
 void cursor_set32(uint32_t x, uint32_t y);
 void cursor_get(int* result);
-
-void clrscr();
-void putc(char c);
-void puts(const char* str);
-void printf(const char* fmt, ...);
-void cprintf(uint32_t color, const char* fmt, ...);
-void print_buffer(const void* buffer, uint32_t count);
-
-void fprintf_unsigned(uint32_t file, unsigned long long number, int radix, int color);
-
-void fputc(char c, uint32_t file, int color);
-void cputc(char c, uint32_t color);
-void fputs(const char* str, uint32_t file, int color);
-void vfprintf(uint32_t file, const char* fmt, va_list args, int color);
-void fprintf(uint32_t file, const char* fmt, ...);
-void fprint_buffer(const void* buffer, uint32_t count);
-
-int vsprintf_signed(char* buffer, long long number, int radix, int position);
-int vsprintf_unsigned(char* buffer, unsigned long long number, int radix, int position);
-void vsprintf(char* buffer, int len, const char* fmt, va_list args);
-void sprintf(char* buffer, int len, const char* fmt, ...);
-
-void putc(char c);
-void puts(const char* str);
-void printf(const char* fmt, ...);
-void cprintf(uint32_t color, const char* fmt, ...);
-
 void set_color(int color);
-void print_hex_table(const char* data, size_t length);
+void clrscr();
+
+void putc(char c);
+void puts(const char* str);
+void printf(const char* fmt, ...);
+void cprintf(uint32_t color, const char* fmt, ...);
+
+void fputc(char c, uint32_t color);
+void cputc(char c, uint32_t color);
+void fputs(const char* str, uint32_t color);
+
+void _fprintf_signed(long long number, int radix, int color);
+void _fprintf_unsigned(unsigned long long number, int radix, int color);
+void _vfprintf(const char* fmt, va_list args, int color);
+void fprintf(const char* fmt, ...);
+
+int _vsprintf_signed(char* buffer, long long number, int radix, int position);
+int _vsprintf_unsigned(char* buffer, unsigned long long number, int radix, int position);
+void _vsprintf(int type, char* buffer, int len, const char* fmt, uint32_t color, va_list args);
+void sprintf(char* buffer, int len, const char* fmt, ...);
 
 #endif
