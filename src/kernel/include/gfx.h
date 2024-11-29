@@ -3,9 +3,9 @@
 
 #include <stdint.h>
 #include <math.h>
-#include <font.h>
 
 #include "allocator.h"
+#include "font.h"
 #include "x86.h"
 
 #include "../multiboot/multiboot.h"

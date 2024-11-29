@@ -1,6 +1,7 @@
 #ifndef VESA_H_
 #define VESA_H_
 
+#include <stdint.h>
 #include <memory.h>
 
 #include "stdio.h"

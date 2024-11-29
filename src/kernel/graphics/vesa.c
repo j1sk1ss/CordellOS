@@ -3,7 +3,7 @@
 
 static int _cursor_x = 0;
 static int _cursor_y = 0;
-static uint32_t _chars[CHARCOUNT * CHARLEN];
+static uint32_t _chars[CHARCOUNT * CHARLEN] = { 0 };
 
 
 void VESA_init() {
