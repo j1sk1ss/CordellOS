@@ -13,7 +13,7 @@ void syscall(struct Registers* regs) {
 
         if (regs->eax == SYS_PRINT) {
             const char* data = (const char*)regs->ecx;
-            kprintf(data);
+            kputs(data);
         } 
         
         else if (regs->eax == SYS_PUTC) {
@@ -116,7 +116,7 @@ void syscall(struct Registers* regs) {
     //=======================
 
         else if (regs->eax == SYS_SWITCH_USER) {
-            // i386_switch2user();
+            i386_switch2user();
         }
 
         else if (regs->eax == SYS_TIME) {

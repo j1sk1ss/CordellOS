@@ -55,7 +55,7 @@
     #define BACKGROUND_YELLOW       0x60
     #define BACKGROUND_WHITE        0x70
 
-    #define NO_COLOR                0xFF
+    #define NO_COLOR                0xFCEFCE
 
 //  COLORS
 //=======================================
@@ -95,9 +95,9 @@ void puts(const char* str);
 void printf(const char* fmt, ...);
 void cprintf(uint32_t color, const char* fmt, ...);
 
-void fputc(char c, uint32_t color);
-void cputc(char c, uint32_t color);
-void fputs(const char* str, uint32_t color);
+void _fputc(char c, uint32_t color);
+void _cputc(char c, uint32_t color);
+void _fputs(const char* str, uint32_t color);
 
 void _fprintf_signed(long long number, int radix, int color);
 void _fprintf_unsigned(unsigned long long number, int radix, int color);

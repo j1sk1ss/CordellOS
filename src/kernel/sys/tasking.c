@@ -267,7 +267,6 @@ TaskManager taskManager = { // Task manager placed in kernel space
             if (new_task->page_directory != task->page_directory)
 		        VMM_set_directory(new_task->page_directory);
 
-		// if (new_task->space == USER) i386_switch2user(new_task->cpuState->eip, new_task->virtual_address, &new_task->cpuState->esp);
         i386_enableInterrupts();
 	}
 

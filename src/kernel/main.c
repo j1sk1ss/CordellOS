@@ -26,7 +26,7 @@
 
 
 // #define USERMODE
-// #define DEBUG_MODE
+#define DEBUG_MODE
 
 #define CONFIG_KSHELL   0
 #define CONFIG_MOUSE    1
@@ -43,6 +43,7 @@
 
 #ifdef DEBUG_MODE
     #define NO_MEM_CHECK
+    #define FAST_MEM_CHECK
 #endif
 
 

@@ -125,8 +125,9 @@ void clrscr() {
 //====================================================================
 //  Puts a char in screen (used kernel printf commands)
 //  ECX - character
-void fputc(char c, uint32_t color) {
-    if (color == -1) {
+void _fputc(char c, uint32_t color) {
+    if (color != NO_COLOR) _cputc(c, color);
+    else {
         __asm__ volatile(
             "movl $1, %%eax\n"
             "movl %0, %%ecx\n"
@@ -136,14 +137,13 @@ void fputc(char c, uint32_t color) {
             : "eax", "ecx"
         );
     }
-    else cputc(c, color);
 }
 
 //====================================================================
 //  Puts a char in screen with color (used kernel printf commands)
 //  ECX - color
 //  EBX - character
-void cputc(char c, uint32_t color) {
+void _cputc(char c, uint32_t color) {
     __asm__ volatile(
         "movl $13, %%eax\n"
         "movl %1, %%ebx\n"
@@ -155,9 +155,9 @@ void cputc(char c, uint32_t color) {
     );
 }
 
-void fputs(const char* str, uint32_t color) {
+void _fputs(const char* str, uint32_t color) {
     while(*str) {
-        fputc(*str, color);
+        _fputc(*str, color);
         str++;
     }
 }
@@ -189,136 +189,20 @@ void _fprintf_unsigned(unsigned long long number, int radix, int color) {
     } while (number > 0);
 
     // print number in reverse order
-    while (--pos >= 0) fputc(buffer[pos], color);
+    while (--pos >= 0) _fputc(buffer[pos], color);
 }
 
 void _fprintf_signed(long long number, int radix, int color) {
     if (number >= 0) _fprintf_unsigned(number, radix, color);
     else {
-        fputc('-', color);
+        _fputc('-', color);
         _fprintf_unsigned(-number, radix, color);
-    }
-}
-
-void _vfprintf(const char* fmt, va_list args, int color) {
-    int state   = PRINTF_STATE_NORMAL;
-    int length  = PRINTF_LENGTH_DEFAULT;
-    int radix   = 10;
-    bool sign   = false;
-    bool number = false;
-
-    while (*fmt) {
-        if (state == PRINTF_STATE_NORMAL) {
-            switch (*fmt) {
-                case '%':   
-                    state = PRINTF_STATE_LENGTH;
-                break;
-
-                default:    
-                    fputc(*fmt, color);
-                break;
-            }
-        }
-
-        else if (state == PRINTF_STATE_LENGTH) {
-            switch (*fmt) {
-                case 'h':   
-                    length  = PRINTF_LENGTH_SHORT;  
-                    state   = PRINTF_STATE_LENGTH_SHORT;
-                break;
-
-                case 'l':   
-                    length  = PRINTF_LENGTH_LONG;
-                    state   = PRINTF_STATE_LENGTH_LONG;
-                break;
-
-                default:    
-                    goto PRINTF_STATE_SPEC_;
-            }
-        }
-
-        else if (state == PRINTF_STATE_LENGTH_SHORT) {
-            if (*fmt == 'h') {
-                length  = PRINTF_LENGTH_SHORT_SHORT;
-                state   = PRINTF_STATE_SPEC;
-            }
-            else 
-                goto PRINTF_STATE_SPEC_;           
-        }
-
-        else if (state == PRINTF_STATE_LENGTH_LONG) {
-            if (*fmt == 'l') {
-                length  = PRINTF_LENGTH_LONG_LONG;
-                state   = PRINTF_STATE_SPEC;
-            }
-            else 
-                goto PRINTF_STATE_SPEC_;            
-        }
-
-        else if (state == PRINTF_STATE_SPEC) {
-            PRINTF_STATE_SPEC_:
-            if (*fmt == 'c') fputc((char)va_arg(args, int), color);
-            else if (*fmt == 's') fputs(va_arg(args, const char*), color);
-            else if (*fmt == '%') fputc('%', color);
-            
-            else if (*fmt == 'd' || *fmt == 'i') {
-                radix   = 10; 
-                sign    = true; 
-                number  = true;
-            }
-
-            else if (*fmt == 'u') {
-                radix   = 10; 
-                sign    = false; 
-                number  = true;
-            }
-
-            else if (*fmt == 'X' || *fmt == 'x' || *fmt == 'p') {
-                radix   = 16; 
-                sign    = false; 
-                number  = true;
-            }
-
-            else if (*fmt == 'o') {
-                radix   = 8; 
-                sign    = false; 
-                number  = true;
-            }
-
-            if (number == true) {
-                if (sign == true) {
-                    if (length == PRINTF_LENGTH_SHORT_SHORT || length == PRINTF_LENGTH_SHORT || length == PRINTF_LENGTH_DEFAULT) 
-                        _fprintf_signed(va_arg(args, int), radix, color);
-                    else if (length == PRINTF_LENGTH_LONG)
-                        _fprintf_signed(va_arg(args, long), radix, color);
-                    else if (length == PRINTF_LENGTH_LONG_LONG)
-                        _fprintf_signed(va_arg(args, long long), radix, color);
-                }
-                else {
-                    if (length == PRINTF_LENGTH_SHORT_SHORT || length == PRINTF_LENGTH_SHORT || length == PRINTF_LENGTH_DEFAULT) 
-                        _fprintf_unsigned(va_arg(args, unsigned int), radix, color);
-                    else if (length == PRINTF_LENGTH_LONG)
-                        _fprintf_unsigned(va_arg(args, unsigned long), radix, color);
-                    else if (length == PRINTF_LENGTH_LONG_LONG)
-                        _fprintf_unsigned(va_arg(args, unsigned long long), radix, color);
-                }
-            }
-
-            // reset state
-            state   = PRINTF_STATE_NORMAL;
-            length  = PRINTF_LENGTH_DEFAULT;
-            radix   = 10;
-            sign    = false;
-            number  = false;            
-        }
-
-        fmt++;
     }
 }
 
 int _vsprintf_unsigned(char* buffer, unsigned long long number, int radix, int position) {
     char hexChars[17] = "0123456789ABCDEF";
-    char numBuffer[32];
+    char numBuffer[32] = { 0 };
     int pos = 0;
 
     do  {
@@ -357,7 +241,8 @@ void _vsprintf(int type, char* buffer, int len, const char* fmt, uint32_t color,
                 break;
 
                 default:
-                    buffer[pos++] = *fmt;
+                    if (type == STDOUT) _fputc(*fmt, color);
+                    else buffer[pos++] = *fmt;
                 break;
             }
         }
@@ -396,16 +281,26 @@ void _vsprintf(int type, char* buffer, int len, const char* fmt, uint32_t color,
 
         else if (state == PRINTF_STATE_SPEC) {
             PRINTF_STATE_SPEC_:
-            if (*fmt == 'c') buffer[pos] = (char)va_arg(args, int);
+            if (*fmt == 'c') {
+                if (type == STDOUT) _fputc((char)va_arg(args, int), color);
+                else buffer[pos] = (char)va_arg(args, int);
+            }
+
             else if (*fmt == 's') {
-                const char* text = va_arg(args, const char*);
-                while (*text) {
-                    buffer[pos++] = *text;
-                    text++;
+                if (type == STDOUT) _fputs(va_arg(args, const char*), color);
+                else {
+                    const char* text = va_arg(args, const char*);
+                    while (*text) {
+                        buffer[pos++] = *text;
+                        text++;
+                    }
                 }
             }
 
-            else if (*fmt == '%') buffer[pos] = '%';
+            else if (*fmt == '%') {
+                if (type == STDOUT) _fputc('%', color);
+                else buffer[pos] = '%';
+            }
             
             else if (*fmt == 'd' || *fmt == 'i') {
                 radix   = 10; 
@@ -433,20 +328,40 @@ void _vsprintf(int type, char* buffer, int len, const char* fmt, uint32_t color,
 
             if (number == true) {
                 if (sign == true) {
-                    if (length == PRINTF_LENGTH_SHORT_SHORT || length == PRINTF_LENGTH_SHORT || length == PRINTF_LENGTH_DEFAULT) 
-                        pos = _vsprintf_signed(buffer, va_arg(args, int), radix, pos);
-                    else if (length == PRINTF_LENGTH_LONG)
-                        pos = _vsprintf_signed(buffer, va_arg(args, long), radix, pos);
-                    else if (length == PRINTF_LENGTH_LONG_LONG)
-                        pos = _vsprintf_signed(buffer, va_arg(args, long long), radix, pos);
+                    if (
+                        length == PRINTF_LENGTH_SHORT_SHORT || 
+                        length == PRINTF_LENGTH_SHORT || 
+                        length == PRINTF_LENGTH_DEFAULT
+                    ) { 
+                        if (type == STDOUT) _fprintf_signed(va_arg(args, int), radix, pos); 
+                        else pos = _vsprintf_signed(buffer, va_arg(args, int), radix, pos); 
+                    }
+                    else if (length == PRINTF_LENGTH_LONG) { 
+                        if (type == STDOUT) _fprintf_signed(va_arg(args, long), radix, pos); 
+                        else pos = _vsprintf_signed(buffer, va_arg(args, long), radix, pos); 
+                    }
+                    else if (length == PRINTF_LENGTH_LONG_LONG) { 
+                        if (type == STDOUT) _fprintf_signed(va_arg(args, long long), radix, pos); 
+                        else pos = _vsprintf_signed(buffer, va_arg(args, long long), radix, pos); 
+                    }
                 }
                 else {
-                    if (length == PRINTF_LENGTH_SHORT_SHORT || length == PRINTF_LENGTH_SHORT || length == PRINTF_LENGTH_DEFAULT) 
-                        pos = _vsprintf_unsigned(buffer, va_arg(args, unsigned int), radix, pos);
-                    else if (length == PRINTF_LENGTH_LONG)
-                        pos = _vsprintf_unsigned(buffer, va_arg(args, unsigned long), radix, pos);
-                    else if (length == PRINTF_LENGTH_LONG_LONG)
-                        pos = _vsprintf_unsigned(buffer, va_arg(args, unsigned long long), radix, pos);
+                    if (
+                        length == PRINTF_LENGTH_SHORT_SHORT || 
+                        length == PRINTF_LENGTH_SHORT || 
+                        length == PRINTF_LENGTH_DEFAULT
+                    ) { 
+                        if (type == STDOUT) _fprintf_unsigned(va_arg(args, int), radix, pos); 
+                        else pos = _vsprintf_unsigned(buffer, va_arg(args, int), radix, pos); 
+                    }
+                    else if (length == PRINTF_LENGTH_LONG) { 
+                        if (type == STDOUT) _fprintf_unsigned(va_arg(args, long), radix, pos); 
+                        else pos = _vsprintf_unsigned(buffer, va_arg(args, long), radix, pos); 
+                    }
+                    else if (length == PRINTF_LENGTH_LONG_LONG) { 
+                        if (type == STDOUT) _fprintf_unsigned(va_arg(args, long long), radix, pos); 
+                        else pos = _vsprintf_unsigned(buffer, va_arg(args, long long), radix, pos); 
+                    }
                 }
             }
 
@@ -463,24 +378,24 @@ void _vsprintf(int type, char* buffer, int len, const char* fmt, uint32_t color,
 }
 
 void putc(char c) {
-    fputc(c, -1);
+    _fputc(c, NO_COLOR);
 }
 
 void puts(const char* str) {
-    fputs(str, -1);
+    _fputs(str, NO_COLOR);
 }
 
 void printf(const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
-    _vfprintf(fmt, args, -1);
+    _vsprintf(STDOUT, NULL, 0, fmt, NO_COLOR, args);
     va_end(args);
 }
 
 void cprintf(uint32_t color, const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
-    _vfprintf(fmt, args, color);
+    _vsprintf(STDOUT, NULL, 0, fmt, color, args);
     va_end(args);
 }
 

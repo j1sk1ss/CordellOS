@@ -4,9 +4,9 @@
 #include <stdint.h>
 #include <memory.h>
 
-#include "stdio.h"
 #include "gfx.h"
 #include "psf.h"
+#include "stdio.h"
 
 
 #define CHAR_BODY	0x0000000F
@@ -38,7 +38,9 @@ uint8_t VESA_get_max_y();
 
 void __vmem_fill(uint32_t color, uint32_t a, uint32_t b, uint32_t c, uint32_t d);
 void __pmem_fill(uint32_t color, uint32_t a, uint32_t b, uint32_t c, uint32_t d);
+void __vmem_putc(int x, int y, char c, uint32_t foreground, uint32_t background);
 void __pmem_putc(int x, int y, char c, uint32_t foreground, uint32_t background);
+void __mem_putc(int x, int y, char c, uint32_t foreground, uint32_t background, uint32_t buffer);
 char __pmem_getc(int x, int y);
 
 #endif
