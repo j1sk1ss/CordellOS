@@ -107,20 +107,49 @@ void swipe_buffers() {
     );
 }
 
+static uint8_t* _cur_font = NULL;
+
+void load_font(char* path) {
+    _cur_font = fread(path);
+}
+
+void unload_font() {
+    if (_cur_font == NULL) return;
+    free(_cur_font);
+    _cur_font = NULL;
+}
+
+void display_char(int x, int y, char c, uint32_t foreground, uint32_t background) {
+    int bytesperline = (_psf_get_width(_cur_font) + 7) / 8;
+    uint8_t* glyph = PSF_get_glyph(_cur_font, c);
+
+    /* Finally display pixels according to the bitmap */
+    uint32_t mask = 0;
+    for (int j = 0; j < _psf_get_height(_cur_font); j++) {
+        /* Save the starting position of the line */
+        mask = 1 << (_psf_get_width(_cur_font) - 1);
+
+        /* Display a row */
+        for (int i = 0; i < _psf_get_width(_cur_font); i++) {
+            uint32_t pixel_color = (*((uint32_t*)glyph) & mask) ? foreground : background;
+            pput_pixel(x + i, y + j, pixel_color);
+            mask >>= 1;
+        }
+
+        /* Adjust to the next line */
+        glyph += bytesperline;
+    }
+}
+
 void display_gui_object(GUIobject_t* object) {
     if (object == NULL) return;
     for (int y = object->height - 1; y >= 0; y--)
         for (int x = 0; x < object->width; x++)
             pput_pixel(x + object->x, y + object->y, object->background_color);
 
-    for (int i = 0; i < object->children_count; i++) 
-        display_gui_object(object->childrens[i]);
-
-    for (int i = 0; i < object->bitmap_count; i++) 
-        BMP_display(object->bitmaps[i]);
-
-    for (int i = 0; i < object->text_count; i++)
-        put_text(object->texts[i]);
+    for (int i = 0; i < object->children_count; i++) display_gui_object(object->childrens[i]);
+    for (int i = 0; i < object->bitmap_count; i++) BMP_display(object->bitmaps[i]);
+    for (int i = 0; i < object->text_count; i++) put_text(object->texts[i]);
 }
 
 GUIobject_t* create_gui_object(int x, int y, int height, int width, uint32_t background) {
@@ -214,7 +243,7 @@ text_object_t* create_text(int x, int y, char* text, uint32_t background_color) 
     object->x = x;
     object->y = y;
     object->char_count = strlen(text);
-    object->text       = malloc(object->char_count + 1);
+    object->text       = (char*)malloc(object->char_count + 1);
     object->bg_color   = background_color;
     strncpy(object->text, text, object->char_count);
 

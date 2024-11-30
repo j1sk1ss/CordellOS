@@ -1,5 +1,9 @@
 #include "../include/stdio.h"
 
+
+static int _cursor_x = 0;
+static int _cursor_y = 0;
+
 //==================================
 //           FUNCTIONS
 //==================================
@@ -22,22 +26,8 @@ void directly_putclr(int x, int y, uint32_t color) {
     );
 }
 
-//====================================================================
-// Function directly in screen put character by coordinates
-// EBX - x
-// ECX - y
-// EDX - character
 void directly_putc(int x, int y, char character) {
-    __asm__ volatile(
-        "movl $23, %%eax\n"
-        "movl %0, %%ebx\n"
-        "movl %1, %%ecx\n"
-        "movl %2, %%edx\n"
-        "int %3\n"
-        :
-        : "r"(x), "r"(y), "r"((int)character), "i"(SYSCALL_INTERRUPT)
-        : "eax", "ebx", "ecx"
-    );
+    display_char(x, y, character, WHITE, BLACK);
 }
 
 //====================================================================
@@ -46,7 +36,7 @@ void directly_putc(int x, int y, char character) {
 // ECX - y
 // AL - result
 char directly_getchar(int x, int y) {
-    char result;
+    char result = 0;
     __asm__ volatile(
         "movl $22, %%eax\n"
         "movl %1, %%ebx\n"
@@ -66,15 +56,8 @@ char directly_getchar(int x, int y) {
 // EBX - x
 // ECX - y
 void cursor_set(int x, int y) {
-    __asm__ volatile(
-        "movl $20, %%eax\n"
-        "movl %0, %%ebx\n"
-        "movl %1, %%ecx\n"
-        "int %2\n"
-        :
-        : "r"(x), "r"(y), "i"(SYSCALL_INTERRUPT)
-        : "eax", "ebx", "ecx"
-    );
+    _cursor_x = x;
+    _cursor_y = y;
 }
 
 //====================================================================
@@ -82,15 +65,8 @@ void cursor_set(int x, int y) {
 // EBX - x
 // ECX - y
 void cursor_set32(uint32_t x, uint32_t y) {
-    __asm__ volatile(
-        "movl $47, %%eax\n"
-        "movl %0, %%ebx\n"
-        "movl %1, %%ecx\n"
-        "int %2\n"
-        :
-        : "r"(x), "r"(y), "i"(SYSCALL_INTERRUPT)
-        : "eax", "ebx", "ecx"
-    );
+    _cursor_x = x;
+    _cursor_y = y;
 }
 
 //====================================================================
@@ -110,16 +86,8 @@ void cursor_get(int* result) {
     );
 }
 
-//====================================================================
-//  Clear entire screen (used kernel printf commands)
 void clrscr() {
-    __asm__ volatile (
-        "movl $2, %%eax\n"
-        "int %0\n"
-        :
-        : "i"(SYSCALL_INTERRUPT)
-        : "eax"
-    );
+    set_color(BLACK);
 }
 
 //====================================================================
@@ -128,6 +96,7 @@ void clrscr() {
 void _fputc(char c, uint32_t color) {
     if (color != NO_COLOR) _cputc(c, color);
     else {
+        
         __asm__ volatile(
             "movl $1, %%eax\n"
             "movl %0, %%ecx\n"
@@ -162,18 +131,12 @@ void _fputs(const char* str, uint32_t color) {
     }
 }
 
-//====================================================================
-//  Fill screen by selected color (Not VBE color)
-//  ECX - color
 void set_color(int color) {
-    __asm__ volatile(
-        "movl $14, %%eax\n"
-        "movl %0, %%ecx\n"
-        "int %1\n"
-        :
-        : "r"((int)color), "i"(SYSCALL_INTERRUPT)
-        : "eax", "ecx"
-    );
+    for (int i = 0; i < get_resolution_x(); i++)
+        for (int j = 0; j < get_resolution_y(); j++)
+            vput_pixel(i, j, color);
+
+    swipe_buffers();
 }
 
 void _fprintf_unsigned(unsigned long long number, int radix, int color) {

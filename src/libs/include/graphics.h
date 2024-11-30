@@ -5,6 +5,9 @@
 #include <stdint.h>
 
 #include "bitmap.h"
+#include "psf.h"
+#include "stdlib.h"
+#include "fslib.h"
 
 
 #define GET_ALPHA(color)        ((color >> 24) & 0x000000FF)
@@ -51,6 +54,10 @@ typedef struct text_object {
 
 
 void swipe_buffers();
+
+void load_font(char* path);
+void unload_font();
+void display_char(int x, int y, char c, uint32_t foreground, uint32_t background);
 
 int get_resolution_x();
 int get_resolution_y();
