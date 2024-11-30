@@ -4,142 +4,78 @@
 static int _cursor_x = 0;
 static int _cursor_y = 0;
 
-//==================================
-//           FUNCTIONS
-//==================================
 
-//====================================================================
-// Function directly in screen put color by coordinates
-// EBX - x
-// ECX - y
-// EDX - color
-void directly_putclr(int x, int y, uint32_t color) {
-    __asm__ volatile(
-        "movl $24, %%eax\n"
-        "movl %0, %%ebx\n"
-        "movl %1, %%ecx\n"
-        "movl %2, %%edx\n"
-        "int %3\n"
-        :
-        : "r"(x), "r"(y), "r"((int)color), "i"(SYSCALL_INTERRUPT)
-        : "eax", "ebx", "ecx"
-    );
-}
-
-void directly_putc(int x, int y, char character) {
-    display_char(x, y, character, WHITE, BLACK);
-}
-
-//====================================================================
-// Function get character from screen by coordinates
-// EBX - x
-// ECX - y
-// AL - result
 char directly_getchar(int x, int y) {
-    char result = 0;
-    __asm__ volatile(
-        "movl $22, %%eax\n"
-        "movl %1, %%ebx\n"
-        "movl %2, %%ecx\n"
-        "int %3\n"
-        "movb %%al, %0\n"
-        : "=r"(result)
-        : "r"(x), "r"(y), "i"(SYSCALL_INTERRUPT)
-        : "eax", "ebx", "ecx"
-    );
-
-    return result;
+    // Not implemented
 }
 
-//====================================================================
-// Function set cursor by char coordinates (x * CHAR SIZE)
-// EBX - x
-// ECX - y
-void cursor_set(int x, int y) {
-    _cursor_x = x;
-    _cursor_y = y;
-}
-
-//====================================================================
-// Function set cursor by global coordinates
-// EBX - x
-// ECX - y
 void cursor_set32(uint32_t x, uint32_t y) {
     _cursor_x = x;
     _cursor_y = y;
 }
 
-//====================================================================
-// Function get coordinates of cursor
-// ECX - pointer to result array
-// 
-// result[0] - x
-// result[1] - y
-void cursor_get(int* result) {
-    __asm__ volatile(
-        "movl $21, %%eax\n"
-        "movl %0, %%ecx\n"
-        "int %1\n"
-        :
-        : "r"(result), "i"(SYSCALL_INTERRUPT)
-        : "eax", "ecx"
-    );
+void cursor_get_x32() {
+    return _cursor_x;
+}
+
+void cursor_get_y32() {
+    return _cursor_y;
 }
 
 void clrscr() {
-    set_color(BLACK);
+    set_color(BLACK, 0, 0, get_resolution_x(), get_resolution_y());
 }
 
-//====================================================================
-//  Puts a char in screen (used kernel printf commands)
-//  ECX - character
-void _fputc(char c, uint32_t color) {
-    if (color != NO_COLOR) _cputc(c, color);
+void __scrollback(int lines) {
+    scroll(lines);
+    set_color(BLACK, 0, get_resolution_x() - lines, get_resolution_x(), get_resolution_y());
+}
+
+void __newline() {
+    _cursor_x = 0;
+    if (_cursor_y < get_resolution_y()) _cursor_y += _psf_get_height(get_font());
     else {
-        
-        __asm__ volatile(
-            "movl $1, %%eax\n"
-            "movl %0, %%ecx\n"
-            "int %1\n"
-            :
-            : "r"((int)c), "i"(SYSCALL_INTERRUPT)
-            : "eax", "ecx"
-        );
+        __scrollback(_psf_get_height(get_font()));
+        _cursor_y = get_resolution_x() - _psf_get_height(get_font());
     }
 }
 
-//====================================================================
-//  Puts a char in screen with color (used kernel printf commands)
-//  ECX - color
-//  EBX - character
-void _cputc(char c, uint32_t color) {
-    __asm__ volatile(
-        "movl $13, %%eax\n"
-        "movl %1, %%ebx\n"
-        "movl %0, %%ecx\n"
-        "int %2\n"
-        :
-        : "r"((int)color), "r"((int)c), "i"(SYSCALL_INTERRUPT)
-        : "eax", "ebx", "ecx"
-    );
+void putc(char c, uint32_t fcolor, uint32_t bcolor) {
+    int _tabSize = 4;
+    if (_cursor_x + _psf_get_width(get_font()) >= get_resolution_x()) __newline();
+    switch (c) {
+        case '\n':
+            __newline();
+        break;
+
+        case '\t':
+            for (int i = 0; i < _tabSize - ((get_resolution_x()) / _psf_get_width(get_font()) % _tabSize); i++)
+                display_char(_cursor_x, _cursor_y, ' ', fcolor, bcolor);
+            break;
+
+        default:
+            display_char(_cursor_x, _cursor_y, c, fcolor, bcolor);
+            _cursor_x += _psf_get_width(get_font());
+        break;
+    }
 }
 
-void _fputs(const char* str, uint32_t color) {
+void puts(const char* str, uint32_t fcolor, uint32_t bcolor) {
     while(*str) {
-        _fputc(*str, color);
+        putc(*str, fcolor, bcolor);
         str++;
     }
 }
 
-void set_color(int color) {
-    for (int i = 0; i < get_resolution_x(); i++)
-        for (int j = 0; j < get_resolution_y(); j++)
+void set_color(uint32_t color, int start_x, int start_y, int end_x, int end_y) {
+    for (int i = start_x; i < end_x; i++)
+        for (int j = start_y; j < end_y; j++)
             vput_pixel(i, j, color);
 
     swipe_buffers();
 }
 
-void _fprintf_unsigned(unsigned long long number, int radix, int color) {
+void _fprintf_unsigned(unsigned long long number, int radix, uint32_t fcolor, uint32_t bcolor) {
     char hexChars[17] = "0123456789ABCDEF";
     char buffer[32] = { 0 };
     int pos = 0;
@@ -152,14 +88,14 @@ void _fprintf_unsigned(unsigned long long number, int radix, int color) {
     } while (number > 0);
 
     // print number in reverse order
-    while (--pos >= 0) _fputc(buffer[pos], color);
+    while (--pos >= 0) putc(buffer[pos], fcolor, bcolor);
 }
 
-void _fprintf_signed(long long number, int radix, int color) {
-    if (number >= 0) _fprintf_unsigned(number, radix, color);
+void _fprintf_signed(long long number, int radix, uint32_t fcolor, uint32_t bcolor) {
+    if (number >= 0) _fprintf_unsigned(number, radix, fcolor, bcolor);
     else {
-        _fputc('-', color);
-        _fprintf_unsigned(-number, radix, color);
+        putc('-', fcolor, bcolor);
+        _fprintf_unsigned(-number, radix, fcolor, bcolor);
     }
 }
 
@@ -188,7 +124,9 @@ int _vsprintf_signed(char* buffer, long long number, int radix, int position) {
     return position;
 }
 
-void _vsprintf(int type, char* buffer, int len, const char* fmt, uint32_t color, va_list args) {
+void _vsprintf(
+    int type, char* buffer, int len, const char* fmt, uint32_t fcolor, uint32_t bcolor, va_list args
+) {
     int state   = PRINTF_STATE_NORMAL;
     int length  = PRINTF_LENGTH_DEFAULT;
     int radix   = 10;
@@ -204,7 +142,7 @@ void _vsprintf(int type, char* buffer, int len, const char* fmt, uint32_t color,
                 break;
 
                 default:
-                    if (type == STDOUT) _fputc(*fmt, color);
+                    if (type == STDOUT) putc(*fmt, fcolor, bcolor);
                     else buffer[pos++] = *fmt;
                 break;
             }
@@ -245,12 +183,12 @@ void _vsprintf(int type, char* buffer, int len, const char* fmt, uint32_t color,
         else if (state == PRINTF_STATE_SPEC) {
             PRINTF_STATE_SPEC_:
             if (*fmt == 'c') {
-                if (type == STDOUT) _fputc((char)va_arg(args, int), color);
+                if (type == STDOUT) putc((char)va_arg(args, int), fcolor, bcolor);
                 else buffer[pos] = (char)va_arg(args, int);
             }
 
             else if (*fmt == 's') {
-                if (type == STDOUT) _fputs(va_arg(args, const char*), color);
+                if (type == STDOUT) puts(va_arg(args, const char*), fcolor, bcolor);
                 else {
                     const char* text = va_arg(args, const char*);
                     while (*text) {
@@ -261,7 +199,7 @@ void _vsprintf(int type, char* buffer, int len, const char* fmt, uint32_t color,
             }
 
             else if (*fmt == '%') {
-                if (type == STDOUT) _fputc('%', color);
+                if (type == STDOUT) putc('%', fcolor, bcolor);
                 else buffer[pos] = '%';
             }
             
@@ -296,15 +234,15 @@ void _vsprintf(int type, char* buffer, int len, const char* fmt, uint32_t color,
                         length == PRINTF_LENGTH_SHORT || 
                         length == PRINTF_LENGTH_DEFAULT
                     ) { 
-                        if (type == STDOUT) _fprintf_signed(va_arg(args, int), radix, pos); 
+                        if (type == STDOUT) _fprintf_signed(va_arg(args, int), radix, fcolor, bcolor); 
                         else pos = _vsprintf_signed(buffer, va_arg(args, int), radix, pos); 
                     }
                     else if (length == PRINTF_LENGTH_LONG) { 
-                        if (type == STDOUT) _fprintf_signed(va_arg(args, long), radix, pos); 
+                        if (type == STDOUT) _fprintf_signed(va_arg(args, long), radix, fcolor, bcolor); 
                         else pos = _vsprintf_signed(buffer, va_arg(args, long), radix, pos); 
                     }
                     else if (length == PRINTF_LENGTH_LONG_LONG) { 
-                        if (type == STDOUT) _fprintf_signed(va_arg(args, long long), radix, pos); 
+                        if (type == STDOUT) _fprintf_signed(va_arg(args, long long), radix, fcolor, bcolor); 
                         else pos = _vsprintf_signed(buffer, va_arg(args, long long), radix, pos); 
                     }
                 }
@@ -314,15 +252,15 @@ void _vsprintf(int type, char* buffer, int len, const char* fmt, uint32_t color,
                         length == PRINTF_LENGTH_SHORT || 
                         length == PRINTF_LENGTH_DEFAULT
                     ) { 
-                        if (type == STDOUT) _fprintf_unsigned(va_arg(args, int), radix, pos); 
+                        if (type == STDOUT) _fprintf_unsigned(va_arg(args, int), radix, fcolor, bcolor); 
                         else pos = _vsprintf_unsigned(buffer, va_arg(args, int), radix, pos); 
                     }
                     else if (length == PRINTF_LENGTH_LONG) { 
-                        if (type == STDOUT) _fprintf_unsigned(va_arg(args, long), radix, pos); 
+                        if (type == STDOUT) _fprintf_unsigned(va_arg(args, long), radix, fcolor, bcolor); 
                         else pos = _vsprintf_unsigned(buffer, va_arg(args, long), radix, pos); 
                     }
                     else if (length == PRINTF_LENGTH_LONG_LONG) { 
-                        if (type == STDOUT) _fprintf_unsigned(va_arg(args, long long), radix, pos); 
+                        if (type == STDOUT) _fprintf_unsigned(va_arg(args, long long), radix, fcolor, bcolor); 
                         else pos = _vsprintf_unsigned(buffer, va_arg(args, long long), radix, pos); 
                     }
                 }
@@ -340,31 +278,23 @@ void _vsprintf(int type, char* buffer, int len, const char* fmt, uint32_t color,
     }
 }
 
-void putc(char c) {
-    _fputc(c, NO_COLOR);
-}
-
-void puts(const char* str) {
-    _fputs(str, NO_COLOR);
-}
-
 void printf(const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
-    _vsprintf(STDOUT, NULL, 0, fmt, NO_COLOR, args);
+    _vsprintf(STDOUT, NULL, 0, fmt, WHITE, BLACK, args);
     va_end(args);
 }
 
-void cprintf(uint32_t color, const char* fmt, ...) {
+void cprintf(uint32_t fcolor, uint32_t bcolor, const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
-    _vsprintf(STDOUT, NULL, 0, fmt, color, args);
+    _vsprintf(STDOUT, NULL, 0, fmt, fcolor, bcolor, args);
     va_end(args);
 }
 
 void sprintf(char* buffer, int len, const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
-    _vsprintf(MEMORY, buffer, len, fmt, NO_COLOR, args);
+    _vsprintf(MEMORY, buffer, len, fmt, NO_COLOR, NO_COLOR, args);
     va_end(args);
 }

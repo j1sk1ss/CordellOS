@@ -85,6 +85,15 @@ uint32_t GFX_convert_color(const uint32_t color) {
     return converted_color;
 }
 
+void GFX_scrollback_buffer(int lines, uint32_t buffer) {
+    uint32_t bytesPerLine = GFX_data.x_resolution * (GFX_data.bits_per_pixel / 8);
+    uint32_t screenSize   = GFX_data.y_resolution * bytesPerLine;
+    uint32_t scrollBytes  = lines * bytesPerLine;
+    uint8_t* screenBuffer = (uint8_t*)buffer;
+    memmove(screenBuffer, screenBuffer + scrollBytes, screenSize - scrollBytes);
+    __pmem_fill(BLACK, 0, VESA_get_max32_y() - lines, VESA_get_max32_x(), VESA_get_max32_y());
+}
+
 void GFX_swap_buffers() {
     memcpy(GFX_data.physical_base_pointer, GFX_data.virtual_second_buffer, GFX_data.buffer_size);
 }

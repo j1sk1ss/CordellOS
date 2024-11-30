@@ -6,6 +6,7 @@ void i386_syscalls_init() {
 }
  
 void syscall(struct Registers* regs) {
+    // VMM_set_directory(kernel_page_directory);
 
     //=======================
     //  PRINT SYSCALLS
@@ -54,8 +55,9 @@ void syscall(struct Registers* regs) {
             KSTDIO_data.set_cursor(x, y);
         } 
         
-        else if (regs->eax == SYS_SET_CURSOR32) {
-            // TODO: cleanup
+        else if (regs->eax == SYS_SCROLL) {
+            int lines = (int)regs->ebx;
+            GFX_scrollback_buffer(lines, GFX_data.physical_base_pointer);
         } 
 
         else if (regs->eax == SYS_SET_SCRCHAR) {
@@ -376,14 +378,14 @@ void syscall(struct Registers* regs) {
     //  GRAPHICS SYSCALLS
     //=======================
     
-        else if (regs->eax == SYS_PUT_PIXEL) {
+        else if (regs->eax == SYS_VPUT_PIXEL) {
             uint16_t x      = (uint16_t)regs->ebx;
             uint16_t y      = (uint16_t)regs->ecx;
             uint32_t pixel  = (uint32_t)regs->edx;
             GFX_vdraw_pixel(x, y, pixel);
         } 
         
-        else if (regs->eax == SYS_VPUT_PIXEL) {
+        else if (regs->eax == SYS_PUT_PIXEL) {
             uint16_t x      = (uint16_t)regs->ebx;
             uint16_t y      = (uint16_t)regs->ecx;
             uint32_t pixel  = (uint32_t)regs->edx;
@@ -487,4 +489,6 @@ void syscall(struct Registers* regs) {
     //=======================
     //  SYS INFO SYSCALLS
     //=======================
+
+    // VMM_set_directory(current_page_directory);
 }

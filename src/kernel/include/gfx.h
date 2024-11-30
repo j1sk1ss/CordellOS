@@ -120,6 +120,7 @@ void __draw_pixel(uint16_t x, uint16_t y, uint32_t color, uint32_t buffer);
 
 uint32_t GFX_convert_color(const uint32_t color);
 void GFX_swap_buffers();
+void GFX_scrollback_buffer(int lines, uint32_t buffer);
 void GFX_set_pbuffer(uint32_t value);
 void GFX_set_vbuffer(uint32_t value);
 void __set_buffer(uint32_t value, uint32_t addr, size_t size);

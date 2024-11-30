@@ -49,6 +49,7 @@ typedef struct text_object {
     uint32_t x, y;
     char* text;
     uint32_t char_count;
+    uint32_t fg_color;
     uint32_t bg_color;
 } text_object_t;
 
@@ -56,18 +57,21 @@ typedef struct text_object {
 void swipe_buffers();
 
 void load_font(char* path);
+uint8_t* get_font();
 void unload_font();
 void display_char(int x, int y, char c, uint32_t foreground, uint32_t background);
+void display_str(int x, int y, char* str, uint32_t foreground, uint32_t background);
 
 int get_resolution_x();
 int get_resolution_y();
+void scroll(int lines);
 
 GUIobject_t* create_gui_object(int x, int y, int height, int width, uint32_t background);
 GUIobject_t* object_add_children(GUIobject_t* object, GUIobject_t* children);
 GUIobject_t* object_add_bitmap(GUIobject_t* object, struct bitmap* bmp);
 GUIobject_t* object_add_text(GUIobject_t* object, text_object_t* text);
 
-text_object_t* create_text(int x, int y, char* text, uint32_t background_color);
+text_object_t* create_text(int x, int y, char* text, uint32_t fcolor, uint32_t bcolor);
 void put_text(text_object_t* text);
 void unload_text(text_object_t* text);
 

@@ -26,7 +26,7 @@
 #define SYS_COLOR_PUTC         13
 #define SYS_SCREEN_COLOR       14
 #define SYS_SET_CURSOR         20
-#define SYS_SET_CURSOR32       47
+#define SYS_SCROLL             47
 #define SYS_GET_CURSOR         21
 #define SYS_GET_SCRCHAR        22
 #define SYS_SET_SCRCHAR        23

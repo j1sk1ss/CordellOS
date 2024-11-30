@@ -18,11 +18,7 @@ void VESA_init() {
 }
 
 void VESA_scrollback(int lines) {
-    uint32_t bytesPerLine = GFX_data.x_resolution * (GFX_data.bits_per_pixel / 8);
-    uint32_t screenSize   = GFX_data.y_resolution * bytesPerLine;
-    uint32_t scrollBytes  = lines * bytesPerLine;
-    uint8_t* screenBuffer = (uint8_t*)GFX_data.physical_base_pointer;
-    memmove(screenBuffer, screenBuffer + scrollBytes, screenSize - scrollBytes);
+    GFX_scrollback_buffer(lines, GFX_data.physical_base_pointer);
     __pmem_fill(BLACK, 0, VESA_get_max32_y() - lines, VESA_get_max32_x(), VESA_get_max32_y());
 }
 

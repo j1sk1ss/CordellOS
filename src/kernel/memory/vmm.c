@@ -170,11 +170,11 @@ int VMM_init(uint32_t memory_start) {
 
     physical_address VMM_virtual2physical(void* virt_address) {
         page_directory* pd = current_page_directory;
-        pd_entry* pd_entry = &pd->entries[PD_INDEX((uint32_t)virt_address)];
+        pd_entry* pd_entry = &pd->entries[PD_INDEX((virtual_address)virt_address)];
         if ((*pd_entry & PTE_PRESENT) != PTE_PRESENT) return 0;
 
         page_table* pt     = (page_table*)PAGE_PHYS_ADDRESS(pd_entry);
-        pt_entry* pt_entry = &pt->entries[PT_INDEX((uint32_t)virt_address)];
+        pt_entry* pt_entry = &pt->entries[PT_INDEX((virtual_address)virt_address)];
         if ((*pt_entry & PTE_PRESENT) != PTE_PRESENT) return 0;
 
         physical_address phys_address = PAGE_PHYS_ADDRESS(pt_entry) | OFFSET_IN_PAGE((uint32_t)virt_address);

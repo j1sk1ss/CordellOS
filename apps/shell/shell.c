@@ -7,12 +7,10 @@ int exit = 1;
 
 
 void main(int argc, char* argv[]) {
-    load_font("\\HOME\\SHELL.PSF");
+    load_font("home\\shell.psf");
     // switch2user();
 
     clrscr();
-    display_char(100, 100, 'H', WHITE, BLACK);
-    for(;;);
     shell_start_screen();
 
 #ifdef ENVARS

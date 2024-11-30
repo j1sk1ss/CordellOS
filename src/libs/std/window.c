@@ -33,7 +33,7 @@ void add_window(window_t* window) {
 void display_window(window_t* window) {
     GUIobject_t* window_image   = create_gui_object(window->x, window->y, window->height, window->width, window->background_color);
     GUIobject_t* title_image    = create_gui_object(window->x, window->y, 25, window->width, BLUE);
-    text_object_t* window_title = create_text(window->x + 10, window->y + 5, window->name, BLUE);
+    text_object_t* window_title = create_text(window->x + 10, window->y + 5, window->name, WHITE, BLUE);
 
     window_image = object_add_children(window_image, title_image);
     window_image = object_add_text(window_image, window_title);

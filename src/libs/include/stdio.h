@@ -81,32 +81,24 @@
 #define PRINTF_LENGTH_LONG_LONG     4
 
 
-void directly_putclr(int x, int y, uint32_t color);
-void directly_putc(int x, int y, char character);
 char directly_getchar(int x, int y);
-void cursor_set(int x, int y);
 void cursor_set32(uint32_t x, uint32_t y);
-void cursor_get(int* result);
-void set_color(int color);
+void cursor_get_x32();
+void cursor_get_y32();
+void set_color(uint32_t color, int start_x, int start_y, int end_x, int end_y);
 void clrscr();
 
-void putc(char c);
-void puts(const char* str);
+void putc(char c, uint32_t fcolor, uint32_t bcolor);
+void puts(const char* str, uint32_t fcolor, uint32_t bcolor);
+
 void printf(const char* fmt, ...);
-void cprintf(uint32_t color, const char* fmt, ...);
+void cprintf(uint32_t fcolor, uint32_t bcolor, const char* fmt, ...);
+void sprintf(char* buffer, int len, const char* fmt, ...);
 
-void _fputc(char c, uint32_t color);
-void _cputc(char c, uint32_t color);
-void _fputs(const char* str, uint32_t color);
-
-void _fprintf_signed(long long number, int radix, int color);
-void _fprintf_unsigned(unsigned long long number, int radix, int color);
-void _vfprintf(const char* fmt, va_list args, int color);
-void fprintf(const char* fmt, ...);
-
+void _fprintf_signed(long long number, int radix, uint32_t fcolor, uint32_t bcolor);
+void _fprintf_unsigned(unsigned long long number, int radix, uint32_t fcolor, uint32_t bcolor);
 int _vsprintf_signed(char* buffer, long long number, int radix, int position);
 int _vsprintf_unsigned(char* buffer, unsigned long long number, int radix, int position);
-void _vsprintf(int type, char* buffer, int len, const char* fmt, uint32_t color, va_list args);
-void sprintf(char* buffer, int len, const char* fmt, ...);
+void _vsprintf(int type, char* buffer, int len, const char* fmt, uint32_t fcolor, uint32_t bcolor, va_list args);
 
 #endif

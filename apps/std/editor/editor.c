@@ -95,9 +95,9 @@ int display_text() {
         printf(text2display);
     }
     
-    cursor_set(0, SCREEN_HEIGHT);
+    //cursor_set(0, SCREEN_HEIGHT);
     printf("| F3 - EXIT | F1 - SAVE & EXIT | F2 - SAVE |");
 
-    cursor_set(0, 1);
+    //cursor_set(0, 1);
     return offset;
 }
