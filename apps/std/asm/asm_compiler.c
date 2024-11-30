@@ -745,7 +745,7 @@ void _asm_executor(int *memory_array, int memory_index, int start, int end) {
 				printf("\n");
 				char input_buffer[128] = { '\0' };
 				char stp[2] = { '\n', '\0' };
-				keyboard_read(VISIBLE_KEYBOARD, -1, stp, input_buffer);
+				keyboard_read(stp, input_buffer);
 
                 memory_array[intermediate_table[i]->parameters[0]] = atoi(input_buffer);
 			break; // READ Instruction //

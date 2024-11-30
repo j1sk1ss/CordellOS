@@ -1,67 +1,70 @@
 #include "../include/stdio.h"
 
 
-static int _cursor_x = 0;
-static int _cursor_y = 0;
+static int _curr_x = 0;
+static int _curr_y = 0;
 
-
-char directly_getchar(int x, int y) {
-    // Not implemented
-}
 
 void cursor_set32(uint32_t x, uint32_t y) {
-    _cursor_x = x;
-    _cursor_y = y;
+    _curr_x = x;
+    _curr_y = y;
 }
 
-void cursor_get_x32() {
-    return _cursor_x;
+uint32_t cursor_get_x32() {
+    return _curr_x;
 }
 
-void cursor_get_y32() {
-    return _cursor_y;
+uint32_t cursor_get_y32() {
+    return _curr_y;
 }
 
 void clrscr() {
     set_color(BLACK, 0, 0, get_resolution_x(), get_resolution_y());
+    cursor_set32(0, 0);
 }
 
 void __scrollback(int lines) {
+    int max_h = get_resolution_y();
     scroll(lines);
-    set_color(BLACK, 0, get_resolution_x() - lines, get_resolution_x(), get_resolution_y());
+    set_color(BLACK, 0, max_h - lines, get_resolution_x(), max_h);
 }
 
 void __newline() {
-    _cursor_x = 0;
-    if (_cursor_y < get_resolution_y()) _cursor_y += _psf_get_height(get_font());
+    int char_h = _psf_get_height(get_font());
+    int max_h = get_resolution_y();
+
+    _curr_x = 0;
+    if (_curr_y < max_h) _curr_y += char_h;
     else {
-        __scrollback(_psf_get_height(get_font()));
-        _cursor_y = get_resolution_x() - _psf_get_height(get_font());
+        __scrollback(char_h);
+        _curr_y = max_h - char_h;
     }
 }
 
 void putc(char c, uint32_t fcolor, uint32_t bcolor) {
-    int _tabSize = 4;
-    if (_cursor_x + _psf_get_width(get_font()) >= get_resolution_x()) __newline();
+    int char_w = _psf_get_width(get_font());
+    int max_w = get_resolution_x();
+
+    if (_curr_x + char_w >= max_w) __newline();
     switch (c) {
         case '\n':
             __newline();
         break;
 
         case '\t':
-            for (int i = 0; i < _tabSize - ((get_resolution_x()) / _psf_get_width(get_font()) % _tabSize); i++)
-                display_char(_cursor_x, _cursor_y, ' ', fcolor, bcolor);
+            for (int i = 0; i < 4 - ((max_w) / char_w % 4); i++)
+                display_char(_curr_x, _curr_y, ' ', fcolor, bcolor);
             break;
 
         default:
-            display_char(_cursor_x, _cursor_y, c, fcolor, bcolor);
-            _cursor_x += _psf_get_width(get_font());
+            display_char(_curr_x, _curr_y, c, fcolor, bcolor);
+            _curr_x += char_w;
         break;
     }
 }
 
 void puts(const char* str, uint32_t fcolor, uint32_t bcolor) {
-    while(*str) {
+    while (*str) {
         putc(*str, fcolor, bcolor);
         str++;
     }
@@ -104,7 +107,7 @@ int _vsprintf_unsigned(char* buffer, unsigned long long number, int radix, int p
     char numBuffer[32] = { 0 };
     int pos = 0;
 
-    do  {
+    do {
         unsigned long long rem = number % radix;
         number /= radix;
         numBuffer[pos++] = hexChars[rem];
@@ -134,7 +137,7 @@ void _vsprintf(
     bool number = false;
     int pos     = 0;
 
-    while (*fmt && pos < len) {
+    while (*fmt && (pos < len || buffer == NULL)) {
         if (state == PRINTF_STATE_NORMAL) {
             switch (*fmt) {
                 case '%':   

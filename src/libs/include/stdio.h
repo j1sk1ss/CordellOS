@@ -59,13 +59,6 @@
 
 //  COLORS
 //=======================================
-//  MODS
-
-    #define HIDDEN_KEYBOARD         0
-    #define VISIBLE_KEYBOARD        1
-
-//  MODS
-//=======================================
 
 
 #define PRINTF_STATE_NORMAL         0
@@ -81,12 +74,11 @@
 #define PRINTF_LENGTH_LONG_LONG     4
 
 
-char directly_getchar(int x, int y);
-void cursor_set32(uint32_t x, uint32_t y);
-void cursor_get_x32();
-void cursor_get_y32();
-void set_color(uint32_t color, int start_x, int start_y, int end_x, int end_y);
 void clrscr();
+uint32_t cursor_get_x32();
+uint32_t cursor_get_y32();
+void cursor_set32(uint32_t x, uint32_t y);
+void set_color(uint32_t color, int start_x, int start_y, int end_x, int end_y);
 
 void putc(char c, uint32_t fcolor, uint32_t bcolor);
 void puts(const char* str, uint32_t fcolor, uint32_t bcolor);

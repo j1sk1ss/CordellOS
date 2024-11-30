@@ -33,8 +33,8 @@
 #define SYS_SET_SCRCOLOR       24
 #define SYS_READ_ELF           4
 #define SYS_GET_KEY_KEYBOARD   5
-#define SYS_AREAD_KEYBOARD     19
-#define SYS_AREAD_KEYBOARD_STP 46
+#define SYS_KEYBOARD_POP       19
+#define SYS_AREAD_KEYBOARD     46
 
 // System memory info
 #define SYS_MALLOC_MAP  48

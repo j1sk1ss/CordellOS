@@ -35,6 +35,8 @@
 #define LEFT_ARROW_BUTTON       '\13'
 #define RIGHT_ARROW_BUTTON      '\14'
 
+#define EMPTY_KEYBOARD          '\15'
+
 #define ENTER_BUTTON            '\n'
 #define BACKSPACE_BUTTON        '\b'
 
@@ -43,11 +45,6 @@
 
 
 typedef struct keyboard_data {
-    uint8_t* char_buffer;
-    uint8_t* stop_buffer;
-    int mode;
-    int color;
-    int pos;
     bool key_pressed[128];
 } keyboard_data_t;
 
@@ -57,7 +54,8 @@ void i386_keyboard_handler(struct Registers* regs);
 int _key_presss();
 char _get_character(char character);
 
-void _enable_keyboard(uint8_t* buffer, int keyboard_mode, int keyboard_color, uint8_t* stop);
+void _enable_keyboard();
+char pop_character();
 char keyboard_navigation();
 void keyboard_wait(char symbol);
 

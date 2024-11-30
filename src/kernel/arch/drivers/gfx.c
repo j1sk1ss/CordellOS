@@ -91,7 +91,6 @@ void GFX_scrollback_buffer(int lines, uint32_t buffer) {
     uint32_t scrollBytes  = lines * bytesPerLine;
     uint8_t* screenBuffer = (uint8_t*)buffer;
     memmove(screenBuffer, screenBuffer + scrollBytes, screenSize - scrollBytes);
-    __pmem_fill(BLACK, 0, VESA_get_max32_y() - lines, VESA_get_max32_x(), VESA_get_max32_y());
 }
 
 void GFX_swap_buffers() {

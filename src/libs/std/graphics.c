@@ -105,10 +105,8 @@ void swipe_buffers() {
 }
 
 //====================================================================
-// Function get pixel from framebuffer by coordinates
-// EBX - x
-// ECX - y
-// EDX - result
+// Function scroll screen buffer by lines of pixels
+// EBX - lines
 void scroll(int lines) {
     __asm__ volatile(
         "movl $47, %%eax\n"
@@ -124,6 +122,7 @@ static uint8_t* _cur_font = NULL;
 
 void load_font(char* path) {
     _cur_font = fread(path);
+    cursor_set32(0, 0);
 }
 
 uint8_t* get_font() {
@@ -138,24 +137,29 @@ void unload_font() {
 
 void display_str(int x, int y, char* str, uint32_t foreground, uint32_t background) {
     int curr_x = x;
+    int char_w = _psf_get_width(get_font());
     while (*str) {
-        display_char(curr_x++, y, *str, foreground, background);
-        ++*str;
+        display_char(curr_x, y, *str, foreground, background);
+        curr_x += char_w;
+        str++;
     }
 }
 
 void display_char(int x, int y, char c, uint32_t foreground, uint32_t background) {
-    int bytesperline = (_psf_get_width(_cur_font) + 7) / 8;
+    int char_w = _psf_get_width(get_font());
+    int char_h = _psf_get_height(get_font());
+
+    int bytesperline = (char_w + 7) / 8;
     uint8_t* glyph = PSF_get_glyph(_cur_font, c);
 
     /* Finally display pixels according to the bitmap */
     uint32_t mask = 0;
-    for (int j = 0; j < _psf_get_height(_cur_font); j++) {
+    for (int j = 0; j < char_h; j++) {
         /* Save the starting position of the line */
-        mask = 1 << (_psf_get_width(_cur_font) - 1);
+        mask = 1 << (char_w - 1);
 
         /* Display a row */
-        for (int i = 0; i < _psf_get_width(_cur_font); i++) {
+        for (int i = 0; i < char_w; i++) {
             uint32_t pixel_color = (*((uint32_t*)glyph) & mask) ? foreground : background;
             pput_pixel(x + i, y + j, pixel_color);
             mask >>= 1;
