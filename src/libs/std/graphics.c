@@ -8,7 +8,7 @@
 // EDX - pixel data
 void pput_pixel(int x, int y, int color) {
     __asm__ volatile(
-        "movl $37, %%eax\n"
+        "movl $28, %%eax\n"
         "movl %0, %%ebx\n"
         "movl %1, %%ecx\n"
         "movl %2, %%edx\n"
@@ -26,7 +26,7 @@ void pput_pixel(int x, int y, int color) {
 // EDX - pixel data
 void vput_pixel(int x, int y, int color) {
     __asm__ volatile(
-        "movl $28, %%eax\n"
+        "movl $37, %%eax\n"
         "movl %0, %%ebx\n"
         "movl %1, %%ecx\n"
         "movl %2, %%edx\n"
@@ -97,14 +97,77 @@ int get_resolution_y() {
 void swipe_buffers() {
     __asm__ volatile(
         "movl $36, %%eax\n"
-        "movl $0, %%ebx\n"
-        "movl $1, %%ecx\n"
-        "movl $0, %%edx\n"
         "int $0x80\n"
         :
         :
-        : "eax", "ebx", "ecx"
+        : "eax"
     );
+}
+
+//====================================================================
+// Function scroll screen buffer by lines of pixels
+// EBX - lines
+void scroll(int lines) {
+    __asm__ volatile(
+        "movl $47, %%eax\n"
+        "movl %0, %%ebx\n"
+        "int $0x80\n"
+        :
+        : "r"(lines)
+        : "eax", "ebx"
+    );
+}
+
+static uint8_t* _cur_font = NULL;
+
+void load_font(char* path) {
+    _cur_font = fread(path);
+    cursor_set32(0, 0);
+}
+
+uint8_t* get_font() {
+    return _cur_font;
+}
+
+void unload_font() {
+    if (_cur_font == NULL) return;
+    free(_cur_font);
+    _cur_font = NULL;
+}
+
+void display_str(int x, int y, char* str, uint32_t foreground, uint32_t background) {
+    int curr_x = x;
+    int char_w = _psf_get_width(get_font());
+    while (*str) {
+        display_char(curr_x, y, *str, foreground, background);
+        curr_x += char_w;
+        str++;
+    }
+}
+
+void display_char(int x, int y, char c, uint32_t foreground, uint32_t background) {
+    int char_w = _psf_get_width(get_font());
+    int char_h = _psf_get_height(get_font());
+
+    int bytesperline = (char_w + 7) / 8;
+    uint8_t* glyph = PSF_get_glyph(_cur_font, c);
+
+    /* Finally display pixels according to the bitmap */
+    uint32_t mask = 0;
+    for (int j = 0; j < char_h; j++) {
+        /* Save the starting position of the line */
+        mask = 1 << (char_w - 1);
+
+        /* Display a row */
+        for (int i = 0; i < char_w; i++) {
+            uint32_t pixel_color = (*((uint32_t*)glyph) & mask) ? foreground : background;
+            pput_pixel(x + i, y + j, pixel_color);
+            mask >>= 1;
+        }
+
+        /* Adjust to the next line */
+        glyph += bytesperline;
+    }
 }
 
 void display_gui_object(GUIobject_t* object) {
@@ -113,14 +176,9 @@ void display_gui_object(GUIobject_t* object) {
         for (int x = 0; x < object->width; x++)
             pput_pixel(x + object->x, y + object->y, object->background_color);
 
-    for (int i = 0; i < object->children_count; i++) 
-        display_gui_object(object->childrens[i]);
-
-    for (int i = 0; i < object->bitmap_count; i++) 
-        BMP_display(object->bitmaps[i]);
-
-    for (int i = 0; i < object->text_count; i++)
-        put_text(object->texts[i]);
+    for (int i = 0; i < object->children_count; i++) display_gui_object(object->childrens[i]);
+    for (int i = 0; i < object->bitmap_count; i++) BMP_display(object->bitmaps[i]);
+    for (int i = 0; i < object->text_count; i++) put_text(object->texts[i]);
 }
 
 GUIobject_t* create_gui_object(int x, int y, int height, int width, uint32_t background) {
@@ -208,14 +266,15 @@ void unload_gui_object(GUIobject_t* object) {
     free(object);
 }
 
-text_object_t* create_text(int x, int y, char* text, uint32_t background_color) {
+text_object_t* create_text(int x, int y, char* text, uint32_t fcolor, uint32_t bcolor) {
     text_object_t* object = malloc(sizeof(text_object_t));
 
     object->x = x;
     object->y = y;
     object->char_count = strlen(text);
-    object->text       = malloc(object->char_count + 1);
-    object->bg_color   = background_color;
+    object->text       = (char*)malloc(object->char_count + 1);
+    object->fg_color   = fcolor;
+    object->bg_color   = bcolor;
     strncpy(object->text, text, object->char_count);
 
     return object;
@@ -228,17 +287,7 @@ void put_text(text_object_t* text) {
         return;
     }
 
-    int cursor[2] = { 0 };
-    cursor_get(cursor);
-
-    int prev_x = cursor[0];
-    int prev_y = cursor[1];
-
-    cursor_set32(text->x, text->y);
-    cprintf(text->bg_color, text->text);
-
-    cursor_set(prev_x, prev_y);
-    return;
+    display_str(text->x, text->y, text->text, text->fg_color, text->bg_color);
 }
 
 void unload_text(text_object_t* text)  {

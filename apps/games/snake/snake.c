@@ -13,7 +13,7 @@ static int dead          = 0;
 int main(int args, char* argv[]) {
 	clrscr();
 
-	text_object_t* logo = create_text(get_resolution_x() / 2, get_resolution_y() / 2, "SNAKE GAME!", WHITE);
+	text_object_t* logo = create_text(get_resolution_x() / 2, get_resolution_y() / 2, "SNAKE GAME!", WHITE, BLACK);
 	window_t* main_menu = create_window("SnakeGameMenu", -1, 0, 0, get_resolution_y(), get_resolution_x(), WHITE, NULL);
 	display_window(main_menu);
 

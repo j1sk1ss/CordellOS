@@ -6,72 +6,16 @@ void i386_syscalls_init() {
 }
  
 void syscall(struct Registers* regs) {
+    // VMM_set_directory(kernel_page_directory);
 
     //=======================
     //  PRINT SYSCALLS
     //=======================
-
-        if (regs->eax == SYS_PRINT) {
-            const char* data = (const char*)regs->ecx;
-            kprintf(data);
-        } 
         
-        else if (regs->eax == SYS_PUTC) {
-            char data = (char)regs->ecx;
-            kputc(data);
-        } 
-        
-        else if (regs->eax == SYS_COLOR_PUTC) {
-            // TODO: cleanup
-        } 
-        
-        else if (regs->eax == SYS_CLEAR) {
-            KSTDIO_data.clrscr();
-        } 
-        
-        else if (regs->eax == SYS_SCREEN_COLOR) {
-            char screen_color = (char)regs->ecx;
-            kset_color(screen_color);
-        } 
-        
-        else if (regs->eax == SYS_GET_SCRCHAR) {
-            char* result = (char*)regs->ecx;
-            int x = (int)regs->ebx;
-            int y = (int)regs->ecx;
-            result[0] = KSTDIO_data.get_char(x, y);
-        } 
-
-        else if (regs->eax == SYS_GET_CURSOR) {
-            int* cursor_cords = (int*)regs->ecx;
-            cursor_cords[0] = KSTDIO_data.get_cursor_x();
-            cursor_cords[1] = KSTDIO_data.get_cursor_y();
-
-        } 
-        
-        else if (regs->eax == SYS_SET_CURSOR) {
-            int x = (int)regs->ebx;
-            int y = (int)regs->ecx;
-            KSTDIO_data.set_cursor(x, y);
-        } 
-        
-        else if (regs->eax == SYS_SET_CURSOR32) {
-            // TODO: cleanup
-        } 
-
-        else if (regs->eax == SYS_SET_SCRCHAR) {
-            int x = (int)regs->ebx;
-            int y = (int)regs->ecx;
-            char new_char = (char)regs->edx;
-            KSTDIO_data.put_chr(x, y, new_char);
-        } 
-        
-        else if (regs->eax == SYS_SET_SCRCOLOR) {
-            int x = (int)regs->ebx;
-            int y = (int)regs->ecx;
-            
-            uint8_t new_color = (uint8_t)regs->edx;
-            VGA_putcolor(x, y, new_color);
-        } 
+        if (regs->eax == SYS_SCROLL) {
+            int lines = (int)regs->ebx;
+            GFX_scrollback_buffer(lines, GFX_data.physical_base_pointer);
+        }
 
         //=======================
         //  KEYBOARD SYSCALLS
@@ -79,30 +23,11 @@ void syscall(struct Registers* regs) {
             
             else if (regs->eax == SYS_GET_KEY_KEYBOARD) {
                 char* key_buffer = (char*)regs->ecx;
-                char key = '\0';
-
-                if (i386_inb(0x64) & 0x1) {
-                    key = i386_inb(0x60);
-                    key = _get_character(key);
-                }
-
-                key_buffer[0] = key;
+                key_buffer[0] = pop_character();
             } 
             
             else if (regs->eax == SYS_AREAD_KEYBOARD) {
-                uint8_t keyborad_color = (uint8_t)regs->edx;
-                int keyboard_mode      = (int)regs->ebx;
-                uint8_t* buffer        = (uint8_t*)regs->ecx;
-                uint8_t stop_list[2]   = { '\n', '\0' };
-                _enable_keyboard(buffer, keyboard_mode, keyborad_color, stop_list);
-            } 
-            
-            else if (regs->eax == SYS_AREAD_KEYBOARD_STP) {
-                uint8_t keyborad_color = (uint8_t)regs->edx;
-                int keyboard_mode      = (int)regs->ebx;
-                uint8_t* stop_list        = (uint8_t*)regs->ecx;
-                uint8_t* buffer        = (uint8_t*)regs->esi;
-                _enable_keyboard(buffer, keyboard_mode, keyborad_color, stop_list);
+                _enable_keyboard();
             } 
 
         //=======================
@@ -116,7 +41,7 @@ void syscall(struct Registers* regs) {
     //=======================
 
         else if (regs->eax == SYS_SWITCH_USER) {
-            // i386_switch2user();
+            i386_switch2user();
         }
 
         else if (regs->eax == SYS_TIME) {
@@ -376,14 +301,14 @@ void syscall(struct Registers* regs) {
     //  GRAPHICS SYSCALLS
     //=======================
     
-        else if (regs->eax == SYS_PUT_PIXEL) {
+        else if (regs->eax == SYS_VPUT_PIXEL) {
             uint16_t x      = (uint16_t)regs->ebx;
             uint16_t y      = (uint16_t)regs->ecx;
             uint32_t pixel  = (uint32_t)regs->edx;
             GFX_vdraw_pixel(x, y, pixel);
         } 
         
-        else if (regs->eax == SYS_VPUT_PIXEL) {
+        else if (regs->eax == SYS_PUT_PIXEL) {
             uint16_t x      = (uint16_t)regs->ebx;
             uint16_t y      = (uint16_t)regs->ecx;
             uint32_t pixel  = (uint32_t)regs->edx;
@@ -487,4 +412,6 @@ void syscall(struct Registers* regs) {
     //=======================
     //  SYS INFO SYSCALLS
     //=======================
+
+    // VMM_set_directory(current_page_directory);
 }

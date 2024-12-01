@@ -26,15 +26,15 @@
 #define SYS_COLOR_PUTC         13
 #define SYS_SCREEN_COLOR       14
 #define SYS_SET_CURSOR         20
-#define SYS_SET_CURSOR32       47
+#define SYS_SCROLL             47
 #define SYS_GET_CURSOR         21
 #define SYS_GET_SCRCHAR        22
 #define SYS_SET_SCRCHAR        23
 #define SYS_SET_SCRCOLOR       24
 #define SYS_READ_ELF           4
 #define SYS_GET_KEY_KEYBOARD   5
-#define SYS_AREAD_KEYBOARD     19
-#define SYS_AREAD_KEYBOARD_STP 46
+#define SYS_KEYBOARD_POP       19
+#define SYS_AREAD_KEYBOARD     46
 
 // System memory info
 #define SYS_MALLOC_MAP  48

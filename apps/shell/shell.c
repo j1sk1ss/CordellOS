@@ -7,7 +7,9 @@ int exit = 1;
 
 
 void main(int argc, char* argv[]) {
+    load_font("home\\shell.psf");
     // switch2user();
+
     clrscr();
     shell_start_screen();
 
@@ -24,49 +26,29 @@ void main(int argc, char* argv[]) {
 
 #endif
 
-#ifdef LOGIN
-
-    //====================
-    //  USER
-
-        if (cexists("boot\\users.txt") != 0) {
-            while (1) {
-                char stop[3]    = { ENTER_BUTTON, '\0' };
-                char stopass[3] = { ENTER_BUTTON, '\0' };
-
-                char login[25]    = { '\0' };
-                char password[25] = { '\0' };
-
-                printf("\nLOGIN: ");
-                keyboard_read(VISIBLE_KEYBOARD, FOREGROUND_WHITE, stop, login);
-                login[max(0, strlen(login) - 1)] = '\0';
-
-                printf("\nPASSWORD: ");
-                keyboard_read(HIDDEN_KEYBOARD, FOREGROUND_WHITE, stopass, password);
-                password[max(0, strlen(password) - 1)] = '\0';
-
-                if (ulogin(login, password) == 1) break;
-                printf("\nWRONG PASS OR LOGIN\n");
-            }
-
-            clrscr();
-        }
-        else printf("\n[WARNING!] BOOT\\USERS.TXT NOT EXISTS. YOUR SYSTEM NOT PROTECTED!\n");
-
-    //  USER
-    //====================
-
-#endif
-
     //====================
     //  PREPARE SCREEN & INPUT
 
         while (exit) {
             printf("\n$%s> ", current_path);
-            
-            char stop_chars[3] = { ENTER_BUTTON, '\0' };
+
             char input[COMMAND_LENGHT] = { '\0' };
-            keyboard_read(VISIBLE_KEYBOARD, FOREGROUND_WHITE, stop_chars, input);
+            char input_data = ' ';
+            int pos = 0;
+
+            while (input_data != ENTER_BUTTON) {
+                input_data = wait_char();
+                if (input_data != BACKSPACE_BUTTON && input_data != LSHIFT_BUTTON && input_data != RSHIFT_BUTTON) {
+                    input[pos++] = input_data;
+                    putc(input_data, WHITE, BLACK);
+                }
+                else if (input_data == BACKSPACE_BUTTON) {
+                    if (pos <= 0) continue;
+                    input[pos--] = '\0';
+                    cursor_set32(cursor_get_x32() - _psf_get_width(get_font()), cursor_get_y32());
+                    display_char(cursor_get_x32(), cursor_get_y32(), ' ', WHITE, BLACK);
+                }
+            }
 
             int last_char = max(0, strlen(input) - 1);
             input[last_char] = '\0';

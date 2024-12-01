@@ -95,12 +95,8 @@ static unsigned char _shift_alphabet[128] = {
     0,	                                                                /* All other keys are undefined */
 };
 
+static char _curr_char = EMPTY_KEYBOARD;
 static keyboard_data_t _keyboard_data = {
-    .char_buffer = NULL,
-    .stop_buffer = NULL,
-    .mode = HIDDEN_KEYBOARD,
-    .color = WHITE,
-    .pos = 0,
     .key_pressed = { false }
 };
 
@@ -157,74 +153,32 @@ char _get_character(char character) {
 //  | . \| |___  | | | |_) | |_| / ___ \|  _ <| |_| |
 //  |_|\_\_____| |_| |____/ \___/_/   \_\_| \_\____/ 
 
-        void _enable_keyboard(uint8_t* buffer, int keyboard_mode, int keyboard_color, uint8_t* stop) {
-            _keyboard_data.char_buffer = buffer;
-            _keyboard_data.stop_buffer = stop;            
-            _keyboard_data.mode  = keyboard_mode;
-            _keyboard_data.color = keyboard_color;
-            _keyboard_data.pos   = 0;
+    void _enable_keyboard() {
+        _curr_char = EMPTY_KEYBOARD;
+    }
+
+    char pop_character() {
+        char character = _curr_char;
+        _curr_char = EMPTY_KEYBOARD;
+        return character;
+    }
+
+    void i386_keyboard_handler(struct Registers* regs) {
+        char character = i386_inb(0x60);
+        if (character < 0 || character >= 128) return;
+
+        _keyboard_data.key_pressed[(int)character] = false;
+        if (!(character & 0x80)) {
+            _keyboard_data.key_pressed[(int)character] = true;
+            _curr_char = _alphabet[(int)character];
+            if (_keyboard_data.key_pressed[LSHIFT] || _keyboard_data.key_pressed[RSHIFT]) _curr_char = _shift_alphabet[(int)character];
+            if (_curr_char == LSHIFT_BUTTON || _curr_char == RSHIFT_BUTTON) return;
         }
 
-        void i386_keyboard_handler(struct Registers* regs) {
-            char character = i386_inb(0x60);
-            if (character < 0 || character >= 128) return;
-            if (_keyboard_data.char_buffer == NULL || _keyboard_data.stop_buffer == NULL) return;
-
-            char* input = (char*)_keyboard_data.char_buffer;
-            input[_keyboard_data.pos] = '\0';
-
-            _keyboard_data.key_pressed[(int)character] = false;
-            if (!(character & 0x80)) {
-                _keyboard_data.key_pressed[(int)character] = true;
-                char currentCharacter = _alphabet[(int)character];
-
-                //==============
-                //  Work with stop symbols
-
-                int chr_pos = 0;
-                while (_keyboard_data.stop_buffer[chr_pos] != '\0') {
-                    if (_keyboard_data.stop_buffer[chr_pos] == currentCharacter || _keyboard_data.stop_buffer[chr_pos] == STOP_KEYBOARD) {
-                        input[max(0, strlen(input))] = _keyboard_data.stop_buffer[chr_pos] == STOP_KEYBOARD ? currentCharacter : _keyboard_data.stop_buffer[chr_pos];
-                        _keyboard_data.stop_buffer[0] = '\250';
-
-                        _keyboard_data.char_buffer = NULL;
-                        _keyboard_data.stop_buffer = NULL;
-                        _keyboard_data.mode  = HIDDEN_KEYBOARD;
-                        _keyboard_data.color = -1;
-                        _keyboard_data.pos   = 0;
-
-                        return;
-                    }
-                
-                    chr_pos++;
-                }
-                
-                //  Work with stop symbols
-                //==============
-
-                if (_keyboard_data.key_pressed[LSHIFT] || _keyboard_data.key_pressed[RSHIFT]) currentCharacter = _shift_alphabet[(int)character];
-                if (currentCharacter == LSHIFT_BUTTON || currentCharacter == RSHIFT_BUTTON) return;
-                if (currentCharacter == BACKSPACE_BUTTON) {
-                    if (strlen(input) <= 0) return;
-                    input[_keyboard_data.pos--] = '\0';
-
-                    KSTDIO_data.set_cursor(KSTDIO_data.get_cursor_x() - 1, KSTDIO_data.get_cursor_y());
-                    KSTDIO_data.put_chr(KSTDIO_data.get_cursor_x(), KSTDIO_data.get_cursor_y(), ' ');
-
-                    return;
-                }
-
-                if (_keyboard_data.mode == VISIBLE_KEYBOARD) {
-                    kprintf("%c", currentCharacter);
-                }
-
-                input[_keyboard_data.pos++] = currentCharacter;
-            }
-
-            if (_keyboard_data.key_pressed[LSHIFT] || _keyboard_data.key_pressed[RSHIFT]) {
-                _keyboard_data.key_pressed[LSHIFT] = false;
-                _keyboard_data.key_pressed[RSHIFT] = false;
-            }
+        if (_keyboard_data.key_pressed[LSHIFT] || _keyboard_data.key_pressed[RSHIFT]) {
+            _keyboard_data.key_pressed[LSHIFT] = false;
+            _keyboard_data.key_pressed[RSHIFT] = false;
         }
+    }
 
 //==================================================================================
