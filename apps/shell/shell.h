@@ -10,7 +10,6 @@
 #include <stdio.h>
 #include <networking.h>
 #include <keyboard.h>
-#include <sysinfo.h>
 #include <memory.h>
 #include <assert.h>
 #include <hash.h>

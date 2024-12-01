@@ -11,10 +11,8 @@ void VFS_initialize(ata_dev_t* dev, uint32_t fs_type) {
     vfs_list->device  = dev;
 
     if (fs_type == FAT_FS) {
-        vfs_list->read         = FAT_read_content;
-        vfs_list->read_stop    = FAT_read_content_stop;
-        vfs_list->readoff      = FAT_read_content2buffer;
-        vfs_list->readoff_stop = FAT_read_content2buffer_stop;
+        vfs_list->read      = FAT_read_content2buffer;
+        vfs_list->read_stop = FAT_read_content2buffer_stop;
 
         vfs_list->write      = FAT_write_content;
         vfs_list->writeoff   = FAT_write_buffer2content;
@@ -39,10 +37,8 @@ void VFS_add_node(ata_dev_t* dev, uint32_t fs_type) {
     new_node->device  = dev;
 
     if (fs_type == FAT_FS) {
-        new_node->read         = FAT_read_content;
-        new_node->read_stop    = FAT_read_content_stop;
-        new_node->readoff      = FAT_read_content2buffer;
-        new_node->readoff_stop = FAT_read_content2buffer_stop;
+        new_node->read      = FAT_read_content2buffer;
+        new_node->read_stop = FAT_read_content2buffer_stop;
 
         new_node->write      = FAT_write_content;
         new_node->writeoff   = FAT_write_buffer2content;

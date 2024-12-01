@@ -12,7 +12,7 @@ bitmap_t* BMP_create(char* file_path, int screen_x, int screen_y) {
     }
 
     uint8_t* header = clralloc(sizeof(bmp_fileheader_t));
-    fread_off(content, 0, header, sizeof(bmp_fileheader_t));
+    fread(content, 0, header, sizeof(bmp_fileheader_t));
 
     bmp_fileheader_t* h = (bmp_fileheader_t*)header;
     uint32_t offset     = h->bfOffBits;
@@ -20,7 +20,7 @@ bitmap_t* BMP_create(char* file_path, int screen_x, int screen_y) {
     free(header);
 
     uint8_t* info = clralloc(sizeof(bmp_infoheader_t));
-    fread_off(content, sizeof(bmp_fileheader_t), info, sizeof(bmp_infoheader_t));
+    fread(content, sizeof(bmp_fileheader_t), info, sizeof(bmp_infoheader_t));
 
     bmp_infoheader_t* inf = (bmp_infoheader_t*)info;
     ret->width         = inf->biWidth;
@@ -57,7 +57,7 @@ void BMP_display(bitmap_t* bmp) {
 
         while (image_part < line_size) {
             uint8_t* bytes = clralloc(load_size);
-            fread_off(bmp->file, offset + image_part, bytes, load_size);
+            fread(bmp->file, offset + image_part, bytes, load_size);
 
             for (int x = 0; x < LOAD_PART; x++) {
                 uint32_t color_index = x * bytes_per_pixel;

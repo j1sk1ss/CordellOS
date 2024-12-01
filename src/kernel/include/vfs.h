@@ -23,21 +23,13 @@ typedef struct vfs_node {
     // Functions
     //===========
 
-        // Read content and return char*
-        // Content
-        char* (*read)(Content*);
-
-        // Read content and return char* (stop reading when meets stop symbols)
-        // Content, stop
-        char* (*read_stop)(Content*, uint8_t*);
-
         // Read content to buffer with file seek
         // Content, buffer, seek, size
-        void (*readoff)(Content*, uint8_t*, uint32_t, uint32_t);
+        void (*read)(Content*, uint8_t*, uint32_t, uint32_t);
 
         // Read content to buffer with file seek (stop reading when meets stop symbols)
         // Content, buffer, seek, size, stop
-        void (*readoff_stop)(Content*, uint8_t*, uint32_t, uint32_t, uint8_t*);
+        void (*read_stop)(Content*, uint8_t*, uint32_t, uint32_t, uint8_t*);
 
         // Write data to content (Change FAT table for allocate \ deallocate clusters)
         // Content, data

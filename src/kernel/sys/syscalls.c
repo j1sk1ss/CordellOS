@@ -6,7 +6,6 @@ void i386_syscalls_init() {
 }
  
 void syscall(struct Registers* regs) {
-    // VMM_set_directory(kernel_page_directory);
 
     //=======================
     //  PRINT SYSCALLS
@@ -39,6 +38,28 @@ void syscall(struct Registers* regs) {
     //=======================
     //  SYSTEM SYSCALLS
     //=======================
+
+        else if (regs->eax == SYS_WRITE) {
+            int destination = (int)regs->ebx;
+            uint32_t source = (uint32_t)regs->ecx;
+            size_t size     = (size_t)regs->edx;
+
+            if (destination == 1) {
+                memcpy(
+                    (void*)GFX_data.virtual_second_buffer, (void*)VMM_virtual2physical((void*)source), size
+                );
+            }
+            else if (destination == 2) {
+                memcpy(
+                    (void*)GFX_data.physical_base_pointer, (void*)VMM_virtual2physical((void*)source), size
+                );
+            }
+            else {
+                memcpy(
+                    (void*)destination, (void*)VMM_virtual2physical((void*)source), size
+                );
+            }
+        }
 
         else if (regs->eax == SYS_SWITCH_USER) {
             i386_switch2user();
@@ -89,7 +110,6 @@ void syscall(struct Registers* regs) {
             }
 
 #ifndef USERMODE
-
             else if (regs->eax == SYS_MALLOC) {
                 uint32_t size = regs->ebx;
                 void* allocated_memory = _kmalloc(size);
@@ -107,9 +127,7 @@ void syscall(struct Registers* regs) {
                 if (ptr_to_free != NULL)
                     _kfree(ptr_to_free);
             }
-
 #elif defined(USERMODE)
-
             else if (regs->eax == SYS_MALLOC) {
                 uint32_t size = regs->ebx;
                 void* allocated_memory = _umalloc(size);
@@ -127,7 +145,6 @@ void syscall(struct Registers* regs) {
                 if (ptr_to_free != NULL)
                     _ufree(ptr_to_free);
             }
-
 #endif
 
             else if (regs->eax == SYS_KERN_PANIC) {
@@ -144,7 +161,6 @@ void syscall(struct Registers* regs) {
             else if (regs->eax == SYS_ADD_VAR) {
                 char* name  = (char*)regs->ebx;
                 char* value = (char*)regs->ecx;
-
                 VARS_add(name, value);
             }
 
@@ -156,7 +172,6 @@ void syscall(struct Registers* regs) {
             else if (regs->eax == SYS_SET_VAR) {
                 char* name  = (char*)regs->ebx;
                 char* value = (char*)regs->ecx;
-
                 VARS_set(name, value);
             }
 
@@ -179,22 +194,6 @@ void syscall(struct Registers* regs) {
     //=======================
     //  FILE SYSTEMS SYSCALLS
     //=======================
-
-        else if (regs->eax == SYS_READ_FILE) {
-            char* rfile_path = (char*)regs->ebx;
-            Content* content = current_vfs->getobj(rfile_path);
-            regs->eax = (uint32_t)current_vfs->read(content);
-            FSLIB_unload_content_system(content);
-        } 
-     
-        else if (regs->eax == SYS_READ_FILE_STP) {
-            char* rfile_path = (char*)regs->ebx;
-            uint8_t* stop    = (uint8_t*)regs->ecx;
-            Content* content = current_vfs->getobj(rfile_path);
-            regs->eax        = (uint32_t)current_vfs->read_stop(content, stop);
-            
-            FSLIB_unload_content_system(content);
-        } 
 
         else if (regs->eax == SYS_WRITE_FILE) {
             char* wfile_path = (char*)regs->ebx;
@@ -262,7 +261,7 @@ void syscall(struct Registers* regs) {
             uint8_t* buffer  = (uint8_t*)regs->edx;
             int offset_len   = (int)regs->esi;
             
-            current_vfs->readoff(content, buffer, offset, offset_len);
+            current_vfs->read(content, buffer, offset, offset_len);
         }
 
         else if (regs->eax == SYS_READ_FILE_OFF_STP) {
@@ -272,7 +271,7 @@ void syscall(struct Registers* regs) {
             int offset_len   = (int)regs->esi;
             uint8_t* stop    = (uint8_t*)regs->edi;
             
-            current_vfs->readoff_stop(content, buffer, offset, offset_len, stop);
+            current_vfs->read_stop(content, buffer, offset, offset_len, stop);
         }
 
         else if (regs->eax == SYS_WRITE_FILE_OFF) {
@@ -302,24 +301,16 @@ void syscall(struct Registers* regs) {
     //=======================
     
         else if (regs->eax == SYS_VPUT_PIXEL) {
-            uint16_t x      = (uint16_t)regs->ebx;
-            uint16_t y      = (uint16_t)regs->ecx;
-            uint32_t pixel  = (uint32_t)regs->edx;
-            GFX_vdraw_pixel(x, y, pixel);
+            GFX_vdraw_pixel((uint16_t)regs->ebx, (uint16_t)regs->ecx, (uint32_t)regs->edx);
         } 
         
-        else if (regs->eax == SYS_PUT_PIXEL) {
-            uint16_t x      = (uint16_t)regs->ebx;
-            uint16_t y      = (uint16_t)regs->ecx;
-            uint32_t pixel  = (uint32_t)regs->edx;
-            GFX_pdraw_pixel(x, y, pixel);
+        else if (regs->eax == SYS_PPUT_PIXEL) {
+            GFX_pdraw_pixel((uint16_t)regs->ebx, (uint16_t)regs->ecx, (uint32_t)regs->edx);
         } 
 
         else if (regs->eax == SYS_GET_PIXEL) {
             uint32_t* pixel = (uint32_t*)regs->edx;
-            uint16_t x      = (uint16_t)regs->ebx;
-            uint16_t y      = (uint16_t)regs->ecx;
-            pixel[0] = GFX_get_pixel(x, y);
+            pixel[0] = GFX_get_pixel((uint16_t)regs->ebx, (uint16_t)regs->ecx);
         } 
 
         else if (regs->eax == SYS_FBUFFER_SWIPE) {
@@ -361,9 +352,8 @@ void syscall(struct Registers* regs) {
             uint8_t* dst_ip   = (uint8_t*)regs->ebx;
             uint16_t src_port = (uint16_t)regs->ecx;
             uint16_t dst_port = (uint16_t)regs->edx;
-            void* data        = (void*)regs->esi;
-            int len           = (int)regs->edi;
-
+            void* data = (void*)regs->esi;
+            int len    = (int)regs->edi;
             UDP_send_packet(dst_ip, src_port, dst_port, data, len);
         }
 
@@ -384,7 +374,6 @@ void syscall(struct Registers* regs) {
 
         else if (regs->eax == SYS_GET_FS_INFO) {
             uint32_t* buffer = (uint32_t*)regs->ebx;
-
             buffer[0] = (uint32_t)current_vfs->device->mountpoint;
             buffer[1] = (uint32_t)current_vfs->name; // TODO: Copy to user space with malloc
             buffer[2] = (uint32_t)FAT_data.fat_type;
@@ -398,20 +387,4 @@ void syscall(struct Registers* regs) {
     //=======================
     //  NETWORKING SYSCALLS
     //=======================
-    //  SYS INFO SYSCALLS
-    //=======================
-
-        else if (regs->eax == SYS_MALLOC_MAP) {
-            #ifdef USERMODE
-                kprint_umalloc();
-            #else
-                kprint_kmalloc();
-            #endif
-        }
-
-    //=======================
-    //  SYS INFO SYSCALLS
-    //=======================
-
-    // VMM_set_directory(current_page_directory);
 }

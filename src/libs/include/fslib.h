@@ -93,10 +93,8 @@ int cexists(const char* path);
 void rmcontent(const char* path);
 void chgcontent(const char* path, directory_entry_t* meta);
 
-uint8_t* fread(const char* path);
-uint8_t* fread_stop(const char* path, char* stop);
-void fread_off(Content* content, int offset, uint8_t* buffer, int len);
-void fread_off_stop(Content* content, int offset, uint8_t* buffer, int len, char* stop);
+void fread(Content* content, int offset, uint8_t* buffer, int len);
+void fread_stop(Content* content, int offset, uint8_t* buffer, int len, char* stop);
 
 void fwrite(const char* path, const char* data);
 void fwrite_off(Content* content, int offset, uint8_t* buffer, int len);

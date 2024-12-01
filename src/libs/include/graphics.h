@@ -1,7 +1,6 @@
 #ifndef GRAPHICS_H_
 #define GRAPHICS_H_
 
-
 #include <stdint.h>
 
 #include "bitmap.h"
@@ -29,32 +28,20 @@
 
 
 typedef struct GUIobject {
-    int x, y;
-    int prev_x, prev_y;
-    int height, width;
-
+    int x, y, prev_x, prev_y, height, width;
+    int children_count, bitmap_count, text_count;
     uint32_t background_color;
-    
-    int children_count;
     struct GUIobject** childrens;
-
-    int bitmap_count;
     struct bitmap** bitmaps;
-
-    int text_count;
     struct text_object** texts;
 } GUIobject_t;
 
 typedef struct text_object {
     uint32_t x, y;
     char* text;
-    uint32_t char_count;
-    uint32_t fg_color;
-    uint32_t bg_color;
+    uint32_t char_count, fg_color, bg_color;
 } text_object_t;
 
-
-void swipe_buffers();
 
 void load_font(char* path);
 uint8_t* get_font();
@@ -62,6 +49,7 @@ void unload_font();
 void display_char(int x, int y, char c, uint32_t foreground, uint32_t background);
 void display_str(int x, int y, char* str, uint32_t foreground, uint32_t background);
 
+void swipe_buffers();
 int get_resolution_x();
 int get_resolution_y();
 void scroll(int lines);

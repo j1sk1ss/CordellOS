@@ -59,7 +59,7 @@ ELF32_program* ELF_read(const char* path, int type) {
     //==========================
 
         void* header = ALC_malloc(sizeof(Elf32_Ehdr), type);
-        current_vfs->readoff(content, header, 0, sizeof(Elf32_Ehdr));
+        current_vfs->read(content, header, 0, sizeof(Elf32_Ehdr));
         Elf32_Ehdr* ehdr = (Elf32_Ehdr*)header;
         if (ehdr->e_ident[0] != '\x7f' || ehdr->e_ident[1] != 'E') {
             kprintf("\n[%s %i] Error: Not ELF.\n", __FILE__, __LINE__);
@@ -82,7 +82,7 @@ ELF32_program* ELF_read(const char* path, int type) {
     //==========================
 
         void* program_header = ALC_malloc(sizeof(Elf32_Phdr) * ehdr->e_phnum, type);
-        current_vfs->readoff(content, program_header, ehdr->e_phoff, sizeof(Elf32_Phdr) * ehdr->e_phnum);
+        current_vfs->read(content, program_header, ehdr->e_phoff, sizeof(Elf32_Phdr) * ehdr->e_phnum);
         Elf32_Phdr* phdr = (Elf32_Phdr*)program_header;
 
         program->entry_point = (void*)ehdr->e_entry;
@@ -112,7 +112,7 @@ ELF32_program* ELF_read(const char* path, int type) {
             }
 
             memset((void*)phdr[i].p_vaddr, 0, phdr[i].p_memsz);
-            current_vfs->readoff(content, (uint8_t*)phdr[i].p_vaddr, phdr[i].p_offset, phdr[i].p_memsz);
+            current_vfs->read(content, (uint8_t*)phdr[i].p_vaddr, phdr[i].p_offset, phdr[i].p_memsz);
         }
 
     //==========================

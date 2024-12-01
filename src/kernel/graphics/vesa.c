@@ -156,11 +156,10 @@ void __mem_putc(int x, int y, char c, uint32_t foreground, uint32_t background, 
     abs_row += x;
 
     /* Finally display pixels according to the bitmap */
-    int j = 0, line = 0;
+    int j = 0;
     uint32_t mask = 0;
     for (j = 0; j < _psf_get_height(&_binary_src_kernel_font_psf_start); j++) {
         /* Save the starting position of the line */
-        line = j * step;
         mask = 1 << (_psf_get_width(&_binary_src_kernel_font_psf_start) - 1);
 
         /* Display a row */

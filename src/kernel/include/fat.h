@@ -166,8 +166,6 @@ extern fat_data_t FAT_data;
 
 	int FAT_content_exists(const char* filePath);
 	Content* FAT_get_content(const char* filePath);
-	char* FAT_read_content(Content* data);
-	char* FAT_read_content_stop(Content* data, uint8_t* stop);
 	void FAT_read_content2buffer(Content* data, uint8_t* buffer, uint32_t offset, uint32_t size);
 	void FAT_read_content2buffer_stop(Content* data, uint8_t* buffer, uint32_t offset, uint32_t size, uint8_t* stop);
 	int FAT_put_content(const char* filePath, Content* content);

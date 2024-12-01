@@ -14,6 +14,8 @@
 #define OFFSET_FROM_BIT(b) 		(b % 0x20)
 
 
+void write(int destination, uint32_t source, size_t size);
+
 void* memcpy(void* destination, const void* source, size_t num);
 void* memset(void* destination, int value, size_t num);
 int memcmp(const void* firstPointer, const void* secondPointer, size_t num);

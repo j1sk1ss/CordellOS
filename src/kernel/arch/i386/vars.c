@@ -16,7 +16,7 @@ void VARS_init() {
         while (current_position < content->file->file_meta.file_size) {
             uint8_t buffer[SECTOR_SIZE] = { '\0' };
             char stop[1] = { '\n' };
-            fread_off_stop(content, current_position, buffer, SECTOR_SIZE, stop);
+            fread_stop(content, current_position, buffer, SECTOR_SIZE, stop);
 
             current_position += min(SECTOR_SIZE, strlen(buffer));
         }

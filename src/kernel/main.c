@@ -285,7 +285,7 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
 
             PMM_deinitialize_memory_region(GFX_data.virtual_second_buffer, framebuffer_pages * BLOCK_SIZE);
             for (uint32_t i = 0, fb_start = GFX_data.virtual_second_buffer; i < framebuffer_pages; i++, fb_start += PAGE_SIZE)
-                VMM_kmap_page((void*)fb_start, (void*)fb_start);
+                VMM_umap_page((void*)fb_start, (void*)fb_start);
 
 #pragma endregion
 
@@ -350,7 +350,8 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
 
         if (current_vfs->objexist(CONFIG_PATH) == 1) {
             Content* boot_config = current_vfs->getobj(CONFIG_PATH);
-            char* config = current_vfs->read(boot_config);
+            uint8_t config[128] = { 0 };
+            current_vfs->read(boot_config, config, 0, 128);
             FSLIB_unload_content_system(boot_config);
             
             //===================

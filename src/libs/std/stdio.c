@@ -54,7 +54,7 @@ void putc(char c, uint32_t fcolor, uint32_t bcolor) {
 
         case '\t':
             for (int i = 0; i < 4 - ((max_w) / char_w % 4); i++)
-                display_char(_curr_x, _curr_y, ' ', fcolor, bcolor);
+                putc(' ', fcolor, bcolor);
             break;
 
         default:

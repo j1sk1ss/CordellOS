@@ -132,7 +132,6 @@ void shell_start_screen() {
             else if (strcmp(command_line[0], COMMAND_REBOOT)    == 0) machine_restart();
             else if (strcmp(command_line[0], COMMAND_VERSION)   == 0) shell_start_screen();
             else if (strcmp(command_line[0], COMMAND_ECHO)      == 0) printf("\n%s", command_line[1]);
-            else if (strcmp(command_line[0], COMMAND_MEM_DATA)  == 0) print_malloc_map();
             else if (strcmp(command_line[0], COMMAND_CLEAR)     == 0) clrscr();
                 
             else if (strcmp(command_line[0], COMMAND_DISK_DATA) == 0) {
@@ -277,7 +276,7 @@ void shell_start_screen() {
                     int copy_size = min(content->file->file_meta.file_size - data_size, 128);
                     char* data = (char*)clralloc(copy_size);
 
-                    fread_off(content, data_size, (uint8_t*)data, copy_size);
+                    fread(content, data_size, (uint8_t*)data, copy_size);
                     printf("%s", data);
 
                     free(data);
@@ -436,8 +435,9 @@ int ulogin(char* login, char* password) {
 
     char* lines[40] = { NULL };
     int pos = 0;
-
-    char* content_text = (char*)fread("boot\\users.txt");
+    
+    char content_text[512] = { 0 };
+    fread(get_content("boot\\users.txt"), 0, (uint8_t*)content_text, 512);
     char* token = strtok(content_text, "\n");
     while (token) {
         lines[pos++] = token;
