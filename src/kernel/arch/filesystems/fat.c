@@ -932,44 +932,6 @@
 		}
 	}
 
-	char* FAT_read_content(Content* data) {
-		int totalSize = FAT_data.sectors_per_cluster * SECTOR_SIZE * data->file->data_size;
-		char* result  = (char*)_kmalloc(totalSize);
-		memset(result, 0, totalSize);
-
-		int offset = 0;
-		for (int i = 0; i < data->file->data_size; i++) {
-			uint8_t* content_part = FAT_cluster_read(data->file->data[i]);
-			int size = SECTOR_SIZE * FAT_data.sectors_per_cluster;
-			
-			memcpy(result + offset, content_part, size);
-			_kfree(content_part);
-
-			offset += size;
-		}
-		
-		return result;
-	}
-
-	char* FAT_read_content_stop(Content* data, uint8_t* stop) {
-		char* result = NULL;
-
-		int offset = 0;
-		for (int i = 0; i < data->file->data_size; i++) {
-			uint8_t* content_part = FAT_cluster_read_stop(data->file->data[i], stop);
-			int size = SECTOR_SIZE * FAT_data.sectors_per_cluster;
-			
-			result = _krealloc(result, offset + size);
-			memcpy(result + offset, content_part, size);
-			_kfree(content_part);
-
-			offset += size;
-			if (stop[0] == STOP_SYMBOL) break;
-		}
-		
-		return result;
-	}
-
 	// Function for reading part of file
 	// data - content for reading
 	// buffer - buffer data storage

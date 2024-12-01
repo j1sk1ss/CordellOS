@@ -121,7 +121,11 @@ void scroll(int lines) {
 static uint8_t* _cur_font = NULL;
 
 void load_font(char* path) {
-    _cur_font = fread(path);
+    Content* font_file = get_content(path);
+    int font_file_size = font_file->file->data_size * 512;
+    _cur_font = (uint8_t*)malloc(font_file_size);
+
+    fread(font_file, 0, _cur_font, font_file_size);
     cursor_set32(0, 0);
 }
 

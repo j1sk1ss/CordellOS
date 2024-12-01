@@ -1,5 +1,19 @@
 #include "../include/memory.h"
 
+
+void write(int destination, uint32_t source, size_t size) {
+    __asm__ volatile(
+        "movl $64, %%eax\n"
+        "movl %0, %%ebx\n"
+        "movl %1, %%ecx\n"
+        "movl %2, %%edx\n"
+        "int $0x80\n"
+        :
+        : "r"(destination), "r"(source), "r"(size)
+        : "eax", "ebx", "ecx"
+    );
+}
+
 // https://forum.osdev.org/viewtopic.php?t=18119
 void* memcpy(void* destination, const void* source, size_t num) {
     uint32_t num_dwords = num / 4;

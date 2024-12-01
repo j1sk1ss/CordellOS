@@ -94,7 +94,7 @@ void GFX_scrollback_buffer(int lines, uint32_t buffer) {
 }
 
 void GFX_swap_buffers() {
-    memcpy(GFX_data.physical_base_pointer, GFX_data.virtual_second_buffer, GFX_data.buffer_size);
+    memcpy((void*)GFX_data.physical_base_pointer, (void*)GFX_data.virtual_second_buffer, GFX_data.buffer_size);
 }
 
 void GFX_set_pbuffer(uint32_t value) {

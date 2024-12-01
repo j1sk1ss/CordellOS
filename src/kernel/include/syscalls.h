@@ -1,7 +1,6 @@
 #ifndef SYSCALLS_H
 #define SYSCALLS_H
 
-
 #include <fslib.h>
 
 #include "isr.h"
@@ -20,27 +19,13 @@
 
 
 // Screen managment through kprint 
-#define SYS_PRINT              0
-#define SYS_PUTC               1
-#define SYS_CLEAR              2
-#define SYS_COLOR_PUTC         13
-#define SYS_SCREEN_COLOR       14
-#define SYS_SET_CURSOR         20
 #define SYS_SCROLL             47
-#define SYS_GET_CURSOR         21
-#define SYS_GET_SCRCHAR        22
-#define SYS_SET_SCRCHAR        23
-#define SYS_SET_SCRCOLOR       24
 #define SYS_READ_ELF           4
 #define SYS_GET_KEY_KEYBOARD   5
-#define SYS_KEYBOARD_POP       19
 #define SYS_AREAD_KEYBOARD     46
 
-// System memory info
-#define SYS_MALLOC_MAP  48
-#define SYS_PAGE_MAP    49
-
 // System managment (memory, tasks, vars)
+#define SYS_WRITE       64 // LAST
 #define SYS_TIME        6
 #define SYS_MALLOC      7
 #define SYS_PAGE_MALLOC 35
@@ -53,7 +38,7 @@
 #define SYS_GET_VAR     55
 #define SYS_DEL_VAR     56
 #define SYS_EXST_VAR    57
-#define SYS_SWITCH_USER 60 // LAST
+#define SYS_SWITCH_USER 60
 #define SYS_GET_TICKS   3
 
 // FS managment
@@ -78,12 +63,14 @@
 #define SYS_KILL_PROCESS  27
 
 // Graphics
-#define SYS_PUT_PIXEL        28
+#define SYS_PPUT_PIXEL       28
+#define SYS_VPUT_PIXEL       37
 #define SYS_GET_PIXEL        29
 #define SYS_GET_RESOLUTION_X 31
 #define SYS_GET_RESOLUTION_Y 32
-#define SYS_VPUT_PIXEL       37
 #define SYS_FBUFFER_SWIPE    36
+#define SYS_GET_FBUFFER_SIZE 62
+#define SYS_GET_FBUFFER_BPP  63
 
 // Networking
 #define SYS_SEND_ETH_PACKET 38
@@ -101,6 +88,5 @@
 
 void i386_syscalls_init();
 void syscall(struct Registers* regs);
-
 
 #endif

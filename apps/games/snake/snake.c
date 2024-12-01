@@ -15,6 +15,7 @@ int main(int args, char* argv[]) {
 
 	text_object_t* logo = create_text(get_resolution_x() / 2, get_resolution_y() / 2, "SNAKE GAME!", WHITE, BLACK);
 	window_t* main_menu = create_window("SnakeGameMenu", -1, 0, 0, get_resolution_y(), get_resolution_x(), WHITE, NULL);
+	add_text2window(main_menu, logo);
 	display_window(main_menu);
 
 	printf("\nSNAKE GAME v. 1.0\nPress ENTER to start.\n");
