@@ -19,14 +19,15 @@ uint32_t cursor_get_y32() {
 }
 
 void clrscr() {
-    set_color(BLACK, 0, 0, get_resolution_x(), get_resolution_y());
+    set_vcolor(BLACK, 0, 0, get_resolution_x(), get_resolution_y());
     cursor_set32(0, 0);
+    swipe_buffers();
 }
 
 void __scrollback(int lines) {
     int max_h = get_resolution_y();
     scroll(lines);
-    set_color(BLACK, 0, max_h - lines, get_resolution_x(), max_h);
+    set_pcolor(BLACK, 0, max_h - lines, get_resolution_x(), max_h);
 }
 
 void __newline() {
@@ -70,12 +71,16 @@ void puts(const char* str, uint32_t fcolor, uint32_t bcolor) {
     }
 }
 
-void set_color(uint32_t color, int start_x, int start_y, int end_x, int end_y) {
+void set_pcolor(uint32_t color, int start_x, int start_y, int end_x, int end_y) {
+    for (int i = start_x; i < end_x; i++)
+        for (int j = start_y; j < end_y; j++)
+            pput_pixel(i, j, color);
+}
+
+void set_vcolor(uint32_t color, int start_x, int start_y, int end_x, int end_y) {
     for (int i = start_x; i < end_x; i++)
         for (int j = start_y; j < end_y; j++)
             vput_pixel(i, j, color);
-
-    swipe_buffers();
 }
 
 void _fprintf_unsigned(unsigned long long number, int radix, uint32_t fcolor, uint32_t bcolor) {

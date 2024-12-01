@@ -78,7 +78,8 @@ void clrscr();
 uint32_t cursor_get_x32();
 uint32_t cursor_get_y32();
 void cursor_set32(uint32_t x, uint32_t y);
-void set_color(uint32_t color, int start_x, int start_y, int end_x, int end_y);
+void set_pcolor(uint32_t color, int start_x, int start_y, int end_x, int end_y);
+void set_vcolor(uint32_t color, int start_x, int start_y, int end_x, int end_y);
 
 void putc(char c, uint32_t fcolor, uint32_t bcolor);
 void puts(const char* str, uint32_t fcolor, uint32_t bcolor);
