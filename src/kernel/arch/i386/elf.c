@@ -45,9 +45,8 @@ const char* ELF_lookup_function(uint32_t addr) {
     return ELF_lookup_symbol_function(addr, &kernel_elf_symbols);
 }
 
-ELF32_program* ELF_read(const char* path, int type) {
+ELF32_program* ELF_read(Content* content, int type) {
     ELF32_program* program = ALC_malloc(sizeof(ELF32_program), type);
-    Content* content = current_vfs->getobj(path);
     if (content->file == NULL) {
         kprintf("[%s %i] File not found\n", __FILE__, __LINE__);
         FAT_unload_content_system(content);

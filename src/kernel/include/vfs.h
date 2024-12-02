@@ -36,7 +36,7 @@ typedef struct vfs_node {
         int (*write)(Content*, uint8_t*, uint32_t, uint32_t);
 
         // Return Directory of current cluster
-        Content* (*dir)(const uint32_t, uint8_t, int);
+        Content* (*lsdir)(const uint32_t, uint8_t, int);
 
         // Get Content by path
         // Path
@@ -56,7 +56,7 @@ typedef struct vfs_node {
 
         // Execute content in specified address space (this function don`t create new page directory)
         // Path, argc, argv, address space
-        int (*objexec)(char*, int, char**, int);
+        int (*objexec)(Content*, int, char**, int);
 
         // Change meta of content
         // Path, new meta
@@ -67,7 +67,6 @@ typedef struct vfs_node {
     //===========
 
     struct vfs_node* next;
-
 } vfs_node_t;
 
 

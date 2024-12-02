@@ -14,6 +14,7 @@
 #include "include/dhcp.h"
 #include "include/vars.h"
 #include "include/mouse.h"
+#include "include/kstdio.h"
 #include "include/tasking.h"
 #include "include/speaker.h"
 #include "include/rtl8139.h"
@@ -112,6 +113,7 @@
 //      22) New kernel panic screen (maybe blue screen?)          [V]
 //      23) Refactor STDIO in userland                            [V]
 //          23.1) Font lib, draw instead kprint                   [V]
+//      24) FAT separation (Content table and descriptors)        [?]
 //      23) DOOM?                                                 [ ]
 //======================================================================================================================================
 
@@ -120,13 +122,15 @@
 
 void _shell() {
 
+    Content* content = current_vfs->getobj(SHELL_PATH);
+
 #ifdef USERMODE
     uint32_t esp = 0;
     asm("mov %%esp, %0" : "=r"(esp));
     TSS_set_stack(0x10, esp);
-    current_vfs->objexec(SHELL_PATH, 0, NULL, USER);
+    current_vfs->objexec(content, 0, NULL, USER);
 #else
-    current_vfs->objexec(SHELL_PATH, 0, NULL, KERNEL);
+    current_vfs->objexec(content, 0, NULL, KERNEL);
 #endif
 
 }
@@ -285,7 +289,7 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
 
             PMM_deinitialize_memory_region(GFX_data.virtual_second_buffer, framebuffer_pages * BLOCK_SIZE);
             for (uint32_t i = 0, fb_start = GFX_data.virtual_second_buffer; i < framebuffer_pages; i++, fb_start += PAGE_SIZE)
-                VMM_umap_page((void*)fb_start, (void*)fb_start);
+                VMM_kmap_page((void*)fb_start, (void*)fb_start);
 
 #pragma endregion
 

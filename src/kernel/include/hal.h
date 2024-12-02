@@ -1,7 +1,6 @@
 #ifndef HAL_H_
 #define HAL_H_
 
-
 #include "isr.h"
 #include "gdt.h"
 #include "idt.h"

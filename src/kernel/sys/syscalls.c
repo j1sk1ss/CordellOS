@@ -195,9 +195,9 @@ void syscall(struct Registers* regs) {
     //  FILE SYSTEMS SYSCALLS
     //=======================
         
-        else if (regs->eax == SYS_OPENDIR) {
+        else if (regs->eax == SYS_LSDIR) {
             char* path = (char*)regs->ebx;
-            regs->eax  = (uint32_t)current_vfs->dir(
+            regs->eax  = (uint32_t)current_vfs->lsdir(
                 GET_CLUSTER_FROM_ENTRY(
                     current_vfs->getobj(path)->directory->directory_meta, FAT_data.fat_type
                 ), (char)0, 0
@@ -222,7 +222,7 @@ void syscall(struct Registers* regs) {
             char* fname = strtok(mkfile_name, ".");
             char* fexec = strtok(NULL, "."); 
 
-            Content* mkfile_content = FAT_create_content(fname, 0, fexec);
+            Content* mkfile_content = FAT_create_object(fname, 0, fexec);
             current_vfs->putobj(mkfile_path, mkfile_content);
             FSLIB_unload_content_system(mkfile_content);
         } 
@@ -231,7 +231,7 @@ void syscall(struct Registers* regs) {
             char* mkdir_path = (char*)regs->ebx;
             char* mkdir_name = (char*)regs->ecx;
 
-            Content* mkdir_content = FAT_create_content(mkdir_name, 1, "\0");
+            Content* mkdir_content = FAT_create_object(mkdir_name, 1, "\0");
             current_vfs->putobj(mkdir_path, mkdir_content);
             FSLIB_unload_content_system(mkdir_content);
         } 
@@ -277,11 +277,12 @@ void syscall(struct Registers* regs) {
 
         else if (regs->eax == SYS_READ_ELF) {
             char* path = (char*)regs->ebx;
+            Content* content = current_vfs->getobj(path);
 
 #ifdef USERMODE
-		    regs->eax = (uint32_t)ELF_read(path, USER);
+		    regs->eax = (uint32_t)ELF_read(content, USER);
 #else
-		    regs->eax = (uint32_t)ELF_read(path, KERNEL);
+		    regs->eax = (uint32_t)ELF_read(content, KERNEL);
 #endif
 
         }

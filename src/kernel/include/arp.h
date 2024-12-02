@@ -1,13 +1,12 @@
 #ifndef ARP_H_
 #define ARP_H_
 
-
 #include <memory.h>
 #include <netutils.h>
 
-#include "ethernet.h"
-#include "rtl8139.h"
 #include "stdio.h"
+#include "rtl8139.h"
+#include "ethernet.h"
 #include "allocator.h"
 
 

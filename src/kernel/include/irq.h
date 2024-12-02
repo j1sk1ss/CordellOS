@@ -1,14 +1,13 @@
 #ifndef IRQ_H
 #define IRQ_H
 
-
 #include <stddef.h>
 
 #include "x86.h"
 #include "isr.h"
-#include "stdio.h"
 #include "pic.h"
 #include "i8259.h"
+#include "kstdio.h"
 
 #include "../util/arrays.h"
 

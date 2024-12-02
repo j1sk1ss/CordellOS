@@ -4,7 +4,7 @@
 #include <memory.h>
 #include <stdint.h>
 
-#include "stdio.h"
+#include "kstdio.h"
 
 
 #define MEM_OFFSET      0x10000

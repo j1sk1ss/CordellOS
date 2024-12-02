@@ -1,11 +1,11 @@
 #ifndef GFX_H_
 #define GFX_H_
 
-#include <stdint.h>
 #include <math.h>
+#include <stdint.h>
 
-#include "allocator.h"
 #include "x86.h"
+#include "allocator.h"
 
 #include "../multiboot/multiboot.h"
 
@@ -25,7 +25,6 @@
 
 
 typedef struct {
-	
 	uint16_t mode_attributes;
 	uint8_t window_a_attributes;
 	uint8_t window_b_attributes;

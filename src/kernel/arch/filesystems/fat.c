@@ -160,7 +160,6 @@
 
 	int FAT_write(uint32_t clusterNum, uint32_t clusterVal) {
 		assert(clusterNum >= 2 && clusterNum < FAT_data.total_clusters);
-
 		if (FAT_data.fat_type == 32 || FAT_data.fat_type == 16) {
 			uint32_t cluster_size = FAT_data.bytes_per_sector * FAT_data.sectors_per_cluster;
 			uint32_t fat_offset   = clusterNum * (FAT_data.fat_type == 16 ? 2 : 4);
@@ -512,7 +511,7 @@
 // entryOffset points to where the directory entry was found in sizeof(directory_entry_t) starting from zero (can be NULL)
 // returns: -1 is a general error, -2 is a "not found" error
 
-	int FAT_directory_search(const char* filepart, const uint32_t cluster, directory_entry_t* file, uint32_t* entryOffset) {
+	int _directory_search(const char* filepart, const uint32_t cluster, directory_entry_t* file, uint32_t* entryOffset) {
 		assert(cluster >= 2 && cluster < FAT_data.total_clusters);
 
 		char searchName[13] = { 0 };
@@ -522,7 +521,7 @@
 
 		uint8_t* cluster_data = FAT_cluster_read(cluster);
 		if (cluster_data == NULL) {
-			kprintf("Function FAT_directory_search: FAT_cluster_read encountered an error. Aborting...\n");
+			kprintf("Function _directory_search: FAT_cluster_read encountered an error. Aborting...\n");
 			return -1;
 		}
 
@@ -542,12 +541,12 @@
 					if (FAT_cluster_end(next_cluster, FAT_data.fat_type) == 1) break;
 
 					else if (next_cluster < 0) {
-						kprintf("Function FAT_directory_search: FAT_read encountered an error. Aborting...\n");
+						kprintf("Function _directory_search: FAT_read encountered an error. Aborting...\n");
 						_kfree(cluster_data);
 						return -1;
 					} else {
 						_kfree(cluster_data);
-						return FAT_directory_search(filepart, next_cluster, file, entryOffset);
+						return _directory_search(filepart, next_cluster, file, entryOffset);
 					}
 				}
 			}
@@ -576,10 +575,10 @@
 // pass in the cluster to write the directory to and the directory struct to write.
 // struct should only have a file name, attributes, and size. the rest will be filled in automatically
 
-	int FAT_directory_add(const uint32_t cluster, directory_entry_t* file_to_add) {
+	int _directory_add(const uint32_t cluster, directory_entry_t* file_to_add) {
 		uint8_t* cluster_data = FAT_cluster_read(cluster);
 		if (cluster_data == NULL) {
-			kprintf("Function FAT_directory_add: FAT_cluster_read encountered an error. Aborting...\n");
+			kprintf("Function _directory_add: FAT_cluster_read encountered an error. Aborting...\n");
 			return -1;
 		}
 
@@ -596,20 +595,20 @@
 					if (FAT_cluster_end(next_cluster, FAT_data.fat_type) == 1) {
 						next_cluster = FAT_cluster_allocate();
 						if (FAT_cluster_bad(next_cluster, FAT_data.fat_type) == 1) {
-							kprintf("Function FAT_directory_add: allocation of new cluster failed. Aborting...\n");
+							kprintf("Function _directory_add: allocation of new cluster failed. Aborting...\n");
 							_kfree(cluster_data);
 							return -1;
 						}
 
 						if (FAT_write(cluster, next_cluster) != 0) {
-							kprintf("Function FAT_directory_add: extension of the cluster chain with new cluster failed. Aborting...\n");
+							kprintf("Function _directory_add: extension of the cluster chain with new cluster failed. Aborting...\n");
 							_kfree(cluster_data);
 							return -1;
 						}
 					}
 
 					_kfree(cluster_data);
-					return FAT_directory_add(next_cluster, file_to_add);
+					return _directory_add(next_cluster, file_to_add);
 				}
 			}
 			else {
@@ -622,7 +621,7 @@
 
 				uint32_t new_cluster = FAT_cluster_allocate();
 				if (FAT_cluster_bad(new_cluster, FAT_data.fat_type) == 1) {
-					kprintf("Function FAT_directory_add: allocation of new cluster failed. Aborting...\n");
+					kprintf("Function _directory_add: allocation of new cluster failed. Aborting...\n");
 					_kfree(cluster_data);
 
 					return -1;
@@ -633,7 +632,7 @@
 
 				memcpy(file_metadata, file_to_add, sizeof(directory_entry_t));
 				if (FAT_cluster_write(cluster_data, cluster) != 0) {
-					kprintf("Function FAT_directory_add: Writing new directory entry failed. Aborting...\n");
+					kprintf("Function _directory_add: Writing new directory entry failed. Aborting...\n");
 					_kfree(cluster_data);
 					return -1;
 				}
@@ -657,15 +656,15 @@
 //========================================================================================
 // This function edit names of directory entries in cluster
 
-	int FAT_directory_edit(const uint32_t cluster, directory_entry_t* oldMeta, directory_entry_t* newMeta) {
+	int _directory_edit(const uint32_t cluster, directory_entry_t* oldMeta, directory_entry_t* newMeta) {
 		if (_name_check((char*)oldMeta->file_name) != 0) {
-			kprintf("Function FAT_directory_edit: Invalid file name!");
+			kprintf("Function _directory_edit: Invalid file name!");
 			return -1;
 		}
 
 		uint8_t* cluster_data = FAT_cluster_read(cluster);
 		if (cluster_data == NULL) {
-			kprintf("Function FAT_directory_edit: FAT_cluster_read encountered an error. Aborting...\n");
+			kprintf("Function _directory_edit: FAT_cluster_read encountered an error. Aborting...\n");
 			return -1;
 		}
 
@@ -684,7 +683,7 @@
 
 				memcpy(file_metadata, newMeta, sizeof(directory_entry_t));
 				if (FAT_cluster_write(cluster_data, cluster) != 0) {
-					kprintf("Function FAT_directory_edit: Writing updated directory entry failed. Aborting...\n");
+					kprintf("Function _directory_edit: Writing updated directory entry failed. Aborting...\n");
 					_kfree(cluster_data);
 					return -1;
 				}
@@ -700,13 +699,13 @@
 			else {
 				uint32_t next_cluster = FAT_read(cluster);
 				if ((next_cluster >= END_CLUSTER_32 && FAT_data.fat_type == 32) || (next_cluster >= END_CLUSTER_16 && FAT_data.fat_type == 16) || (next_cluster >= END_CLUSTER_12 && FAT_data.fat_type == 12)) {
-					kprintf("Function FAT_directory_edit: End of cluster chain reached. File not found. Aborting...\n");
+					kprintf("Function _directory_edit: End of cluster chain reached. File not found. Aborting...\n");
 					_kfree(cluster_data);
 					return -2;
 				}
 
 				_kfree(cluster_data);
-				return FAT_directory_edit(next_cluster, oldMeta, newMeta);
+				return _directory_edit(next_cluster, oldMeta, newMeta);
 			}
 		}
 
@@ -724,15 +723,15 @@
 //========================================================================================
 // This function mark data in FAT table as _kfree and deallocates all clusters
 
-	int FAT_directory_remove(const uint32_t cluster, const char* fileName) {
+	int _directory_remove(const uint32_t cluster, const char* fileName) {
 		if (_name_check(fileName) != 0) {
-			kprintf("Function FAT_directory_remove: Invalid file name!");
+			kprintf("Function _directory_remove: Invalid file name!");
 			return -1;
 		}
 
 		uint8_t* cluster_data = FAT_cluster_read(cluster);
 		if (cluster_data == NULL) {
-			kprintf("Function FAT_directory_remove: FAT_cluster_read encountered an error. Aborting...\n");
+			kprintf("Function _directory_remove: FAT_cluster_read encountered an error. Aborting...\n");
 			return -1;
 		}
 
@@ -742,29 +741,27 @@
 			if (strstr((char*)file_metadata->file_name, fileName) == 0) {
 				file_metadata->file_name[0] = ENTRY_FREE;
 				if (FAT_cluster_write(cluster_data, cluster) != 0) {
-					kprintf("Function FAT_directory_remove: Writing updated directory entry failed. Aborting...\n");
+					kprintf("Function _directory_remove: Writing updated directory entry failed. Aborting...\n");
 					_kfree(cluster_data);
 					return -1;
 				}
 
 				return 0;
 			} 
-			
 			else if (meta_pointer_iterator_count < FAT_data.bytes_per_sector * FAT_data.sectors_per_cluster / sizeof(directory_entry_t) - 1)  {
 				file_metadata++;
 				meta_pointer_iterator_count++;
 			} 
-			
 			else {
 				uint32_t next_cluster = FAT_read(cluster);
 				if ((next_cluster >= END_CLUSTER_32 && FAT_data.fat_type == 32) || (next_cluster >= END_CLUSTER_16 && FAT_data.fat_type == 16) || (next_cluster >= END_CLUSTER_12 && FAT_data.fat_type == 12)) {
-					kprintf("Function FAT_directory_remove: End of cluster chain reached. File not found. Aborting...\n");
+					kprintf("Function _directory_remove: End of cluster chain reached. File not found. Aborting...\n");
 					_kfree(cluster_data);
 					return -2;
 				}
 
 				_kfree(cluster_data);
-				return FAT_directory_remove(next_cluster, fileName);
+				return _directory_remove(next_cluster, fileName);
 			}
 		}
 
@@ -800,10 +797,10 @@
 				memset(fileNamePart, '\0', 256);
 				memcpy(fileNamePart, filePath + start, iterator - start);
 
-				int retVal = FAT_directory_search(fileNamePart, active_cluster, &file_info, NULL);
+				int retVal = _directory_search(fileNamePart, active_cluster, &file_info, NULL);
 				if (retVal == -2) return 0;
 				else if (retVal == -1) {
-					kprintf("Function FAT_content_exists: An error occurred in FAT_directory_search. Aborting...\n");
+					kprintf("Function FAT_content_exists: An error occurred in _directory_search. Aborting...\n");
 					return -1;
 				}
 
@@ -848,14 +845,14 @@
 				memset(fileNamePart, '\0', 256);
 				memcpy(fileNamePart, filePath + start, iterator - start);
 
-				int retVal = FAT_directory_search(fileNamePart, active_cluster, &content_meta, NULL);
+				int retVal = _directory_search(fileNamePart, active_cluster, &content_meta, NULL);
 				if (retVal == -2) {
 					FAT_unload_content_system(fatContent);
 					return NULL;
 				}
 
 				else if (retVal == -1) {
-					kprintf("Function FAT_get_content: An error occurred in FAT_directory_search. Aborting...\n");
+					kprintf("Function FAT_get_content: An error occurred in _directory_search. Aborting...\n");
 					FAT_unload_content_system(fatContent);
 					return NULL;
 				}
@@ -909,7 +906,6 @@
 			strcpy(name, (char*)fatContent->file->file_meta.file_name);
 			strncpy(fatContent->file->name, strtok(name, " "), 8);
 			strncpy(fatContent->file->extension, strtok(NULL, " "), 4);
-			return fatContent;
 		}
 		else {
 			fatContent->directory = (Directory*)_kmalloc(sizeof(Directory)); 
@@ -921,8 +917,9 @@
 			char name[13] = { 0 };
 			strcpy(name, (char*)content_meta.file_name);
 			strncpy(fatContent->directory->name, strtok(name, " "), 12);
-			return fatContent;
 		}
+
+		return fatContent;
 	}
 
 	// Function for reading part of file
@@ -972,8 +969,8 @@
 		}
 	}
 
-	int FAT_ELF_execute_content(char* path, int argc, char* argv[], int type) {
-		ELF32_program* program = ELF_read(path, type);
+	int FAT_ELF_execute_content(Content* content, int argc, char* argv[], int type) {
+		ELF32_program* program = ELF_read(content, type);
 
 		int (*programEntry)(int, char* argv[]) = (int (*)(int, char* argv[]))(program->entry_point);
 		if (programEntry == NULL) return -255;
@@ -1028,6 +1025,8 @@
 			FAT_add_cluster2content(data);
 			FAT_write_buffer2content(data, new_buffer, new_offset, new_size);
 		}
+
+		return 1;
 	}
 
 //========================================================================================
@@ -1081,14 +1080,14 @@
 						memset(fileNamePart, '\0', 256);
 						memcpy(fileNamePart, filePath + start, iterator - start);
 
-						int retVal = FAT_directory_search(fileNamePart, active_cluster, &file_info, NULL);
+						int retVal = _directory_search(fileNamePart, active_cluster, &file_info, NULL);
 						switch (retVal) {
 							case -2:
 								kprintf("Function FAT_change_meta: No matching directory found. Aborting...\n");
 							return -2;
 
 							case -1:
-								kprintf("Function FAT_change_meta: An error occurred in FAT_directory_search. Aborting...\n");
+								kprintf("Function FAT_change_meta: An error occurred in _directory_search. Aborting...\n");
 							return retVal;
 						}
 
@@ -1101,8 +1100,8 @@
 		//////////////////////
 		// EDIT DATA
 
-			if (FAT_directory_edit(prev_active_cluster, &file_info, newMeta) != 0) {
-				kprintf("Function FAT_change_meta: FAT_directory_edit encountered an error. Aborting...\n");
+			if (_directory_edit(prev_active_cluster, &file_info, newMeta) != 0) {
+				kprintf("Function FAT_change_meta: _directory_edit encountered an error. Aborting...\n");
 				return -1;
 			}
 		
@@ -1153,7 +1152,7 @@
 		
 			char output[13] = { 0 };
 			_fatname2name((char*)content_meta.file_name, output);
-			int retVal = FAT_directory_search(output, active_cluster, NULL, NULL);
+			int retVal = _directory_search(output, active_cluster, NULL, NULL);
 			if (retVal == -1) {
 				kprintf("Function putFile: directorySearch encountered an error. Aborting...\n");
 				return -1;
@@ -1166,8 +1165,8 @@
 		// CHECK IF FILE EXIST
 		//====================
 
-		if (FAT_directory_add(active_cluster, &content_meta) != 0) {
-			kprintf("Function FAT_put_content: FAT_directory_add encountered an error. Aborting...\n");
+		if (_directory_add(active_cluster, &content_meta) != 0) {
+			kprintf("Function FAT_put_content: _directory_add encountered an error. Aborting...\n");
 			return -1;
 		}
 
@@ -1223,8 +1222,8 @@
 				data_cluster = prev_cluster;
 			}
 
-			if (FAT_directory_remove(fatContent->parent_cluster, (char*)content_meta.file_name) != 0) {
-				kprintf("[%s %i] FAT_directory_remove encountered an error. Aborting...\n", __FILE__, __LINE__);
+			if (_directory_remove(fatContent->parent_cluster, (char*)content_meta.file_name) != 0) {
+				kprintf("[%s %i] _directory_remove encountered an error. Aborting...\n", __FILE__, __LINE__);
 				FAT_unload_content_system(fatContent);
 				return -1;
 			}

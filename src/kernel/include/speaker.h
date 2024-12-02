@@ -1,7 +1,6 @@
 #ifndef SPEAKER_H_
 #define SPEAKER_H_
 
-
 #include "pic.h"
 #include "x86.h"
 

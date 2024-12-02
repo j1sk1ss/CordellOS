@@ -12,6 +12,7 @@
 
 #include "ata.h"      // Lib for reading and writing ATA PIO sectors
 #include "elf.h"      // Not important for base implementation. ELF executer
+#include "kstdio.h"
 #include "datetime.h" // Not important for base implementation. Date time getter from CMOS
 
 
@@ -151,10 +152,10 @@ extern fat_data_t FAT_data;
 //===================================
 
 	Content* FAT_directory_list(const uint32_t cluster, uint8_t attrs, int exclusive);
-	int FAT_directory_search(const char* filepart, const uint32_t cluster, directory_entry_t* file, uint32_t* entryOffset);
-	int FAT_directory_add(const uint32_t cluster, directory_entry_t* file_to_add);
-	int FAT_directory_remove(const uint32_t cluster, const char* fileName);
-	int FAT_directory_edit(const uint32_t cluster, directory_entry_t* oldMeta, directory_entry_t* newMeta);
+	int _directory_search(const char* filepart, const uint32_t cluster, directory_entry_t* file, uint32_t* entryOffset);
+	int _directory_add(const uint32_t cluster, directory_entry_t* file_to_add);
+	int _directory_remove(const uint32_t cluster, const char* fileName);
+	int _directory_edit(const uint32_t cluster, directory_entry_t* oldMeta, directory_entry_t* newMeta);
 
 //===================================
 //    ____ ___  _   _ _____ _____ _   _ _____ 
@@ -171,7 +172,7 @@ extern fat_data_t FAT_data;
 	int FAT_put_content(const char* filePath, Content* content);
 	int FAT_delete_content(const char* path);
 	int FAT_write_buffer2content(Content* data, uint8_t* buffer, uint32_t offset, uint32_t size);
-	int FAT_ELF_execute_content(char* path, int argc, char* argv[], int type);
+	int FAT_ELF_execute_content(Content* content, int argc, char* argv[], int type);
 	int FAT_change_meta(const char* filePath, directory_entry_t* newMeta);
 
 //===================================

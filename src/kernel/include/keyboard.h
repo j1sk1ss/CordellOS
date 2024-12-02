@@ -1,7 +1,6 @@
 #ifndef KEYBOARD_H_
 #define KEYBOARD_H_
 
-
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -11,9 +10,9 @@
 
 #include "x86.h"
 #include "irq.h"
-#include "stdio.h"
 #include "vga.h"
 #include "vesa.h"
+#include "kstdio.h"
 
 
 #define KBD_DATA_PORT           0x60
@@ -60,6 +59,5 @@ char keyboard_navigation();
 void keyboard_wait(char symbol);
 
 void i386_init_keyboard();
-
 
 #endif

@@ -3,19 +3,19 @@
 
 #include <fslib.h>
 
-#include "isr.h"
-#include "stdio.h"
+#include "ip.h"
+#include "vfs.h"
 #include "vga.h"
+#include "isr.h"
 #include "vesa.h"
+#include "time.h"
+#include "vars.h"
+#include "kstdio.h"
+#include "tasking.h"
+#include "rtl8139.h"
 #include "keyboard.h"
 #include "datetime.h"
-#include "vfs.h"
-#include "time.h"
-#include "tasking.h"
 #include "allocator.h"
-#include "ip.h"
-#include "rtl8139.h"
-#include "vars.h"
 
 
 // Screen managment through kprint 
@@ -48,7 +48,7 @@
 #define SYS_READ_FILE_OFF_STP  58
 #define SYS_WRITE_FILE         10
 #define SYS_WRITE_FILE_OFF     50
-#define SYS_OPENDIR            11
+#define SYS_LSDIR            11
 #define SYS_GET_CONTENT        30
 #define SYS_EXECUTE_FILE       12 // FREE
 #define SYS_CEXISTS            15

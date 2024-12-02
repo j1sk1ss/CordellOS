@@ -1,7 +1,6 @@
 #ifndef IDT_H_
 #define IDT_H_
 
-
 #include <stdint.h>
 
 #include "../util/binary.h"

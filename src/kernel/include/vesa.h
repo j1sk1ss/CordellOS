@@ -6,7 +6,7 @@
 
 #include "gfx.h"
 #include "psf.h"
-#include "stdio.h"
+#include "kstdio.h"
 
 
 #define CHAR_BODY	0x0000000F
