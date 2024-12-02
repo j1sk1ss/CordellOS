@@ -32,14 +32,14 @@ typedef struct directory_entry {
 	uint8_t attributes;
 	uint8_t reserved0; // Here place access
 	uint8_t creation_time_tenths;
-	unsigned short creation_time;
-	unsigned short creation_date;
-	unsigned short last_accessed;
-	unsigned short high_bits;
-	unsigned short last_modification_time;
-	unsigned short last_modification_date;
-	unsigned short low_bits;
-	unsigned int file_size;
+	uint16_t creation_time;
+	uint16_t creation_date;
+	uint16_t last_accessed;
+	uint16_t high_bits;
+	uint16_t last_modification_time;
+	uint16_t last_modification_date;
+	uint16_t low_bits;
+	uint32_t file_size;
 } __attribute__((packed)) directory_entry_t;
 
 typedef struct FATFile {
@@ -47,7 +47,6 @@ typedef struct FATFile {
 	char extension[4];
 	directory_entry_t file_meta;
 	int data_size;
-	void* data_pointer;
 	uint32_t* data;
     struct FATFile* next;
 } File;
@@ -55,7 +54,6 @@ typedef struct FATFile {
 typedef struct FATDirectory {
 	char name[12];
 	directory_entry_t directory_meta;
-	void* data_pointer;
 	struct FATDirectory* next;
     struct FATFile* files;
     struct FATDirectory* subDirectory;
@@ -95,14 +93,12 @@ void chgcontent(const char* path, directory_entry_t* meta);
 
 void fread(Content* content, int offset, uint8_t* buffer, int len);
 void fread_stop(Content* content, int offset, uint8_t* buffer, int len, char* stop);
-
-void fwrite(const char* path, const char* data);
-void fwrite_off(Content* content, int offset, uint8_t* buffer, int len);
+void fwrite(Content* content, int offset, uint8_t* buffer, int len);
 
 void mkfile(const char* path, const char* name);
 int fexec(char* path, int args, char** argv);
 
-Directory* opendir(const char* path);
+Content* opendir(const char* path);
 Content* get_content(const char* path);
 void mkdir(const char* path, const char* name);
 

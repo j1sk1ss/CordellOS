@@ -790,7 +790,7 @@ void _asm_executor(int *memory_array, int memory_index, int start, int end) {
 			break;
 
 			case WFILE_INSTRUCTION:
-				if (cexists(intermediate_table[i]->string_params[0]) == 1) fwrite(intermediate_table[i]->string_params[0], intermediate_table[i]->string_params[1]);
+				// if (cexists(intermediate_table[i]->string_params[0]) == 1) fwrite(intermediate_table[i]->string_params[0], intermediate_table[i]->string_params[1]);
 			break;
 
 			case RFILE_INSTRUCTION:

@@ -194,14 +194,6 @@ void syscall(struct Registers* regs) {
     //=======================
     //  FILE SYSTEMS SYSCALLS
     //=======================
-
-        else if (regs->eax == SYS_WRITE_FILE) {
-            char* wfile_path = (char*)regs->ebx;
-            Content* content = current_vfs->getobj(wfile_path);
-            char* data = (char*)regs->ecx;
-            current_vfs->write(content, data);
-            FSLIB_unload_content_system(content);
-        } 
         
         else if (regs->eax == SYS_OPENDIR) {
             char* path = (char*)regs->ebx;
@@ -280,7 +272,7 @@ void syscall(struct Registers* regs) {
             uint8_t* buffer  = (uint8_t*)regs->edx;
             int offset_len   = (int)regs->esi;
             
-            current_vfs->writeoff(content, buffer, offset, offset_len);
+            current_vfs->write(content, buffer, offset, offset_len);
         }
 
         else if (regs->eax == SYS_READ_ELF) {

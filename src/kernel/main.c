@@ -110,8 +110,8 @@
 //          20.1) User page directory                             [V]
 //      21) Data append \ modify FAT                              [ ]
 //      22) New kernel panic screen (maybe blue screen?)          [V]
-//      23) Refactor STDIO in userland                            [ ]
-//          23.1) Font lib, draw instead kprint                   [ ]
+//      23) Refactor STDIO in userland                            [V]
+//          23.1) Font lib, draw instead kprint                   [V]
 //      23) DOOM?                                                 [ ]
 //======================================================================================================================================
 

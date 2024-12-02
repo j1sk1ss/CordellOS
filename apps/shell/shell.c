@@ -241,9 +241,9 @@ void shell_start_screen() {
             }
 
             else if (strcmp(command_line[0], COMMAND_LIST_DIR) == 0) {
-                Directory* directory   = opendir(current_path);
-                Directory* current_dir = directory->subDirectory;
-                File* current_file     = directory->files;
+                Content* content       = opendir(current_path);
+                Directory* current_dir = content->directory->subDirectory;
+                File* current_file     = content->directory->files;
 
                 printf("\n");
                 while (current_dir != NULL) {
@@ -257,7 +257,7 @@ void shell_start_screen() {
                     current_file = current_file->next;
                 }
                 
-                FSLIB_unload_directories_system(directory);
+                FSLIB_unload_content_system(content);
             }
 
             else if (strcmp(command_line[0], COMMAND_FILE_VIEW) == 0) {

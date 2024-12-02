@@ -59,52 +59,52 @@
 
 //FAT directory and bootsector structures
 typedef struct fat_extBS_32 {
-	unsigned int		table_size_32;
-	unsigned short		extended_flags;
-	unsigned short		fat_version;
-	unsigned int		root_cluster;
-	unsigned short		fat_info;
-	unsigned short		backup_BS_sector;
-	unsigned char 		reserved_0[12];
-	unsigned char		drive_number;
-	unsigned char 		reserved_1;
-	unsigned char		boot_signature;
-	unsigned int 		volume_id;
-	unsigned char		volume_label[11];
-	unsigned char		fat_type_label[8];
+	uint32_t table_size_32;
+	uint16_t extended_flags;
+	uint16_t fat_version;
+	uint32_t root_cluster;
+	uint16_t fat_info;
+	uint16_t backup_BS_sector;
+	uint8_t  reserved_0[12];
+	uint8_t	 drive_number;
+	uint8_t  reserved_1;
+	uint8_t	 boot_signature;
+	uint32_t volume_id;
+	uint8_t	 volume_label[11];
+	uint8_t	 fat_type_label[8];
 } __attribute__((packed)) fat_extBS_32_t;
 
 typedef struct fat_BS {
-	unsigned char 		bootjmp[3];
-	unsigned char 		oem_name[8];
-	unsigned short 	    bytes_per_sector;
-	unsigned char		sectors_per_cluster;
-	unsigned short		reserved_sector_count;
-	unsigned char		table_count;
-	unsigned short		root_entry_count;
-	unsigned short		total_sectors_16;
-	unsigned char		media_type;
-	unsigned short		table_size_16;
-	unsigned short		sectors_per_track;
-	unsigned short		head_side_count;
-	unsigned int 		hidden_sector_count;
-	unsigned int 		total_sectors_32;
-	unsigned char		extended_section[54];
+	uint8_t  bootjmp[3];
+	uint8_t  oem_name[8];
+	uint16_t bytes_per_sector;
+	uint8_t	 sectors_per_cluster;
+	uint16_t reserved_sector_count;
+	uint8_t	 table_count;
+	uint16_t root_entry_count;
+	uint16_t total_sectors_16;
+	uint8_t	 media_type;
+	uint16_t table_size_16;
+	uint16_t sectors_per_track;
+	uint16_t head_side_count;
+	uint32_t hidden_sector_count;
+	uint32_t total_sectors_32;
+	uint8_t	 extended_section[54];
 } __attribute__((packed)) fat_BS_t;
 
 /* from http://wiki.osdev.org/FAT */
 /* From file_system.h (CordellOS brunch FS_based_on_FAL) */
 
 typedef struct fat_data {
-	unsigned int fat_size;
-	unsigned int fat_type;
-	unsigned int first_fat_sector;
-	unsigned int first_data_sector;
-	unsigned int total_sectors;
-	unsigned int total_clusters;
-	unsigned int bytes_per_sector;
-	unsigned int sectors_per_cluster;
-	unsigned int ext_root_cluster;
+	uint32_t fat_size;
+	uint32_t fat_type;
+	uint32_t first_fat_sector;
+	uint32_t first_data_sector;
+	uint32_t total_sectors;
+	uint32_t total_clusters;
+	uint32_t bytes_per_sector;
+	uint32_t sectors_per_cluster;
+	uint32_t ext_root_cluster;
 } fat_data_t;
 
 //Global variables
@@ -119,8 +119,8 @@ extern fat_data_t FAT_data;
 //===================================
 
 	int FAT_initialize(); 
-	int FAT_read(unsigned int clusterNum);
-	int FAT_write(unsigned int clusterNum, unsigned int clusterVal);
+	int FAT_read(uint32_t clusterNum);
+	int FAT_write(uint32_t clusterNum, uint32_t clusterVal);
 
 //===================================
 //    ____ _    _   _ ____ _____ _____ ____  
@@ -130,17 +130,17 @@ extern fat_data_t FAT_data;
 //   \____|_____\___/|____/ |_| |_____|_| \_\
 //===================================
 
-	unsigned int FAT_cluster_allocate();
-	int FAT_cluster_deallocate(const unsigned int cluster);
-	uint8_t* FAT_cluster_read(unsigned int clusterNum);
-	uint8_t* FAT_cluster_read_stop(unsigned int clusterNum, uint8_t* stop);
-	uint8_t* FAT_cluster_readoff(unsigned int clusterNum, uint32_t offset);
-	uint8_t* FAT_cluster_readoff_stop(unsigned int clusterNum, uint32_t offset, uint8_t* stop);
-	int FAT_cluster_write(void* contentsToWrite, unsigned int clusterNum);
-	int FAT_cluster_writeoff(void* contentsToWrite, unsigned int clusterNum, uint32_t offset, uint32_t size);
-	int FAT_cluster_clear(unsigned int clusterNum);
+	uint32_t FAT_cluster_allocate();
+	int FAT_cluster_deallocate(const uint32_t cluster);
+	uint8_t* FAT_cluster_read(uint32_t clusterNum);
+	uint8_t* FAT_cluster_read_stop(uint32_t clusterNum, uint8_t* stop);
+	uint8_t* FAT_cluster_readoff(uint32_t clusterNum, uint32_t offset);
+	uint8_t* FAT_cluster_readoff_stop(uint32_t clusterNum, uint32_t offset, uint8_t* stop);
+	int FAT_cluster_write(void* contentsToWrite, uint32_t clusterNum);
+	int FAT_cluster_writeoff(void* contentsToWrite, uint32_t clusterNum, uint32_t offset, uint32_t size);
+	int FAT_cluster_clear(uint32_t clusterNum);
 	void FAT_add_cluster2content(Content* content);
-	int FAT_copy_cluster2cluster(unsigned int firstCluster, unsigned int secondCluster);
+	int FAT_copy_cluster2cluster(uint32_t firstCluster, uint32_t secondCluster);
 
 //===================================
 //   _____ _   _ _____ ______   __
@@ -150,11 +150,11 @@ extern fat_data_t FAT_data;
 //  |_____|_| \_| |_| |_| \_\|_| 
 //===================================
 
-	Directory* FAT_directory_list(const unsigned int cluster, unsigned char attributesToAdd, int exclusive);
-	int FAT_directory_search(const char* filepart, const unsigned int cluster, directory_entry_t* file, unsigned int* entryOffset);
-	int FAT_directory_add(const unsigned int cluster, directory_entry_t* file_to_add);
-	int FAT_directory_remove(const unsigned int cluster, const char* fileName);
-	int FAT_directory_edit(const unsigned int cluster, directory_entry_t* oldMeta, directory_entry_t* newMeta);
+	Content* FAT_directory_list(const uint32_t cluster, uint8_t attrs, int exclusive);
+	int FAT_directory_search(const char* filepart, const uint32_t cluster, directory_entry_t* file, uint32_t* entryOffset);
+	int FAT_directory_add(const uint32_t cluster, directory_entry_t* file_to_add);
+	int FAT_directory_remove(const uint32_t cluster, const char* fileName);
+	int FAT_directory_edit(const uint32_t cluster, directory_entry_t* oldMeta, directory_entry_t* newMeta);
 
 //===================================
 //    ____ ___  _   _ _____ _____ _   _ _____ 
@@ -170,8 +170,7 @@ extern fat_data_t FAT_data;
 	void FAT_read_content2buffer_stop(Content* data, uint8_t* buffer, uint32_t offset, uint32_t size, uint8_t* stop);
 	int FAT_put_content(const char* filePath, Content* content);
 	int FAT_delete_content(const char* path);
-	int FAT_write_content(Content* content, char* content_data);
-	void FAT_write_buffer2content(Content* data, uint8_t* buffer, uint32_t offset, uint32_t size);
+	int FAT_write_buffer2content(Content* data, uint8_t* buffer, uint32_t offset, uint32_t size);
 	int FAT_ELF_execute_content(char* path, int argc, char* argv[], int type);
 	int FAT_change_meta(const char* filePath, directory_entry_t* newMeta);
 
@@ -183,13 +182,12 @@ extern fat_data_t FAT_data;
 //   \___/ |_| |_| |_|_____|_| \_\
 //=================================== 
 
-	unsigned short FAT_current_time();
-	unsigned short FAT_current_date();
-	unsigned char FAT_current_time_temths();
-	void FAT_fatname2name(char* input, char* output);
-	char* FAT_name2fatname(char* input);
-	int FAT_name_check(const char* input);
-	unsigned char FAT_check_sum(unsigned char *pFcbName);
+	uint16_t _current_time();
+	uint16_t _current_date();
+	void _fatname2name(char* input, char* output);
+	char* _name2fatname(char* input);
+	int _name_check(const char* input);
+	uint8_t _check_sum(uint8_t *pFcbName);
 
 	directory_entry_t* FAT_create_entry(const char* name, const char* ext, int isDir, uint32_t firstCluster, uint32_t filesize);
 	Content* FAT_create_object(char* name, int directory, char* extension);

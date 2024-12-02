@@ -31,16 +31,12 @@ typedef struct vfs_node {
         // Content, buffer, seek, size, stop
         void (*read_stop)(Content*, uint8_t*, uint32_t, uint32_t, uint8_t*);
 
-        // Write data to content (Change FAT table for allocate \ deallocate clusters)
-        // Content, data
-        int (*write)(Content*, char*);
-
         // Write data to content with offset (Change FAT table for allocate \ deallocate clusters)
         // Content, buffer, seek, size
-        void (*writeoff)(Content*, uint8_t*, uint32_t, uint32_t);
+        int (*write)(Content*, uint8_t*, uint32_t, uint32_t);
 
         // Return Directory of current cluster
-        Directory* (*dir)(const unsigned int, unsigned char, int);
+        Content* (*dir)(const uint32_t, uint8_t, int);
 
         // Get Content by path
         // Path

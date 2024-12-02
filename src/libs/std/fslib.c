@@ -15,8 +15,6 @@ Directory* FSLIB_create_directory() {
     directory->files        = NULL;
     directory->subDirectory = NULL;
     directory->next         = NULL;
-    directory->data_pointer = NULL;
-
     return directory;
 }
 
@@ -24,8 +22,6 @@ File* FSLIB_create_file() {
     File* file = (File*)clralloc(sizeof(File));
     file->next         = NULL;
     file->data         = NULL;
-    file->data_pointer = NULL;
-
     return file;
 }
 
@@ -34,17 +30,13 @@ void FSLIB_unload_directories_system(Directory* directory) {
     if (directory->files != NULL) FSLIB_unload_files_system(directory->files);
     if (directory->subDirectory != NULL) FSLIB_unload_directories_system(directory->subDirectory);
     if (directory->next != NULL) FSLIB_unload_directories_system(directory->next);
-    if (directory->data_pointer != NULL) free(directory->data_pointer);
-
     free(directory);
 }
 
 void FSLIB_unload_files_system(File* file) {
     if (file == NULL) return;
     if (file->next != NULL) FSLIB_unload_files_system(file->next);
-    if (file->data_pointer != NULL) free(file->data_pointer);
     if (file->data != NULL) free(file->data);
-
     free(file);
 }
 
@@ -160,28 +152,12 @@ void fread_stop(Content* content, int offset, uint8_t* buffer, int len, char* st
 }
 
 //====================================================================
-// Write file to content (if it exists) by path (rewrite all content)
-// EBX - path
-// ECX - data
-void fwrite(const char* path, const char* data) {
-    __asm__ volatile(
-        "movl $10, %%eax\n"
-        "movl %0, %%ebx\n"
-        "movl %1, %%ecx\n"
-        "int $0x80\n"
-        :
-        : "r"((uint32_t)path), "r"((uint32_t)data)
-        : "eax", "ebx", "ecx"
-    );
-}
-
-//====================================================================
 // Write file to content (if it exists) with offset
 // EBX - content pointer
 // ECX - data offset
 // EDX - buffer pointer
 // ESI - buffer len / data len
-void fwrite_off(Content* content, int offset, uint8_t* buffer, int len) {
+void fwrite(Content* content, int offset, uint8_t* buffer, int len) {
     __asm__ volatile(
         "movl $50, %%eax\n"
         "movl %0, %%ebx\n"
@@ -199,19 +175,19 @@ void fwrite_off(Content* content, int offset, uint8_t* buffer, int len) {
 // Returns linked list of dir content by path
 // EBX - path
 // ECX - pointer to directory
-Directory* opendir(const char* path) {
-    Directory* directory;
+Content* opendir(const char* path) {
+    Content* content = NULL;
     __asm__ volatile(
         "movl $11, %%eax\n"
         "movl %1, %%ebx\n"
         "int $0x80\n"
         "movl %%eax, %0\n"
-        : "=r"(directory)
+        : "=r"(content)
         : "r"((uint32_t)path)
         : "eax", "ebx", "ecx"
     );
 
-    return directory;
+    return content;
 }
 
 //====================================================================

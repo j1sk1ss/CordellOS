@@ -56,13 +56,13 @@ int loop() {
         else if (action == F2_BUTTON) {
             if (mode == VIEW) continue;
             FSLIB_unload_content_system(edit_content);
-            fwrite(edit_path, NULL);
+            // fwrite(edit_path, NULL); TODO fwrite
             return 1;
         }
 
         else if (action == F1_BUTTON) {
             if (mode == VIEW) continue;
-            fwrite(edit_path, NULL);
+            // fwrite(edit_path, NULL); TODO fwrite
         }
     }
 }

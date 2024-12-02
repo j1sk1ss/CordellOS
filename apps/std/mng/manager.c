@@ -4,7 +4,7 @@
 int current_position = 0;
 int max_rows = 0;
 
-Directory* current_directory;
+Content* current_directory;
 Content choosed_content;
 
 char* current_path = "HOME";
@@ -51,7 +51,7 @@ int loop() {
 
 void open_content() {
     if (choosed_content.directory != NULL) {
-        FSLIB_unload_directories_system(current_directory);
+        FSLIB_unload_content_system(current_directory);
         char* path = FSLIB_change_path(current_path, choosed_content.directory->name);
         current_directory = opendir(path);
 
@@ -68,8 +68,8 @@ void open_content() {
 }
 
 void display_manager() {
-    Directory* subdir = current_directory->subDirectory;
-    File* subfile = current_directory->files;
+    Directory* subdir = current_directory->directory->subDirectory;
+    File* subfile = current_directory->directory->files;
     int line = 0;
     max_rows = 0;
 
