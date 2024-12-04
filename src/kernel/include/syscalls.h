@@ -25,7 +25,7 @@
 #define SYS_AREAD_KEYBOARD     46
 
 // System managment (memory, tasks, vars)
-#define SYS_WRITE       64 // LAST
+#define SYS_WRITE       64
 #define SYS_TIME        6
 #define SYS_MALLOC      7
 #define SYS_PAGE_MALLOC 35
@@ -48,8 +48,10 @@
 #define SYS_READ_FILE_OFF_STP  58
 #define SYS_WRITE_FILE         10
 #define SYS_WRITE_FILE_OFF     50
-#define SYS_LSDIR            11
-#define SYS_GET_CONTENT        30
+#define SYS_LSDIR              11
+#define SYS_CONTENT_STAT       65
+#define SYS_OPEN_CONTENT       30
+#define SYS_CLOSE_CONTENT      66 // LAST
 #define SYS_EXECUTE_FILE       12 // FREE
 #define SYS_CEXISTS            15
 #define SYS_FCREATE            16

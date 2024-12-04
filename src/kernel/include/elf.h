@@ -133,7 +133,7 @@ typedef struct ELF32_symbols_desctiptor {
 } ELF32_SymDescriptor;
 
 
-ELF32_program* ELF_read(Content* content, int type);
+ELF32_program* ELF_read(int ci, int type);
 void ELF_free_program(ELF32_program* program, uint8_t type);
 
 void ELF_kernel_trace();

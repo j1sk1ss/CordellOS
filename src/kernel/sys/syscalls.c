@@ -196,19 +196,30 @@ void syscall(struct Registers* regs) {
     //=======================
         
         else if (regs->eax == SYS_LSDIR) {
-            char* path = (char*)regs->ebx;
-            regs->eax  = (uint32_t)current_vfs->lsdir(
-                GET_CLUSTER_FROM_ENTRY(
-                    current_vfs->getobj(path)->directory->directory_meta, FAT_data.fat_type
-                ), (char)0, 0
-            );
+            // char* path = (char*)regs->ebx; TODO lsdir with ci
+            // regs->eax  = (uint32_t)current_vfs->lsdir(
+            //     GET_CLUSTER_FROM_ENTRY(
+            //         current_vfs->openobj(path)->directory->directory_meta, FAT_data.fat_type
+            //     ), (char)0, 0
+            // );
         } 
         
-        else if (regs->eax == SYS_GET_CONTENT) {
+        else if (regs->eax == SYS_OPEN_CONTENT) {
             char* content_path = (char*)regs->ebx;
-            regs->eax = (uint32_t)current_vfs->getobj(content_path);
+            regs->eax = current_vfs->openobj(content_path);
         } 
         
+        else if (regs->eax == SYS_CONTENT_STAT) {
+            CInfo_t info;
+            current_vfs->objstat(regs->ebx, &info);
+            memcpy((CInfo_t*)regs->ecx, &info, sizeof(CInfo_t));
+        }
+
+        else if (regs->eax == SYS_CLOSE_CONTENT) {
+            uint32_t ci = regs->ebx;
+            current_vfs->closeobj(ci);
+        }
+
         else if (regs->eax == SYS_CEXISTS) {
             int* result = (int*)regs->ecx;
             char* path  = (char *)regs->ebx;
@@ -248,7 +259,7 @@ void syscall(struct Registers* regs) {
         } 
 
         else if (regs->eax == SYS_READ_FILE_OFF) {
-            Content* content = (Content*)regs->ebx;
+            int content = (int)regs->ebx;
             int offset       = (int)regs->ecx;
             uint8_t* buffer  = (uint8_t*)regs->edx;
             int offset_len   = (int)regs->esi;
@@ -277,12 +288,12 @@ void syscall(struct Registers* regs) {
 
         else if (regs->eax == SYS_READ_ELF) {
             char* path = (char*)regs->ebx;
-            Content* content = current_vfs->getobj(path);
+            int ci = current_vfs->openobj(path);
 
 #ifdef USERMODE
-		    regs->eax = (uint32_t)ELF_read(content, USER);
+		    // regs->eax = (uint32_t)ELF_read(ci, USER); TODO
 #else
-		    regs->eax = (uint32_t)ELF_read(content, KERNEL);
+		    // regs->eax = (uint32_t)ELF_read(ci, KERNEL);
 #endif
 
         }

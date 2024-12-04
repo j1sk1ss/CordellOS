@@ -25,11 +25,11 @@ typedef struct vfs_node {
 
         // Read content to buffer with file seek
         // Content, buffer, seek, size
-        void (*read)(Content*, uint8_t*, uint32_t, uint32_t);
+        int (*read)(int, uint8_t*, uint32_t, uint32_t);
 
         // Read content to buffer with file seek (stop reading when meets stop symbols)
         // Content, buffer, seek, size, stop
-        void (*read_stop)(Content*, uint8_t*, uint32_t, uint32_t, uint8_t*);
+        int (*read_stop)(Content*, uint8_t*, uint32_t, uint32_t, uint8_t*);
 
         // Write data to content with offset (Change FAT table for allocate \ deallocate clusters)
         // Content, buffer, seek, size
@@ -40,7 +40,12 @@ typedef struct vfs_node {
 
         // Get Content by path
         // Path
-        Content* (*getobj)(const char*);
+        int (*openobj)(const char*);
+
+        int (*objstat)(int, CInfo_t*);
+
+        // Close content by ContentIndex (ci)
+        int (*closeobj)(int);
 
         // Check if content exists (0 - nexists)
         // Path
@@ -56,7 +61,7 @@ typedef struct vfs_node {
 
         // Execute content in specified address space (this function don`t create new page directory)
         // Path, argc, argv, address space
-        int (*objexec)(Content*, int, char**, int);
+        int (*objexec)(int, int, char**, int);
 
         // Change meta of content
         // Path, new meta
@@ -76,5 +81,7 @@ extern vfs_node_t* current_vfs;
 void VFS_initialize(struct ata_dev* dev, uint32_t fs_type);
 void VFS_add_node(struct ata_dev* dev, uint32_t fs_type);
 void VFS_switch_device(int index);
+
+vfs_node_t* _fat_vfs_setup(vfs_node_t* node);
 
 #endif

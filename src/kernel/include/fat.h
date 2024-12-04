@@ -55,6 +55,7 @@
 #define GET_ENTRY_HIGH_BITS(x, fat_type)          ((x) >> (fat_type / 2))
 #define CONCAT_ENTRY_HL_BITS(high, low, fat_type) ((high << (fat_type / 2)) | low)
 
+#define CONTENT_TABLE_SIZE	50
 
 /* Bpb taken from http://wiki.osdev.org/FAT */
 
@@ -140,7 +141,7 @@ extern fat_data_t FAT_data;
 	int FAT_cluster_write(void* contentsToWrite, uint32_t clusterNum);
 	int FAT_cluster_writeoff(void* contentsToWrite, uint32_t clusterNum, uint32_t offset, uint32_t size);
 	int FAT_cluster_clear(uint32_t clusterNum);
-	void FAT_add_cluster2content(Content* content);
+	void FAT_add_cluster2content(int content);
 	int FAT_copy_cluster2cluster(uint32_t firstCluster, uint32_t secondCluster);
 
 //===================================
@@ -166,14 +167,16 @@ extern fat_data_t FAT_data;
 //===================================
 
 	int FAT_content_exists(const char* filePath);
-	Content* FAT_get_content(const char* filePath);
-	void FAT_read_content2buffer(Content* data, uint8_t* buffer, uint32_t offset, uint32_t size);
-	void FAT_read_content2buffer_stop(Content* data, uint8_t* buffer, uint32_t offset, uint32_t size, uint8_t* stop);
+	int FAT_open_content(const char* filePath);
+	int FAT_close_content(int ci);
+	int FAT_read_content2buffer(int ci, uint8_t* buffer, uint32_t offset, uint32_t size);
+	int FAT_read_content2buffer_stop(int ci, uint8_t* buffer, uint32_t offset, uint32_t size, uint8_t* stop);
 	int FAT_put_content(const char* filePath, Content* content);
 	int FAT_delete_content(const char* path);
-	int FAT_write_buffer2content(Content* data, uint8_t* buffer, uint32_t offset, uint32_t size);
-	int FAT_ELF_execute_content(Content* content, int argc, char* argv[], int type);
+	int FAT_write_buffer2content(int ci, uint8_t* buffer, uint32_t offset, uint32_t size);
+	int FAT_ELF_execute_content(int ci, int argc, char* argv[], int type);
 	int FAT_change_meta(const char* filePath, directory_entry_t* newMeta);
+	int FAT_stat_content(int ci, CInfo_t* info);
 
 //===================================
 //    ___ _____ _   _ _____ ____  
@@ -190,7 +193,7 @@ extern fat_data_t FAT_data;
 	int _name_check(const char* input);
 	uint8_t _check_sum(uint8_t *pFcbName);
 
-	directory_entry_t* FAT_create_entry(const char* name, const char* ext, int isDir, uint32_t firstCluster, uint32_t filesize);
+	directory_entry_t* _create_entry(const char* name, const char* ext, int isDir, uint32_t firstCluster, uint32_t filesize);
 	Content* FAT_create_object(char* name, int directory, char* extension);
 
 	Content* FAT_create_content();

@@ -116,7 +116,7 @@ char* FSLIB_change_path(const char* currentPath, const char* content) {
 // ECX - data offset (file seek)
 // EDX - buffer pointer
 // ESI - buffer len / data len
-void fread(Content* content, int offset, uint8_t* buffer, int len) {
+void fread(int content, int offset, uint8_t* buffer, int len) {
     __asm__ volatile(
         "movl $33, %%eax\n"
         "movl %0, %%ebx\n"
@@ -194,8 +194,8 @@ Content* opendir(const char* path) {
 //  Returns linked list of dir content by path
 //  EBX - path
 //  ECX - pointer to directory
-Content* get_content(const char* path) {
-    Content* content = NULL;
+int fopen(const char* path) {
+    int content = -1;
     __asm__ volatile(
         "movl $30, %%eax\n"
         "movl %1, %%ebx\n"
@@ -290,6 +290,34 @@ void chgcontent(const char* path, directory_entry_t* meta) {
         : "r"((uint32_t)path), "r"((uint32_t)meta)
         : "eax", "ebx", "ecx"
     );
+}
+
+int fstat(int ci, CInfo_t* info) {
+    __asm__ volatile(
+        "movl $65, %%eax\n"
+        "movl %0, %%ebx\n"
+        "movl %1, %%ecx\n"
+        "int $0x80\n"
+        :
+        : "r"(ci), "r"((uint32_t)info)
+        : "eax", "ebx", "ecx"
+    );
+
+    return 1;
+}
+
+// TODO
+int fclose(int ci) {
+    __asm__ volatile(
+        "movl $65, %%eax\n"
+        "movl %0, %%ebx\n"
+        "int $0x80\n"
+        :
+        : "r"(ci)
+        : "eax", "ebx", "ecx"
+    );
+
+    return 1;
 }
 
 //====================================================================

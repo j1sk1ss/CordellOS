@@ -26,6 +26,9 @@
 #define NOT_CONVERTED_YET 0x08
 #define TOO_MANY_DOTS     0x10
 
+#define STAT_FILE	0x00
+#define STAT_DIR	0x01
+
 
 typedef struct directory_entry {
 	uint8_t file_name[11];
@@ -45,7 +48,6 @@ typedef struct directory_entry {
 typedef struct FATFile {
 	char name[8];
 	char extension[4];
-	directory_entry_t file_meta;
 	int data_size;
 	uint32_t* data;
     struct FATFile* next;
@@ -53,7 +55,6 @@ typedef struct FATFile {
 
 typedef struct FATDirectory {
 	char name[12];
-	directory_entry_t directory_meta;
 	struct FATDirectory* next;
     struct FATFile* files;
     struct FATDirectory* subDirectory;
@@ -72,7 +73,21 @@ typedef struct FATContent {
 	Directory* directory;
 	File* file;
 	uint32_t parent_cluster;
+	directory_entry_t meta;
 } Content;
+
+typedef struct {
+	uint8_t full_name[11];
+	char file_name[8];
+	char file_extension[4];
+	int type;
+	int size;
+	uint16_t creation_time;
+	uint16_t creation_date;
+	uint16_t last_accessed;
+	uint16_t last_modification_time;
+	uint16_t last_modification_date;
+} CInfo_t;
 
 
 Content* FSLIB_create_content();
@@ -87,11 +102,11 @@ char* FSLIB_change_path(const char* currentPath, const char* content);
 
 Date* FSLIB_get_date(short data, int type);
 
-int cexists(const char* path);
+int cexists(const char* path); // TODO move to fstat func
 void rmcontent(const char* path);
 void chgcontent(const char* path, directory_entry_t* meta);
 
-void fread(Content* content, int offset, uint8_t* buffer, int len);
+void fread(int content, int offset, uint8_t* buffer, int len);
 void fread_stop(Content* content, int offset, uint8_t* buffer, int len, char* stop);
 void fwrite(Content* content, int offset, uint8_t* buffer, int len);
 
@@ -99,7 +114,9 @@ void mkfile(const char* path, const char* name);
 int fexec(char* path, int args, char** argv);
 
 Content* opendir(const char* path);
-Content* get_content(const char* path);
+int fstat(int ci, CInfo_t* info);
+int fopen(const char* path);
+int fclose(int ci);
 void mkdir(const char* path, const char* name);
 
 #endif

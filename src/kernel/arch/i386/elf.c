@@ -45,11 +45,13 @@ const char* ELF_lookup_function(uint32_t addr) {
     return ELF_lookup_symbol_function(addr, &kernel_elf_symbols);
 }
 
-ELF32_program* ELF_read(Content* content, int type) {
+ELF32_program* ELF_read(int ci, int type) {
     ELF32_program* program = ALC_malloc(sizeof(ELF32_program), type);
-    if (content->file == NULL) {
-        kprintf("[%s %i] File not found\n", __FILE__, __LINE__);
-        FAT_unload_content_system(content);
+    CInfo_t info;
+    current_vfs->objstat(ci, &info);
+    
+    if (info.type != STAT_FILE) {
+        kprintf("\n[%s %i] Error: Not File.\n", __FILE__, __LINE__);
         return NULL;
     }
 
@@ -58,19 +60,17 @@ ELF32_program* ELF_read(Content* content, int type) {
     //==========================
 
         void* header = ALC_malloc(sizeof(Elf32_Ehdr), type);
-        current_vfs->read(content, header, 0, sizeof(Elf32_Ehdr));
+        current_vfs->read(ci, header, 0, sizeof(Elf32_Ehdr));
         Elf32_Ehdr* ehdr = (Elf32_Ehdr*)header;
         if (ehdr->e_ident[0] != '\x7f' || ehdr->e_ident[1] != 'E') {
             kprintf("\n[%s %i] Error: Not ELF.\n", __FILE__, __LINE__);
             ALC_free(header, type);
-            FAT_unload_content_system(content);
             return NULL;
         }
 
         if (ehdr->e_type != ET_EXEC && ehdr->e_type != ET_DYN) {
             kprintf("\n[%s %i] Error: Program is not an executable or dynamic executable.\n", __FILE__, __LINE__);
             ALC_free(header, type);
-            FAT_unload_content_system(content);
             return NULL;
         }
 
@@ -81,7 +81,7 @@ ELF32_program* ELF_read(Content* content, int type) {
     //==========================
 
         void* program_header = ALC_malloc(sizeof(Elf32_Phdr) * ehdr->e_phnum, type);
-        current_vfs->read(content, program_header, ehdr->e_phoff, sizeof(Elf32_Phdr) * ehdr->e_phnum);
+        current_vfs->read(ci, program_header, ehdr->e_phoff, sizeof(Elf32_Phdr) * ehdr->e_phnum);
         Elf32_Phdr* phdr = (Elf32_Phdr*)program_header;
 
         program->entry_point = (void*)ehdr->e_entry;
@@ -111,7 +111,7 @@ ELF32_program* ELF_read(Content* content, int type) {
             }
 
             memset((void*)phdr[i].p_vaddr, 0, phdr[i].p_memsz);
-            current_vfs->read(content, (uint8_t*)phdr[i].p_vaddr, phdr[i].p_offset, phdr[i].p_memsz);
+            current_vfs->read(ci, (uint8_t*)phdr[i].p_vaddr, phdr[i].p_offset, phdr[i].p_memsz);
         }
 
     //==========================
@@ -119,7 +119,6 @@ ELF32_program* ELF_read(Content* content, int type) {
     //==========================
 
     ALC_free(program_header, type);
-    FAT_unload_content_system(content);
     return program;
 }
 

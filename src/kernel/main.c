@@ -122,15 +122,15 @@
 
 void _shell() {
 
-    Content* content = current_vfs->getobj(SHELL_PATH);
+    int ci = current_vfs->openobj(SHELL_PATH);
 
 #ifdef USERMODE
     uint32_t esp = 0;
     asm("mov %%esp, %0" : "=r"(esp));
     TSS_set_stack(0x10, esp);
-    current_vfs->objexec(content, 0, NULL, USER);
+    current_vfs->objexec(ci, 0, NULL, USER);
 #else
-    current_vfs->objexec(content, 0, NULL, KERNEL);
+    current_vfs->objexec(ci, 0, NULL, KERNEL);
 #endif
 
 }
@@ -353,10 +353,10 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
         START_PROCESS("idle", (uint32_t)_idle, KERNEL, 1);
 
         if (current_vfs->objexist(CONFIG_PATH) == 1) {
-            Content* boot_config = current_vfs->getobj(CONFIG_PATH);
+            int boot_config = current_vfs->openobj(CONFIG_PATH);
             uint8_t config[128] = { 0 };
             current_vfs->read(boot_config, config, 0, 128);
-            FSLIB_unload_content_system(boot_config);
+            current_vfs->closeobj(boot_config);
             
             //===================
             // Speaker test
