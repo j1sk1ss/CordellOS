@@ -1,53 +1,6 @@
 #include "../include/fslib.h"
 
 
-Content* FSLIB_create_content() {
-    Content* content = (Content*)clralloc(sizeof(Content));
-    content->directory      = NULL;
-    content->file           = NULL;
-    content->parent_cluster = -1;
-
-    return content;
-}
-
-Directory* FSLIB_create_directory() {
-    Directory* directory = (Directory*)clralloc(sizeof(Directory));
-    directory->files        = NULL;
-    directory->subDirectory = NULL;
-    directory->next         = NULL;
-    return directory;
-}
-
-File* FSLIB_create_file() {
-    File* file = (File*)clralloc(sizeof(File));
-    file->next         = NULL;
-    file->data         = NULL;
-    return file;
-}
-
-void FSLIB_unload_directories_system(Directory* directory) {
-    if (directory == NULL) return;
-    if (directory->files != NULL) FSLIB_unload_files_system(directory->files);
-    if (directory->subDirectory != NULL) FSLIB_unload_directories_system(directory->subDirectory);
-    if (directory->next != NULL) FSLIB_unload_directories_system(directory->next);
-    free(directory);
-}
-
-void FSLIB_unload_files_system(File* file) {
-    if (file == NULL) return;
-    if (file->next != NULL) FSLIB_unload_files_system(file->next);
-    if (file->data != NULL) free(file->data);
-    free(file);
-}
-
-void FSLIB_unload_content_system(Content* content) {
-    if (content == NULL) return;
-    if (content->directory != NULL) FSLIB_unload_directories_system(content->directory);
-    if (content->file != NULL) FSLIB_unload_files_system(content->file);
-    
-    free(content);
-}
-
 // Get date from content meta data (work with FAT32)
 // 1 - date
 // 2 - time
@@ -136,7 +89,7 @@ void fread(int content, int offset, uint8_t* buffer, int len) {
 // ECX - data offset (file seek)
 // EDX - buffer pointer
 // ESI - buffer len / data len
-void fread_stop(Content* content, int offset, uint8_t* buffer, int len, char* stop) {
+void fread_stop(int ci, int offset, uint8_t* buffer, int len, char* stop) {
     __asm__ volatile(
         "movl $58, %%eax\n"
         "movl %0, %%ebx\n"
@@ -146,7 +99,7 @@ void fread_stop(Content* content, int offset, uint8_t* buffer, int len, char* st
         "movl %4, %%edi\n"
         "int $0x80\n"
         :
-        : "g"(content), "g"(offset), "g"(buffer), "g"(len), "g"(stop)
+        : "g"(ci), "g"(offset), "g"(buffer), "g"(len), "g"(stop)
         : "eax", "ebx", "ecx", "edx", "esi", "edi"
     );
 }
@@ -157,7 +110,7 @@ void fread_stop(Content* content, int offset, uint8_t* buffer, int len, char* st
 // ECX - data offset
 // EDX - buffer pointer
 // ESI - buffer len / data len
-void fwrite(Content* content, int offset, uint8_t* buffer, int len) {
+void fwrite(int ci, int offset, uint8_t* buffer, int len) {
     __asm__ volatile(
         "movl $50, %%eax\n"
         "movl %0, %%ebx\n"
@@ -166,7 +119,7 @@ void fwrite(Content* content, int offset, uint8_t* buffer, int len) {
         "movl %3, %%esi\n"
         "int $0x80\n"
         :
-        : "g"(content), "g"(offset), "g"(buffer), "g"(len)
+        : "g"(ci), "g"(offset), "g"(buffer), "g"(len)
         : "eax", "ebx", "ecx", "edx", "esi"
     );
 }
@@ -175,19 +128,21 @@ void fwrite(Content* content, int offset, uint8_t* buffer, int len) {
 // Returns linked list of dir content by path
 // EBX - path
 // ECX - pointer to directory
-Content* opendir(const char* path) {
-    Content* content = NULL;
+int lsdir(const char* path, char* name, int step) {
+    int lstep = 0;
     __asm__ volatile(
         "movl $11, %%eax\n"
         "movl %1, %%ebx\n"
+        "movl %2, %%ecx\n"
+        "movl %3, %%edx\n"
         "int $0x80\n"
         "movl %%eax, %0\n"
-        : "=r"(content)
-        : "r"((uint32_t)path)
+        : "=r"((uint32_t)lstep)
+        : "r"((uint32_t)path), "r"((uint32_t)name), "r"((uint32_t)step)
         : "eax", "ebx", "ecx"
     );
 
-    return content;
+    return step;
 }
 
 //====================================================================
@@ -280,14 +235,14 @@ void rmcontent(const char* path) {
 // This function change content meta by path
 // EBX - path
 // ECX - new meta
-void chgcontent(const char* path, directory_entry_t* meta) {
+void chgcontent(const char* path, const char* new_name) {
     __asm__ volatile(
         "movl $25, %%eax\n"
         "movl %0, %%ebx\n"
         "movl %1, %%ecx\n"
         "int $0x80\n"
         :
-        : "r"((uint32_t)path), "r"((uint32_t)meta)
+        : "r"((uint32_t)path), "r"((uint32_t)new_name)
         : "eax", "ebx", "ecx"
     );
 }
@@ -306,10 +261,9 @@ int fstat(int ci, CInfo_t* info) {
     return 1;
 }
 
-// TODO
 int fclose(int ci) {
     __asm__ volatile(
-        "movl $65, %%eax\n"
+        "movl $66, %%eax\n"
         "movl %0, %%ebx\n"
         "int $0x80\n"
         :

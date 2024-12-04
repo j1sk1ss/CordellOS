@@ -17,7 +17,7 @@
 //     choosed_content.file      = NULL;
 
 //     if (argc != 0) current_path = argv[0];
-//     current_directory = opendir(current_path);
+//     current_directory = lsdir(current_path);
 
 //     return loop();
 // }
@@ -53,7 +53,7 @@
 //     if (choosed_content.directory != NULL) {
 //         FSLIB_unload_content_system(current_directory);
 //         char* path = FSLIB_change_path(current_path, choosed_content.directory->name);
-//         current_directory = opendir(path);
+//         current_directory = lsdir(path);
 
 //         free(current_path);
 //         current_path = path;

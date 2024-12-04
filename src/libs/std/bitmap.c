@@ -87,6 +87,6 @@ void BMP_display(bitmap_t* bmp) {
 }
 
 void BMP_unload(bitmap_t* bitmap) {
-    if (bitmap->file != NULL) FSLIB_unload_content_system(bitmap->file);
+    if (bitmap->file != NULL) fclose(bitmap->file);
     if (bitmap != NULL) free(bitmap);
 }

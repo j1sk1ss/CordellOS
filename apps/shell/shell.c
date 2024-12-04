@@ -244,23 +244,12 @@ void shell_start_screen() {
             }
 
             else if (strcmp(command_line[0], COMMAND_LIST_DIR) == 0) {
-                Content* content       = opendir(current_path);
-                Directory* current_dir = content->directory->subDirectory;
-                File* current_file     = content->directory->files;
-
-                printf("\n");
-                while (current_dir != NULL) {
-                    printf("\t%s", current_dir->name);
-                    current_dir = current_dir->next;
+                int step = 0;
+                while (step != -1) {
+                    char name[11] = { 0 };
+                    step = lsdir(current_path, name, step);
+                    printf("%s\t", name);
                 }
-
-                printf("\n");
-                while (current_file != NULL) {
-                    printf("\t%s.%s", current_file->name, current_file->extension);
-                    current_file = current_file->next;
-                }
-                
-                FSLIB_unload_content_system(content);
             }
 
             else if (strcmp(command_line[0], COMMAND_FILE_VIEW) == 0) {

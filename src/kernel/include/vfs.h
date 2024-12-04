@@ -3,7 +3,6 @@
 
 
 #include <memory.h>
-#include <fslib.h>
 
 #include "ata.h"
 #include "fat.h"
@@ -14,6 +13,7 @@
 #define EXT2_FS     1
 
 
+struct FATContent;
 typedef struct vfs_node {
     char name[25];
     uint8_t fs_type;
@@ -29,14 +29,14 @@ typedef struct vfs_node {
 
         // Read content to buffer with file seek (stop reading when meets stop symbols)
         // Content, buffer, seek, size, stop
-        int (*read_stop)(Content*, uint8_t*, uint32_t, uint32_t, uint8_t*);
+        int (*read_stop)(int, uint8_t*, uint32_t, uint32_t, uint8_t*);
 
         // Write data to content with offset (Change FAT table for allocate \ deallocate clusters)
         // Content, buffer, seek, size
-        int (*write)(Content*, uint8_t*, uint32_t, uint32_t);
+        int (*write)(int, uint8_t*, uint32_t, uint32_t);
 
         // Return Directory of current cluster
-        Content* (*lsdir)(const uint32_t, uint8_t, int);
+        int (*lsdir)(int, uint8_t, int);
 
         // Get Content by path
         // Path
@@ -53,7 +53,7 @@ typedef struct vfs_node {
 
         // Put content to directory by path
         // Path, content
-        int (*putobj)(const char*, Content*);
+        int (*putobj)(const char*, struct FATContent*);
 
         // Delete content from directory by path
         // Path, name
@@ -65,7 +65,7 @@ typedef struct vfs_node {
 
         // Change meta of content
         // Path, new meta
-        int (*objmetachg)(const char*, directory_entry_t*);
+        int (*objmetachg)(const char*, const char*);
 
     //===========
     // Functions

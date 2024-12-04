@@ -24,7 +24,7 @@ void VARS_init() {
     else {
         Content* content = FAT_create_content("vars", 0, "txt");
         current_vfs->putobj("boot", content);
-        FSLIB_unload_content_system(content);
+        FAT_unload_content_system(content);
     }
 
 #endif

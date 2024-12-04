@@ -48,6 +48,25 @@
 #define NOT_CONVERTED_YET       0x08
 #define TOO_MANY_DOTS           0x10
 
+#define FILE_READ_ONLY 0x01
+#define FILE_HIDDEN    0x02
+#define FILE_SYSTEM    0x04
+#define FILE_VOLUME_ID 0x08
+#define FILE_DIRECTORY 0x10
+#define FILE_ARCHIVE   0x20
+
+#define FILE_LAST_LONG_ENTRY 0x40
+#define ENTRY_FREE           0xE5
+#define ENTRY_END            0x00
+#define ENTRY_JAPAN          0x05
+#define LAST_LONG_ENTRY      0x40
+
+#define LOWERCASE_ISSUE	  0x01
+#define BAD_CHARACTER	  0x02
+#define BAD_TERMINATION   0x04
+#define NOT_CONVERTED_YET 0x08
+#define TOO_MANY_DOTS     0x10
+
 #define GET_CLUSTER_FROM_ENTRY(x, fat_type)       (x.low_bits | (x.high_bits << (fat_type / 2)))
 #define GET_CLUSTER_FROM_PENTRY(x, fat_type)      (x->low_bits | (x->high_bits << (fat_type / 2)))
 
@@ -109,6 +128,44 @@ typedef struct fat_data {
 	uint32_t ext_root_cluster;
 } fat_data_t;
 
+typedef struct directory_entry {
+	uint8_t file_name[11];
+	uint8_t attributes;
+	uint8_t reserved0;
+	uint8_t creation_time_tenths;
+	uint16_t creation_time;
+	uint16_t creation_date;
+	uint16_t last_accessed;
+	uint16_t high_bits;
+	uint16_t last_modification_time;
+	uint16_t last_modification_date;
+	uint16_t low_bits;
+	uint32_t file_size;
+} __attribute__((packed)) directory_entry_t;
+
+typedef struct FATFile {
+	char name[8];
+	char extension[4];
+	int data_size;
+	uint32_t* data;
+    struct FATFile* next;
+} File;
+
+typedef struct FATDirectory {
+	char name[11];
+	struct FATDirectory* next;
+    struct FATFile* files;
+    struct FATDirectory* subDirectory;
+} Directory;
+
+typedef struct FATContent {
+	Directory* directory;
+	File* file;
+	uint32_t parent_cluster;
+	directory_entry_t meta;
+} Content;
+
+
 //Global variables
 extern fat_data_t FAT_data;
 
@@ -152,11 +209,11 @@ extern fat_data_t FAT_data;
 //  |_____|_| \_| |_| |_| \_\|_| 
 //===================================
 
-	Content* FAT_directory_list(const uint32_t cluster, uint8_t attrs, int exclusive);
+	int FAT_directory_list(int ci, uint8_t attrs, int exclusive);
 	int _directory_search(const char* filepart, const uint32_t cluster, directory_entry_t* file, uint32_t* entryOffset);
 	int _directory_add(const uint32_t cluster, directory_entry_t* file_to_add);
 	int _directory_remove(const uint32_t cluster, const char* fileName);
-	int _directory_edit(const uint32_t cluster, directory_entry_t* oldMeta, directory_entry_t* newMeta);
+	int _directory_edit(const uint32_t cluster, directory_entry_t* old_meta, const char* new_name);
 
 //===================================
 //    ____ ___  _   _ _____ _____ _   _ _____ 
@@ -175,7 +232,7 @@ extern fat_data_t FAT_data;
 	int FAT_delete_content(const char* path);
 	int FAT_write_buffer2content(int ci, uint8_t* buffer, uint32_t offset, uint32_t size);
 	int FAT_ELF_execute_content(int ci, int argc, char* argv[], int type);
-	int FAT_change_meta(const char* filePath, directory_entry_t* newMeta);
+	int FAT_change_meta(const char* filePath, const char* new_name);
 	int FAT_stat_content(int ci, CInfo_t* info);
 
 //===================================
@@ -193,9 +250,12 @@ extern fat_data_t FAT_data;
 	int _name_check(const char* input);
 	uint8_t _check_sum(uint8_t *pFcbName);
 
+	int _add_content2table(Content* content);
+	Content* _get_content_from_table(int ci) ;
+	int _remove_content_from_table(int index);
+
 	directory_entry_t* _create_entry(const char* name, const char* ext, int isDir, uint32_t firstCluster, uint32_t filesize);
 	Content* FAT_create_object(char* name, int directory, char* extension);
-
 	Content* FAT_create_content();
 	Directory* FAT_create_directory();
 	File* FAT_create_file();
