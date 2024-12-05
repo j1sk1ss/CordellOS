@@ -415,7 +415,7 @@
 		assert(cluster >= 2 && cluster < FAT_data.total_clusters);
 		
 		Content* content = FAT_create_content();
-		content->directory = FAT_create_directory();
+		content->directory = _create_directory();
 		content->parent_cluster = 0;
 
 		const uint8_t default_hidden_attributes = (FILE_HIDDEN | FILE_SYSTEM);
@@ -426,7 +426,7 @@
 		uint8_t* cluster_data = FAT_cluster_read(cluster);
 		if (cluster_data == NULL) {
 			kprintf("Function FAT_directory_list: FAT_cluster_read encountered an error. Aborting...\n");
-			FAT_unload_directories_system(content->directory);
+			_unload_directories_system(content->directory);
 			return -1;
 		}
 
@@ -460,7 +460,7 @@
 			}
 			else {
 				if ((file_metadata->attributes & FILE_DIRECTORY) != FILE_DIRECTORY) {			
-					File* file = FAT_create_file();
+					File* file = _create_file();
 
 					char name[13] = { 0 };
 					strcpy(name, (const char*)file_metadata->file_name);
@@ -476,7 +476,7 @@
 				}
 				else {
 					if ((file_metadata->attributes & FILE_DIRECTORY) == FILE_DIRECTORY) {
-						Directory* upperDir = FAT_create_directory();
+						Directory* upperDir = _create_directory();
 
 						char name[13] = { 0 };
 						strcpy(name, (char*)file_metadata->file_name);
@@ -786,7 +786,7 @@
 // Function that checks is content exist
 // returns: 0 if nexist and 1 if exist
 
-	int FAT_content_exists(const char* filePath) {
+	int FAT_content_exists(const char* path) {
 		char fileNamePart[256] = { 0 };
 		uint16_t start = 0;
 		uint32_t active_cluster = 0;
@@ -798,10 +798,10 @@
 		}
 
 		directory_entry_t file_info;
-		for (uint32_t iterator = 0; iterator <= strlen(filePath); iterator++) {
-			if (filePath[iterator] == '\\' || filePath[iterator] == '\0') {
+		for (uint32_t iterator = 0; iterator <= strlen(path); iterator++) {
+			if (path[iterator] == '\\' || path[iterator] == '\0') {
 				memset(fileNamePart, '\0', 256);
-				memcpy(fileNamePart, filePath + start, iterator - start);
+				memcpy(fileNamePart, path + start, iterator - start);
 
 				int result = _directory_search(fileNamePart, active_cluster, &file_info, NULL);
 				if (result != 0) return 0;
@@ -824,7 +824,7 @@
 //========================================================================================
 // Returns: -1 is general error, -2 is content not found
 
-	int FAT_open_content(const char* filePath) {
+	int FAT_open_content(const char* path) {
 		Content* fat_content = (Content*)_kmalloc(sizeof(Content));
 
 		fat_content->directory = NULL;
@@ -842,10 +842,10 @@
 		}
 		
 		directory_entry_t content_meta;
-		for (uint32_t iterator = 0; iterator <= strlen(filePath); iterator++) 
-			if (filePath[iterator] == '\\' || filePath[iterator] == '\0') {
+		for (uint32_t iterator = 0; iterator <= strlen(path); iterator++) 
+			if (path[iterator] == '\\' || path[iterator] == '\0') {
 				memset(fileNamePart, '\0', 256);
-				memcpy(fileNamePart, filePath + start, iterator - start);
+				memcpy(fileNamePart, path + start, iterator - start);
 
 				int result = _directory_search(fileNamePart, active_cluster, &content_meta, NULL);
 				if (result == -2) {
@@ -860,7 +860,7 @@
 
 				start = iterator + 1;
 				active_cluster = GET_CLUSTER_FROM_ENTRY(content_meta, FAT_data.fat_type);
-				if (filePath[iterator] != '\0') fat_content->parent_cluster = active_cluster;
+				if (path[iterator] != '\0') fat_content->parent_cluster = active_cluster;
 			}
 		
 		if ((content_meta.attributes & FILE_DIRECTORY) != FILE_DIRECTORY) {
@@ -1059,7 +1059,7 @@
 //
 //========================================================================================
 // This function finds content in FAT table and change their name
-	int FAT_change_meta(const char* filePath, const char* new_name) {
+	int FAT_change_meta(const char* path, const char* new_name) {
 
 		char fileNamePart[256] = { 0 };
 		uint16_t start = 0;
@@ -1080,7 +1080,7 @@
 		//	FINDING DIR BY PATH
 
 			directory_entry_t file_info; //holds found directory info
-			if (strlen(filePath) == 0) { // Create main dir if it not created (root dir)
+			if (strlen(path) == 0) { // Create main dir if it not created (root dir)
 				if (FAT_data.fat_type == 32) {
 					active_cluster 		 = FAT_data.ext_root_cluster;
 					file_info.attributes = FILE_DIRECTORY | FILE_VOLUME_ID;
@@ -1094,12 +1094,12 @@
 				}
 			}
 			else {
-				for (uint32_t iterator = 0; iterator <= strlen(filePath); iterator++) 
-					if (filePath[iterator] == '\\' || filePath[iterator] == '\0') {
+				for (uint32_t iterator = 0; iterator <= strlen(path); iterator++) 
+					if (path[iterator] == '\\' || path[iterator] == '\0') {
 						prev_active_cluster = active_cluster;
 
 						memset(fileNamePart, '\0', 256);
-						memcpy(fileNamePart, filePath + start, iterator - start);
+						memcpy(fileNamePart, path + start, iterator - start);
 
 						int retVal = _directory_search(fileNamePart, active_cluster, &file_info, NULL);
 						switch (retVal) {
@@ -1144,7 +1144,7 @@
 // content: contains the full data of content (meta, name, ext, type)
 // returns: -1 is general error, -2 indicates a bad path/file name, -3 indicates file with same name already exists, -4 indicates file size error
 
-	int FAT_put_content(const char* filePath, Content* content) {
+	int FAT_put_content(const char* path, Content* content) {
 
 		//====================
 		// CONTENT META SAVING
@@ -1155,7 +1155,7 @@
 		//====================
 		//	FINDING DIR BY PATH
 
-			int dir = FAT_open_content(filePath);
+			int dir = FAT_open_content(path);
 			if (dir == -1) return -1;
 
 			directory_entry_t file_info = _content_table[dir]->meta;
@@ -1201,7 +1201,7 @@
 //
 //========================================================================================
 // This function delete content from FS
-// filePath - path where placed content
+// path - path where placed content
 // name - name of content (if it file - with extension (if presented), like "test.txt")
 
 	int FAT_delete_content(const char* path) {
@@ -1569,12 +1569,12 @@
 		}
 		
 		if (directory == 1) {
-			content->directory = FAT_create_directory();
+			content->directory = _create_directory();
 			strncpy(content->directory->name, name, 12);
 			content->meta = *_create_entry(name, NULL, 1, FAT_cluster_allocate(), 0);
 		}
 		else {
-			content->file = FAT_create_file();
+			content->file = _create_file();
 			strncpy(content->file->name, name, 8);
 			strncpy(content->file->extension, extension, 4);
 			content->meta = *_create_entry(name, extension, 0, FAT_cluster_allocate(), 1);
@@ -1591,7 +1591,7 @@
 		return content;
 	}
 
-	Directory* FAT_create_directory() {
+	Directory* _create_directory() {
 		Directory* directory = (Directory*)_kmalloc(sizeof(Directory));
 		directory->files        = NULL;
 		directory->subDirectory = NULL;
@@ -1599,25 +1599,25 @@
 		return directory;
 	}
 
-	File* FAT_create_file() {
+	File* _create_file() {
 		File* file = (File*)_kmalloc(sizeof(File));
 		file->next = NULL;
 		file->data = NULL;
 		return file;
 	}
 
-	int FAT_unload_directories_system(Directory* directory) {
+	int _unload_directories_system(Directory* directory) {
 		if (directory == NULL) return -1;
-		if (directory->files != NULL) FAT_unload_files_system(directory->files);
-		if (directory->subDirectory != NULL) FAT_unload_directories_system(directory->subDirectory);
-		if (directory->next != NULL) FAT_unload_directories_system(directory->next);
+		if (directory->files != NULL) _unload_files_system(directory->files);
+		if (directory->subDirectory != NULL) _unload_directories_system(directory->subDirectory);
+		if (directory->next != NULL) _unload_directories_system(directory->next);
 		_kfree(directory);
 		return 1;
 	}
 
-	int FAT_unload_files_system(File* file) {
+	int _unload_files_system(File* file) {
 		if (file == NULL) return -1;
-		if (file->next != NULL) FAT_unload_files_system(file->next);
+		if (file->next != NULL) _unload_files_system(file->next);
 		if (file->data != NULL) _kfree(file->data);
 		_kfree(file);
 		return 1;
@@ -1625,8 +1625,8 @@
 
 	int FAT_unload_content_system(Content* content) {
 		if (content == NULL) return -1;
-		if (content->directory != NULL) FAT_unload_directories_system(content->directory);
-		if (content->file != NULL) FAT_unload_files_system(content->file);
+		if (content->directory != NULL) _unload_directories_system(content->directory);
+		if (content->file != NULL) _unload_files_system(content->file);
 		
 		_kfree(content);
 		return 1;

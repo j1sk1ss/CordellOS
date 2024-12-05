@@ -109,11 +109,11 @@
 //      20) Tasking problems (again)                              [V]
 //          20.0) Page directory cloning                          [V]
 //          20.1) User page directory                             [V]
-//      21) Data append \ modify FAT                              [ ]
+//      21) Data append \ modify FAT                              [V]
 //      22) New kernel panic screen (maybe blue screen?)          [V]
 //      23) Refactor STDIO in userland                            [V]
 //          23.1) Font lib, draw instead kprint                   [V]
-//      24) FAT separation (Content table and descriptors)        [?]
+//      24) FAT separation (Content table and descriptors)        [V]
 //      23) DOOM?                                                 [ ]
 //======================================================================================================================================
 

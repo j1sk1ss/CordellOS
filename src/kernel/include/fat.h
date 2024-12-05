@@ -16,22 +16,22 @@
 #include "datetime.h" // Not important for base implementation. Date time getter from CMOS
 
 
-#define SECTOR_OFFSET		23000
+#define SECTOR_OFFSET			23000
 
-#define END_CLUSTER_32      0x0FFFFFF8
-#define BAD_CLUSTER_32      0x0FFFFFF7
-#define FREE_CLUSTER_32     0x00000000
-#define END_CLUSTER_16      0xFFF8
-#define BAD_CLUSTER_16      0xFFF7
-#define FREE_CLUSTER_16     0x0000
-#define END_CLUSTER_12      0xFF8
-#define BAD_CLUSTER_12      0xFF7
-#define FREE_CLUSTER_12     0x000
+#define END_CLUSTER_32      	0x0FFFFFF8
+#define BAD_CLUSTER_32      	0x0FFFFFF7
+#define FREE_CLUSTER_32     	0x00000000
+#define END_CLUSTER_16      	0xFFF8
+#define BAD_CLUSTER_16      	0xFFF7
+#define FREE_CLUSTER_16     	0x0000
+#define END_CLUSTER_12      	0xFF8
+#define BAD_CLUSTER_12      	0xFF7
+#define FREE_CLUSTER_12     	0x000
 
-#define CLEAN_EXIT_BMASK_16 0x8000
-#define HARD_ERR_BMASK_16   0x4000
-#define CLEAN_EXIT_BMASK_32 0x08000000
-#define HARD_ERR_BMASK_32   0x04000000
+#define CLEAN_EXIT_BMASK_16 	0x8000
+#define HARD_ERR_BMASK_16   	0x4000
+#define CLEAN_EXIT_BMASK_32 	0x08000000
+#define HARD_ERR_BMASK_32   	0x04000000
 
 #define FILE_LONG_NAME 			(FILE_READ_ONLY|FILE_HIDDEN|FILE_SYSTEM|FILE_VOLUME_ID)
 #define FILE_LONG_NAME_MASK 	(FILE_READ_ONLY|FILE_HIDDEN|FILE_SYSTEM|FILE_VOLUME_ID|FILE_DIRECTORY|FILE_ARCHIVE)
@@ -48,24 +48,24 @@
 #define NOT_CONVERTED_YET       0x08
 #define TOO_MANY_DOTS           0x10
 
-#define FILE_READ_ONLY 0x01
-#define FILE_HIDDEN    0x02
-#define FILE_SYSTEM    0x04
-#define FILE_VOLUME_ID 0x08
-#define FILE_DIRECTORY 0x10
-#define FILE_ARCHIVE   0x20
+#define FILE_READ_ONLY 			0x01
+#define FILE_HIDDEN    			0x02
+#define FILE_SYSTEM    			0x04
+#define FILE_VOLUME_ID 			0x08
+#define FILE_DIRECTORY 			0x10
+#define FILE_ARCHIVE   			0x20
 
-#define FILE_LAST_LONG_ENTRY 0x40
-#define ENTRY_FREE           0xE5
-#define ENTRY_END            0x00
-#define ENTRY_JAPAN          0x05
-#define LAST_LONG_ENTRY      0x40
+#define FILE_LAST_LONG_ENTRY 	0x40
+#define ENTRY_FREE           	0xE5
+#define ENTRY_END            	0x00
+#define ENTRY_JAPAN          	0x05
+#define LAST_LONG_ENTRY      	0x40
 
-#define LOWERCASE_ISSUE	  0x01
-#define BAD_CHARACTER	  0x02
-#define BAD_TERMINATION   0x04
-#define NOT_CONVERTED_YET 0x08
-#define TOO_MANY_DOTS     0x10
+#define LOWERCASE_ISSUE	  		0x01
+#define BAD_CHARACTER	  		0x02
+#define BAD_TERMINATION   		0x04
+#define NOT_CONVERTED_YET 		0x08
+#define TOO_MANY_DOTS     		0x10
 
 #define GET_CLUSTER_FROM_ENTRY(x, fat_type)       (x.low_bits | (x.high_bits << (fat_type / 2)))
 #define GET_CLUSTER_FROM_PENTRY(x, fat_type)      (x->low_bits | (x->high_bits << (fat_type / 2)))
@@ -223,16 +223,16 @@ extern fat_data_t FAT_data;
 //   \____\___/|_| \_| |_| |_____|_| \_| |_|  
 //===================================
 
-	int FAT_content_exists(const char* filePath);
-	int FAT_open_content(const char* filePath);
+	int FAT_content_exists(const char* path);
+	int FAT_open_content(const char* path);
 	int FAT_close_content(int ci);
 	int FAT_read_content2buffer(int ci, uint8_t* buffer, uint32_t offset, uint32_t size);
 	int FAT_read_content2buffer_stop(int ci, uint8_t* buffer, uint32_t offset, uint32_t size, uint8_t* stop);
-	int FAT_put_content(const char* filePath, Content* content);
+	int FAT_put_content(const char* path, Content* content);
 	int FAT_delete_content(const char* path);
 	int FAT_write_buffer2content(int ci, uint8_t* buffer, uint32_t offset, uint32_t size);
 	int FAT_ELF_execute_content(int ci, int argc, char* argv[], int type);
-	int FAT_change_meta(const char* filePath, const char* new_name);
+	int FAT_change_meta(const char* path, const char* new_name);
 	int FAT_stat_content(int ci, CInfo_t* info);
 
 //===================================
@@ -254,14 +254,14 @@ extern fat_data_t FAT_data;
 	Content* _get_content_from_table(int ci) ;
 	int _remove_content_from_table(int index);
 
-	directory_entry_t* _create_entry(const char* name, const char* ext, int isDir, uint32_t firstCluster, uint32_t filesize);
 	Content* FAT_create_object(char* name, int directory, char* extension);
 	Content* FAT_create_content();
-	Directory* FAT_create_directory();
-	File* FAT_create_file();
-	int FAT_unload_directories_system(Directory* directory);
-	int FAT_unload_files_system(File* file);
 	int FAT_unload_content_system(Content* content);
+	directory_entry_t* _create_entry(const char* name, const char* ext, int isDir, uint32_t firstCluster, uint32_t filesize);
+	Directory* _create_directory();
+	File* _create_file();
+	int _unload_directories_system(Directory* directory);
+	int _unload_files_system(File* file);
 
 //===================================
 

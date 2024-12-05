@@ -3,15 +3,15 @@
 
 bitmap_t* BMP_create(char* file_path, int screen_x, int screen_y) {
     bitmap_t* ret = (bitmap_t*)clralloc(sizeof(bitmap_t));
-    int content = copen(file_path);
-    if (content == -1) {
+    int ci = copen(file_path);
+    if (ci == -1) {
         printf("File not found\n");
         BMP_unload(ret);
         return NULL;
     }
 
     uint8_t* header = clralloc(sizeof(bmp_fileheader_t));
-    fread(content, 0, header, sizeof(bmp_fileheader_t));
+    fread(ci, 0, header, sizeof(bmp_fileheader_t));
 
     bmp_fileheader_t* h = (bmp_fileheader_t*)header;
     uint32_t offset = h->bfOffBits;
@@ -19,13 +19,13 @@ bitmap_t* BMP_create(char* file_path, int screen_x, int screen_y) {
     free(header);
 
     uint8_t* info = clralloc(sizeof(bmp_infoheader_t));
-    fread(content, sizeof(bmp_fileheader_t), info, sizeof(bmp_infoheader_t));
+    fread(ci, sizeof(bmp_fileheader_t), info, sizeof(bmp_infoheader_t));
 
     bmp_infoheader_t* inf = (bmp_infoheader_t*)info;
     ret->width         = inf->biWidth;
     ret->height        = inf->biHeight;
     ret->header_offset = offset;
-    ret->file          = content;
+    ret->file          = ci;
     ret->bpp           = inf->biBitCount;
     ret->x             = screen_x;
     ret->y             = screen_y;
@@ -67,7 +67,7 @@ void BMP_display(bitmap_t* bmp) {
                 uint32_t alpha = bytes[color_index + 3] & 0xff;
 
                 if (x + line_part < bmp->width) 
-                    pput_pixel(
+                    vput_pixel(
                         x + bmp->x + line_part, 
                         (bmp->height - 1 - y) + bmp->y, 
                         ((alpha << 24) | (red << 16) | (green << 8) | (blue))

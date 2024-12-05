@@ -196,8 +196,7 @@ void syscall(struct Registers* regs) {
     //=======================
         
         else if (regs->eax == SYS_OPENDIR) {
-            int ci = (int)regs->ebx;
-            regs->eax = current_vfs->lsdir(ci, (char)0, 0);
+            regs->eax = current_vfs->lsdir((int)regs->ebx, (char)0, 0);
         }
 
         else if (regs->eax == SYS_LSDIR) {
@@ -215,19 +214,20 @@ void syscall(struct Registers* regs) {
                     while (curr_dir != NULL) {
                         if (local_step == step) {
                             strncpy(cname, curr_dir->name, 11);
-                            break;
+                            goto ls_end;
                         }
 
                         curr_dir = curr_dir->next;
                         local_step++;
                     }
                 }
-                else if (root_dir->files != NULL) {
+
+                if (root_dir->files != NULL) {
                     File* curr_file = root_dir->files;
                     while (curr_file != NULL) {
                         if (local_step == step) {
                             sprintf(cname, 11, "%s.%s", curr_file->name, curr_file->extension);
-                            break;
+                            goto ls_end;
                         }
 
                         curr_file = curr_file->next;
@@ -235,14 +235,13 @@ void syscall(struct Registers* regs) {
                     }
                 }
             }
-
+ls_end:
             if (local_step == step) regs->eax = step + 1;
             else regs->eax = -1;
         } 
         
         else if (regs->eax == SYS_OPEN_CONTENT) {
-            char* content_path = (char*)regs->ebx;
-            regs->eax = current_vfs->openobj(content_path);
+            regs->eax = current_vfs->openobj((char*)regs->ebx);
         } 
         
         else if (regs->eax == SYS_CONTENT_STAT) {
@@ -252,13 +251,11 @@ void syscall(struct Registers* regs) {
         }
 
         else if (regs->eax == SYS_CLOSE_CONTENT) {
-            uint32_t ci = regs->ebx;
-            current_vfs->closeobj(ci);
+            current_vfs->closeobj(regs->ebx);
         }
 
         else if (regs->eax == SYS_CEXISTS) {
-            char* path = (char*)regs->ebx;
-            regs->eax = current_vfs->objexist(path);
+            regs->eax = current_vfs->objexist((char*)regs->ebx);
         } 
         
         else if (regs->eax == SYS_FCREATE) {
@@ -294,36 +291,21 @@ void syscall(struct Registers* regs) {
         } 
 
         else if (regs->eax == SYS_READ_FILE_OFF) {
-            int ci           = (int)regs->ebx;
-            int offset       = (int)regs->ecx;
-            uint8_t* buffer  = (uint8_t*)regs->edx;
-            int offset_len   = (int)regs->esi;
-            
-            current_vfs->read(ci, buffer, offset, offset_len);
+            current_vfs->read((int)regs->ebx, (uint8_t*)regs->edx, (int)regs->ecx, (int)regs->esi);
         }
 
         else if (regs->eax == SYS_READ_FILE_OFF_STP) {
-            int ci           = (int)regs->ebx;
-            int offset       = (int)regs->ecx;
-            uint8_t* buffer  = (uint8_t*)regs->edx;
-            int offset_len   = (int)regs->esi;
-            uint8_t* stop    = (uint8_t*)regs->edi;
-            
-            current_vfs->read_stop(ci, buffer, offset, offset_len, stop);
+            current_vfs->read_stop(
+                (int)regs->ebx, (uint8_t*)regs->edx, (int)regs->ecx, (int)regs->esi, (uint8_t*)regs->edi
+            );
         }
 
         else if (regs->eax == SYS_WRITE_FILE_OFF) {
-            int ci           = (int)regs->ebx;
-            int offset       = (int)regs->ecx;
-            uint8_t* buffer  = (uint8_t*)regs->edx;
-            int offset_len   = (int)regs->esi;
-            
-            current_vfs->write(ci, buffer, offset, offset_len);
+            current_vfs->write((int)regs->ebx, (uint8_t*)regs->edx, (int)regs->ecx, (int)regs->esi);
         }
 
         else if (regs->eax == SYS_READ_ELF) {
-            char* path = (char*)regs->ebx;
-            int ci = current_vfs->openobj(path);
+            int ci = current_vfs->openobj((char*)regs->ebx);
             
 #ifdef USERMODE
 		    regs->eax = (uint32_t)ELF_read(ci, USER);
