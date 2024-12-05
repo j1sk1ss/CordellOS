@@ -49,7 +49,8 @@ int fexec(char* path, int args, char** argv);
 void mkfile(const char* path, const char* name);
 void mkdir(const char* path, const char* name);
 
-int lsdir(const char* path, char* name, int step);
+int opendir(int ci);
+int lsdir(int ci, char* name, int step);
 int fstat(int ci, CInfo_t* info);
 int fopen(const char* path);
 int fclose(int ci);

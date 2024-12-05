@@ -245,11 +245,17 @@ void shell_start_screen() {
 
             else if (strcmp(command_line[0], COMMAND_LIST_DIR) == 0) {
                 int step = 0;
+                int dir_ci = fopen(current_path);
+                int root_ci = opendir(dir_ci);
+                
                 while (step != -1) {
                     char name[11] = { 0 };
-                    step = lsdir(current_path, name, step);
+                    step = lsdir(root_ci, name, step);
                     printf("%s\t", name);
                 }
+
+                fclose(root_ci);
+                fclose(dir_ci);
             }
 
             else if (strcmp(command_line[0], COMMAND_FILE_VIEW) == 0) {

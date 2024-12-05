@@ -195,47 +195,49 @@ void syscall(struct Registers* regs) {
     //  FILE SYSTEMS SYSCALLS
     //=======================
         
-        else if (regs->eax == SYS_LSDIR) {
-            char* path = (char*)regs->ebx;
-            int ci = current_vfs->openobj(path);
-            int root_ci = current_vfs->lsdir(ci, (char)0, 0);
-            current_vfs->closeobj(ci);
+        else if (regs->eax == SYS_OPENDIR) {
+            int ci = (int)regs->ebx;
+            regs->eax = current_vfs->lsdir(ci, (char)0, 0);
+        }
 
-            int local_step = 0;
+        else if (regs->eax == SYS_LSDIR) {
+            int root_ci = (int)regs->ebx;
             int step = (int)regs->edx;
             char* cname = (char*)regs->ecx;
 
+            int local_step = 0;
             Content* root_node = _get_content_from_table(root_ci);
+            
             if (root_node != NULL) {
                 Directory* root_dir = root_node->directory;
                 if (root_dir->subDirectory != NULL) {
                     Directory* curr_dir = root_dir->subDirectory;
                     while (curr_dir != NULL) {
-                        if (local_step++ == step) {
+                        if (local_step == step) {
                             strncpy(cname, curr_dir->name, 11);
                             break;
                         }
 
                         curr_dir = curr_dir->next;
+                        local_step++;
                     }
                 }
                 else if (root_dir->files != NULL) {
                     File* curr_file = root_dir->files;
                     while (curr_file != NULL) {
-                        if (local_step++ == step) {
-                            sprintf(cname, 11, "%s %s", curr_file->name, curr_file->extension);
+                        if (local_step == step) {
+                            sprintf(cname, 11, "%s.%s", curr_file->name, curr_file->extension);
                             break;
                         }
 
                         curr_file = curr_file->next;
+                        local_step++;
                     }
                 }
             }
 
             if (local_step == step) regs->eax = step + 1;
             else regs->eax = -1;
-
-            current_vfs->closeobj(root_ci);
         } 
         
         else if (regs->eax == SYS_OPEN_CONTENT) {

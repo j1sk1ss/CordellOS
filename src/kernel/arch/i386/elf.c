@@ -59,16 +59,15 @@ ELF32_program* ELF_read(int ci, int type) {
     // Load ELF header
     //==========================
 
-        void* header = ALC_malloc(sizeof(Elf32_Ehdr), type);
+        Elf32_Ehdr* header = ALC_malloc(sizeof(Elf32_Ehdr), type);
         current_vfs->read(ci, header, 0, sizeof(Elf32_Ehdr));
-        Elf32_Ehdr* ehdr = (Elf32_Ehdr*)header;
-        if (ehdr->e_ident[0] != '\x7f' || ehdr->e_ident[1] != 'E') {
+        if (header->e_ident[0] != '\x7f' || header->e_ident[1] != 'E') {
             kprintf("\n[%s %i] Error: Not ELF.\n", __FILE__, __LINE__);
             ALC_free(header, type);
             return NULL;
         }
 
-        if (ehdr->e_type != ET_EXEC && ehdr->e_type != ET_DYN) {
+        if (header->e_type != ET_EXEC && header->e_type != ET_DYN) {
             kprintf("\n[%s %i] Error: Program is not an executable or dynamic executable.\n", __FILE__, __LINE__);
             ALC_free(header, type);
             return NULL;
@@ -80,12 +79,11 @@ ELF32_program* ELF_read(int ci, int type) {
     // Load program header
     //==========================
 
-        void* program_header = ALC_malloc(sizeof(Elf32_Phdr) * ehdr->e_phnum, type);
-        current_vfs->read(ci, program_header, ehdr->e_phoff, sizeof(Elf32_Phdr) * ehdr->e_phnum);
-        Elf32_Phdr* phdr = (Elf32_Phdr*)program_header;
+        Elf32_Phdr* program_headers = ALC_malloc(sizeof(Elf32_Phdr) * header->e_phnum, type);
+        current_vfs->read(ci, program_headers, header->e_phoff, sizeof(Elf32_Phdr) * header->e_phnum);
 
-        program->entry_point = (void*)ehdr->e_entry;
-        uint32_t header_num  = ehdr->e_phnum;
+        program->entry_point = (void*)header->e_entry;
+        uint32_t header_num  = header->e_phnum;
 
         ALC_free(header, type);
 
@@ -98,27 +96,27 @@ ELF32_program* ELF_read(int ci, int type) {
         program->pages = ALC_malloc(header_num * sizeof(uint32_t), type);
         program->pages_count = header_num;
         for (uint32_t i = 0; i < header_num; i++) {
-            if (phdr[i].p_type != PT_LOAD) continue;
+            if (program_headers[i].p_type != PT_LOAD) continue;
 
-            uint32_t program_pages   = phdr[i].p_memsz / PAGE_SIZE;
-            uint32_t virtual_address = phdr[i].p_vaddr;
-            program->pages[i] = phdr[i].p_vaddr;
+            uint32_t program_pages   = program_headers[i].p_memsz / PAGE_SIZE;
+            uint32_t virtual_address = program_headers[i].p_vaddr;
+            program->pages[i] = program_headers[i].p_vaddr;
 
-            if (phdr[i].p_memsz % PAGE_SIZE > 0) program_pages++;
+            if (program_headers[i].p_memsz % PAGE_SIZE > 0) program_pages++;
             for (uint32_t i = 0; i < program_pages; i++) {
                 ALC_mallocp(virtual_address, type);
                 virtual_address += PAGE_SIZE;
             }
 
-            memset((void*)phdr[i].p_vaddr, 0, phdr[i].p_memsz);
-            current_vfs->read(ci, (uint8_t*)phdr[i].p_vaddr, phdr[i].p_offset, phdr[i].p_memsz);
+            memset((void*)program_headers[i].p_vaddr, 0, program_headers[i].p_memsz);
+            current_vfs->read(ci, (uint8_t*)program_headers[i].p_vaddr, program_headers[i].p_offset, program_headers[i].p_memsz);
         }
 
     //==========================
     // Copy data to vELF location
     //==========================
 
-    ALC_free(program_header, type);
+    ALC_free(program_headers, type);
     return program;
 }
 

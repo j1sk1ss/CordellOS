@@ -63,13 +63,7 @@ char* FSLIB_change_path(const char* currentPath, const char* content) {
     }
 }
 
-//====================================================================
-// Function read content data to buffer with file seeking
-// EBX - content pointer
-// ECX - data offset (file seek)
-// EDX - buffer pointer
-// ESI - buffer len / data len
-void fread(int content, int offset, uint8_t* buffer, int len) {
+void fread(int ci, int offset, uint8_t* buffer, int len) {
     __asm__ volatile(
         "movl $33, %%eax\n"
         "movl %0, %%ebx\n"
@@ -78,17 +72,11 @@ void fread(int content, int offset, uint8_t* buffer, int len) {
         "movl %3, %%esi\n"
         "int $0x80\n"
         :
-        : "g"(content), "g"(offset), "g"(buffer), "g"(len)
+        : "g"(ci), "g"(offset), "g"(buffer), "g"(len)
         : "eax", "ebx", "ecx", "edx", "esi"
     );
 }
 
-//====================================================================
-// Function read content data to buffer with file seeking
-// EBX - content pointer
-// ECX - data offset (file seek)
-// EDX - buffer pointer
-// ESI - buffer len / data len
 void fread_stop(int ci, int offset, uint8_t* buffer, int len, char* stop) {
     __asm__ volatile(
         "movl $58, %%eax\n"
@@ -104,12 +92,6 @@ void fread_stop(int ci, int offset, uint8_t* buffer, int len, char* stop) {
     );
 }
 
-//====================================================================
-// Write file to content (if it exists) with offset
-// EBX - content pointer
-// ECX - data offset
-// EDX - buffer pointer
-// ESI - buffer len / data len
 void fwrite(int ci, int offset, uint8_t* buffer, int len) {
     __asm__ volatile(
         "movl $50, %%eax\n"
@@ -124,12 +106,23 @@ void fwrite(int ci, int offset, uint8_t* buffer, int len) {
     );
 }
 
-//====================================================================
-// Returns linked list of dir content by path
-// EBX - path
-// ECX - pointer to directory
-int lsdir(const char* path, char* name, int step) {
-    int lstep = 0;
+int opendir(int ci) {
+    int root_ci = -1;
+    __asm__ volatile(
+        "movl $67, %%eax\n"
+        "movl %1, %%ebx\n"
+        "int $0x80\n"
+        "movl %%eax, %0\n"
+        : "=r"(root_ci)
+        : "r"(ci)
+        : "eax", "ebx"
+    );
+
+    return root_ci;
+}
+
+int lsdir(int ci, char* name, int step) {
+    int lstep = -1;
     __asm__ volatile(
         "movl $11, %%eax\n"
         "movl %1, %%ebx\n"
@@ -137,18 +130,14 @@ int lsdir(const char* path, char* name, int step) {
         "movl %3, %%edx\n"
         "int $0x80\n"
         "movl %%eax, %0\n"
-        : "=r"((uint32_t)lstep)
-        : "r"((uint32_t)path), "r"((uint32_t)name), "r"((uint32_t)step)
+        : "=r"(lstep)
+        : "r"(ci), "r"((uint32_t)name), "r"(step)
         : "eax", "ebx", "ecx"
     );
 
-    return step;
+    return lstep;
 }
 
-//====================================================================
-//  Returns linked list of dir content by path
-//  EBX - path
-//  ECX - pointer to directory
 int fopen(const char* path) {
     int content = -1;
     __asm__ volatile(
@@ -165,10 +154,6 @@ int fopen(const char* path) {
     return content;
 }
 
-//====================================================================
-//  Function for checking if content exist by this path
-//  EBX - path
-//  ECX - result (0 - nexists)
 int cexists(const char* path) {
     int result = 0;
     __asm__ volatile(
@@ -184,10 +169,6 @@ int cexists(const char* path) {
     return result;
 }
 
-//====================================================================
-//  This function creates file
-//  EBX - path
-//  RCX - name (with extention)
 void mkfile(const char* path, const char* name) {
     __asm__ volatile(
         "movl $16, %%eax\n"
@@ -200,10 +181,6 @@ void mkfile(const char* path, const char* name) {
     );
 }
 
-//====================================================================
-//  This function creates directory
-//  EBX - path
-//  ECX - name
 void mkdir(const char* path, const char* name) {
     __asm__ volatile(
         "movl $17, %%eax\n"
@@ -216,10 +193,6 @@ void mkdir(const char* path, const char* name) {
     );
 }
 
-//====================================================================
-//  This function remove content
-//  EBX - path
-//  ECX - name (if file - with extention)
 void rmcontent(const char* path) {
     __asm__ volatile(
         "movl $18, %%eax\n"
@@ -231,10 +204,6 @@ void rmcontent(const char* path) {
     );
 }
 
-//====================================================================
-// This function change content meta by path
-// EBX - path
-// ECX - new meta
 void chgcontent(const char* path, const char* new_name) {
     __asm__ volatile(
         "movl $25, %%eax\n"
@@ -274,12 +243,6 @@ int fclose(int ci) {
     return 1;
 }
 
-//====================================================================
-//  Function that executes ELF file
-//  EAX - result CODE
-//  EBX - path
-//  ECX - args (count)
-//  EDX - argv (array of args)
 int fexec(char* path, int argc, char** argv) {
     struct ELF_program* program = get_entry_point(path);
     int result = execute(program, argc, argv);
