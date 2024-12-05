@@ -1,4 +1,4 @@
-#include "../include/stdio.h"
+#include "../include/kstdio.h"
 
 
 static const char _HexChars[] = "0123456789ABCDEF";

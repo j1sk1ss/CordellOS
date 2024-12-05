@@ -2,7 +2,7 @@
 
 
 struct ELF_program* get_entry_point(char* path) {
-    struct ELF_program* program_pointer;
+    struct ELF_program* program_pointer = NULL;
     __asm__ volatile(
         "movl $4, %%eax\n"
         "movl %1, %%ebx\n"

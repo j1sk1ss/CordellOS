@@ -11,21 +11,7 @@ void VFS_initialize(ata_dev_t* dev, uint32_t fs_type) {
     vfs_list->device  = dev;
 
     if (fs_type == FAT_FS) {
-        vfs_list->read      = FAT_read_content2buffer;
-        vfs_list->read_stop = FAT_read_content2buffer_stop;
-
-        vfs_list->write      = FAT_write_content;
-        vfs_list->writeoff   = FAT_write_buffer2content;
-
-        vfs_list->dir        = FAT_directory_list;
-        vfs_list->getobj     = FAT_get_content;
-        vfs_list->objexist   = FAT_content_exists;
-        vfs_list->putobj     = FAT_put_content;
-        vfs_list->delobj     = FAT_delete_content;
-        vfs_list->objexec    = FAT_ELF_execute_content;
-        vfs_list->objmetachg = FAT_change_meta;
-
-        strncpy(vfs_list->name, "FATFS", 5);
+        _fat_vfs_setup(vfs_list);
     } 
 
     current_vfs = vfs_list;
@@ -37,26 +23,30 @@ void VFS_add_node(ata_dev_t* dev, uint32_t fs_type) {
     new_node->device  = dev;
 
     if (fs_type == FAT_FS) {
-        new_node->read      = FAT_read_content2buffer;
-        new_node->read_stop = FAT_read_content2buffer_stop;
-
-        new_node->write      = FAT_write_content;
-        new_node->writeoff   = FAT_write_buffer2content;
-        
-        new_node->dir        = FAT_directory_list;
-        new_node->getobj     = FAT_get_content;
-        new_node->objexist   = FAT_content_exists;
-        new_node->putobj     = FAT_put_content;
-        new_node->delobj     = FAT_delete_content;
-        new_node->objexec    = FAT_ELF_execute_content;
-        new_node->objmetachg = FAT_change_meta;
-
-        strncpy(new_node->name, "FATFS", 5);
+        _fat_vfs_setup(new_node);
     }
 
     vfs_node_t* cur = vfs_list;
     while (cur->next != NULL) cur = cur->next;
     cur->next = new_node;
+}
+
+vfs_node_t* _fat_vfs_setup(vfs_node_t* node) {
+    node->read       = FAT_read_content2buffer;
+    node->read_stop  = FAT_read_content2buffer_stop;
+    node->write      = FAT_write_buffer2content;
+    node->lsdir      = FAT_directory_list;
+    node->openobj    = FAT_open_content;
+    node->objstat    = FAT_stat_content;
+    node->closeobj   = FAT_close_content;
+    node->objexist   = FAT_content_exists;
+    node->putobj     = FAT_put_content;
+    node->delobj     = FAT_delete_content;
+    node->objexec    = FAT_ELF_execute_content;
+    node->objmetachg = FAT_change_meta;
+    strncpy(node->name, "FATFS", 5);
+
+    return node;
 }
 
 void VFS_switch_device(int index) {

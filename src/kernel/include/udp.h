@@ -1,7 +1,6 @@
 #ifndef UDP_H
 #define UDP_H
 
-
 #include <memory.h>
 #include <stdint.h>
 #include <netutils.h>

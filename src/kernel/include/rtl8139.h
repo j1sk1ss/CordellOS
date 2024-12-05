@@ -6,6 +6,7 @@
 #include "pci.h"
 #include "x86.h"
 #include "vmm.h"
+#include "kstdio.h"
 #include "ethernet.h"
 #include "allocator.h"
 

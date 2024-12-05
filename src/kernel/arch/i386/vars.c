@@ -11,7 +11,7 @@ void VARS_init() {
 
     if (current_vfs->objexist("boot\\vars.txt") == 1) {
         int current_position = 0;
-        Content* content = current_vfs->getobj("boot\\vars.txt");
+        int ci = current_vfs->openobj("boot\\vars.txt");
 
         while (current_position < content->file->file_meta.file_size) {
             uint8_t buffer[SECTOR_SIZE] = { '\0' };
@@ -24,7 +24,7 @@ void VARS_init() {
     else {
         Content* content = FAT_create_content("vars", 0, "txt");
         current_vfs->putobj("boot", content);
-        FSLIB_unload_content_system(content);
+        FAT_unload_content_system(content);
     }
 
 #endif

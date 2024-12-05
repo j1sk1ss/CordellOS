@@ -194,29 +194,68 @@ void syscall(struct Registers* regs) {
     //=======================
     //  FILE SYSTEMS SYSCALLS
     //=======================
-
-        else if (regs->eax == SYS_WRITE_FILE) {
-            char* wfile_path = (char*)regs->ebx;
-            Content* content = current_vfs->getobj(wfile_path);
-            char* data = (char*)regs->ecx;
-            current_vfs->write(content, data);
-            FSLIB_unload_content_system(content);
-        } 
         
         else if (regs->eax == SYS_OPENDIR) {
-            char* path = (char*)regs->ebx;
-            regs->eax  = (uint32_t)current_vfs->dir(
-                GET_CLUSTER_FROM_ENTRY(
-                    current_vfs->getobj(path)->directory->directory_meta, FAT_data.fat_type
-                ), (char)0, 0
-            );
+            int ci = (int)regs->ebx;
+            regs->eax = current_vfs->lsdir(ci, (char)0, 0);
+        }
+
+        else if (regs->eax == SYS_LSDIR) {
+            int root_ci = (int)regs->ebx;
+            int step = (int)regs->edx;
+            char* cname = (char*)regs->ecx;
+
+            int local_step = 0;
+            Content* root_node = _get_content_from_table(root_ci);
+            
+            if (root_node != NULL) {
+                Directory* root_dir = root_node->directory;
+                if (root_dir->subDirectory != NULL) {
+                    Directory* curr_dir = root_dir->subDirectory;
+                    while (curr_dir != NULL) {
+                        if (local_step == step) {
+                            strncpy(cname, curr_dir->name, 11);
+                            break;
+                        }
+
+                        curr_dir = curr_dir->next;
+                        local_step++;
+                    }
+                }
+                else if (root_dir->files != NULL) {
+                    File* curr_file = root_dir->files;
+                    while (curr_file != NULL) {
+                        if (local_step == step) {
+                            sprintf(cname, 11, "%s.%s", curr_file->name, curr_file->extension);
+                            break;
+                        }
+
+                        curr_file = curr_file->next;
+                        local_step++;
+                    }
+                }
+            }
+
+            if (local_step == step) regs->eax = step + 1;
+            else regs->eax = -1;
         } 
         
-        else if (regs->eax == SYS_GET_CONTENT) {
+        else if (regs->eax == SYS_OPEN_CONTENT) {
             char* content_path = (char*)regs->ebx;
-            regs->eax = (uint32_t)current_vfs->getobj(content_path);
+            regs->eax = current_vfs->openobj(content_path);
         } 
         
+        else if (regs->eax == SYS_CONTENT_STAT) {
+            CInfo_t info;
+            current_vfs->objstat(regs->ebx, &info);
+            memcpy((CInfo_t*)regs->ecx, &info, sizeof(CInfo_t));
+        }
+
+        else if (regs->eax == SYS_CLOSE_CONTENT) {
+            uint32_t ci = regs->ebx;
+            current_vfs->closeobj(ci);
+        }
+
         else if (regs->eax == SYS_CEXISTS) {
             int* result = (int*)regs->ecx;
             char* path  = (char *)regs->ebx;
@@ -230,18 +269,18 @@ void syscall(struct Registers* regs) {
             char* fname = strtok(mkfile_name, ".");
             char* fexec = strtok(NULL, "."); 
 
-            Content* mkfile_content = FAT_create_content(fname, 0, fexec);
+            Content* mkfile_content = FAT_create_object(fname, 0, fexec);
             current_vfs->putobj(mkfile_path, mkfile_content);
-            FSLIB_unload_content_system(mkfile_content);
+            FAT_unload_content_system(mkfile_content);
         } 
         
         else if (regs->eax == SYS_DIRCREATE) {
             char* mkdir_path = (char*)regs->ebx;
             char* mkdir_name = (char*)regs->ecx;
 
-            Content* mkdir_content = FAT_create_content(mkdir_name, 1, "\0");
+            Content* mkdir_content = FAT_create_object(mkdir_name, 1, "\0");
             current_vfs->putobj(mkdir_path, mkdir_content);
-            FSLIB_unload_content_system(mkdir_content);
+            FAT_unload_content_system(mkdir_content);
         } 
         
         else if (regs->eax == SYS_CDELETE) {
@@ -251,45 +290,46 @@ void syscall(struct Registers* regs) {
         
         else if (regs->eax == SYS_CHANGE_META) {
             char* meta_path = (char*)regs->ebx;
-            directory_entry_t* meta = (directory_entry_t*)regs->ecx;
+            char* meta = (char*)regs->ecx;
             current_vfs->objmetachg(meta_path, meta);
         } 
 
         else if (regs->eax == SYS_READ_FILE_OFF) {
-            Content* content = (Content*)regs->ebx;
+            int ci           = (int)regs->ebx;
             int offset       = (int)regs->ecx;
             uint8_t* buffer  = (uint8_t*)regs->edx;
             int offset_len   = (int)regs->esi;
             
-            current_vfs->read(content, buffer, offset, offset_len);
+            current_vfs->read(ci, buffer, offset, offset_len);
         }
 
         else if (regs->eax == SYS_READ_FILE_OFF_STP) {
-            Content* content = (Content*)regs->ebx;
+            int ci           = (int)regs->ebx;
             int offset       = (int)regs->ecx;
             uint8_t* buffer  = (uint8_t*)regs->edx;
             int offset_len   = (int)regs->esi;
             uint8_t* stop    = (uint8_t*)regs->edi;
             
-            current_vfs->read_stop(content, buffer, offset, offset_len, stop);
+            current_vfs->read_stop(ci, buffer, offset, offset_len, stop);
         }
 
         else if (regs->eax == SYS_WRITE_FILE_OFF) {
-            Content* content = (Content*)regs->ebx;
+            int ci           = (int)regs->ebx;
             int offset       = (int)regs->ecx;
             uint8_t* buffer  = (uint8_t*)regs->edx;
             int offset_len   = (int)regs->esi;
             
-            current_vfs->writeoff(content, buffer, offset, offset_len);
+            current_vfs->write(ci, buffer, offset, offset_len);
         }
 
         else if (regs->eax == SYS_READ_ELF) {
             char* path = (char*)regs->ebx;
-
+            int ci = current_vfs->openobj(path);
+            
 #ifdef USERMODE
-		    regs->eax = (uint32_t)ELF_read(path, USER);
+		    regs->eax = (uint32_t)ELF_read(ci, USER);
 #else
-		    regs->eax = (uint32_t)ELF_read(path, KERNEL);
+		    regs->eax = (uint32_t)ELF_read(ci, KERNEL);
 #endif
 
         }

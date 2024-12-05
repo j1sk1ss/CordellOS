@@ -1,9 +1,8 @@
 #ifndef PCI_H
 #define PCI_H
 
-
 #include "x86.h"
-#include "stdio.h"
+#include "kstdio.h"
 
 #include <stdint.h>
 #include <string.h>

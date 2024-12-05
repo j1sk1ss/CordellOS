@@ -211,15 +211,18 @@ void shell_start_screen() {
                         return;
                     }
 
-                    Content* content = get_content(dir_path);
-                    if (content->file != NULL) {
-                        FSLIB_unload_content_system(content);
+                    int content = fopen(dir_path);
+                    CInfo_t content_info;
+                    fstat(content, &content_info);
+
+                    if (content_info.type == STAT_FILE) {
+                        fclose(content);
                         free(dir_path);
                         printf("\nQUESTA NON E` UNA DIRECTORY");
                         return;
                     }
 
-                    FSLIB_unload_content_system(content);
+                    fclose(content);
                     free(current_path);
                     current_path = dir_path;
                 }
@@ -241,23 +244,18 @@ void shell_start_screen() {
             }
 
             else if (strcmp(command_line[0], COMMAND_LIST_DIR) == 0) {
-                Directory* directory   = opendir(current_path);
-                Directory* current_dir = directory->subDirectory;
-                File* current_file     = directory->files;
-
-                printf("\n");
-                while (current_dir != NULL) {
-                    printf("\t%s", current_dir->name);
-                    current_dir = current_dir->next;
-                }
-
-                printf("\n");
-                while (current_file != NULL) {
-                    printf("\t%s.%s", current_file->name, current_file->extension);
-                    current_file = current_file->next;
-                }
+                int step = 0;
+                int dir_ci = fopen(current_path);
+                int root_ci = opendir(dir_ci);
                 
-                FSLIB_unload_directories_system(directory);
+                while (step != -1) {
+                    char name[11] = { 0 };
+                    step = lsdir(root_ci, name, step);
+                    printf("%s\t", name);
+                }
+
+                fclose(root_ci);
+                fclose(dir_ci);
             }
 
             else if (strcmp(command_line[0], COMMAND_FILE_VIEW) == 0) {
@@ -270,10 +268,13 @@ void shell_start_screen() {
                 
                 printf("\n");
 
-                Content* content = get_content(file_path);
+                int content = fopen(file_path);
                 int data_size = 0;
-                while (data_size < content->file->file_meta.file_size) {
-                    int copy_size = min(content->file->file_meta.file_size - data_size, 128);
+                CInfo_t content_info;
+                fstat(content, &content_info);
+
+                while (data_size < content_info.size) {
+                    int copy_size = min(content_info.size - data_size, 128);
                     char* data = (char*)clralloc(copy_size);
 
                     fread(content, data_size, (uint8_t*)data, copy_size);
@@ -283,7 +284,7 @@ void shell_start_screen() {
                     data_size += copy_size;
                 }
                 
-                FSLIB_unload_content_system(content);
+                fclose(content);
                 free(file_path);
             }
 
@@ -329,29 +330,30 @@ void shell_start_screen() {
                 }
 
                 printf("\n");
-                Content* content = get_content(info_file);
-                if (content->directory != NULL) {
-                    Directory* directory = content->directory;
-                    Date* creation_date  = FSLIB_get_date(directory->directory_meta.creation_date, 1);
-                    Date* accesed_date   = FSLIB_get_date(directory->directory_meta.last_modification_date, 1);
+                int content = fopen(info_file);
+                CInfo_t content_info;
+                fstat(content, &content_info);
+
+                if (content_info.type == STAT_DIR) {
+                    Date* creation_date  = FSLIB_get_date(content_info.creation_date, 1);
+                    Date* accesed_date   = FSLIB_get_date(content_info.last_modification_date, 1);
 
                     printf("DIRECTORY\n");
-                    printf("NAME:          [%s]\n", directory->name);
-                    printf("SIZE:          [%iB]\n", directory->directory_meta.file_size);
+                    printf("NAME:          [%s]\n", content_info.full_name);
+                    printf("SIZE:          [NaN]\n");
                     printf("CREATION DATE: [%i/%i/%i]\n", creation_date->day, creation_date->mounth, creation_date->year);
                     printf("ACCESED DATE:  [%i/%i/%i]\n", accesed_date->day, accesed_date->mounth, accesed_date->year);
 
                     free(creation_date);
                     free(accesed_date);
                 }
-                else if (content->file != NULL) {
-                    File* file = content->file;
-                    Date* creation_date = FSLIB_get_date(file->file_meta.creation_date, 1);
-                    Date* accesed_date  = FSLIB_get_date(file->file_meta.last_modification_date, 1);
+                else if (content_info.type == STAT_FILE) {
+                    Date* creation_date = FSLIB_get_date(content_info.creation_date, 1);
+                    Date* accesed_date  = FSLIB_get_date(content_info.last_modification_date, 1);
 
                     printf("FILE\n");
-                    printf("NAME:          [%s.%s]\n", file->name, file->extension);
-                    printf("SIZE:          [%iB]\n", file->file_meta.file_size);
+                    printf("NAME:          [%s.%s]\n", content_info.file_name, content_info.file_extension);
+                    printf("SIZE:          [%iB]\n", content_info.size);
                     printf("CREATION DATE: [%i/%i/%i]\n", creation_date->day, creation_date->mounth, creation_date->year);
                     printf("ACCESED DATE:  [%i/%i/%i]\n", accesed_date->day, accesed_date->mounth, accesed_date->year);
 
@@ -359,7 +361,7 @@ void shell_start_screen() {
                     free(accesed_date);
                 }
 
-                FSLIB_unload_content_system(content);
+                fclose(content);
                 free(info_file);
             }
 
@@ -437,7 +439,8 @@ int ulogin(char* login, char* password) {
     int pos = 0;
     
     char content_text[512] = { 0 };
-    fread(get_content("boot\\users.txt"), 0, (uint8_t*)content_text, 512);
+    int users = fopen("boot\\users.txt");
+    fread(users, 0, (uint8_t*)content_text, 512);
     char* token = strtok(content_text, "\n");
     while (token) {
         lines[pos++] = token;

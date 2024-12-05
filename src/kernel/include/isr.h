@@ -1,7 +1,6 @@
 #ifndef ISR_H
 #define ISR_H
 
-
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -10,7 +9,7 @@
 #include "idt.h"
 #include "gdt.h"
 #include "x86.h"
-#include "stdio.h"
+#include "kstdio.h"
 #include "elf.h"
 
 #include "../util/arrays.h"

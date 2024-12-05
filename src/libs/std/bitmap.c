@@ -3,11 +3,10 @@
 
 bitmap_t* BMP_create(char* file_path, int screen_x, int screen_y) {
     bitmap_t* ret = (bitmap_t*)clralloc(sizeof(bitmap_t));
-    Content* content = get_content(file_path);
-    if (content->file == NULL) {
+    int content = fopen(file_path);
+    if (content == -1) {
         printf("File not found\n");
         BMP_unload(ret);
-        FSLIB_unload_content_system(content);
         return NULL;
     }
 
@@ -15,7 +14,7 @@ bitmap_t* BMP_create(char* file_path, int screen_x, int screen_y) {
     fread(content, 0, header, sizeof(bmp_fileheader_t));
 
     bmp_fileheader_t* h = (bmp_fileheader_t*)header;
-    uint32_t offset     = h->bfOffBits;
+    uint32_t offset = h->bfOffBits;
 
     free(header);
 
@@ -88,6 +87,6 @@ void BMP_display(bitmap_t* bmp) {
 }
 
 void BMP_unload(bitmap_t* bitmap) {
-    if (bitmap->file != NULL) FSLIB_unload_content_system(bitmap->file);
+    if (bitmap->file != NULL) fclose(bitmap->file);
     if (bitmap != NULL) free(bitmap);
 }

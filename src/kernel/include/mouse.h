@@ -1,11 +1,10 @@
 #ifndef MOUSE_H_
 #define MOUSE_H_
 
-
 #include "x86.h"
 #include "irq.h"
-#include "stdio.h"
 #include "gfx.h"
+#include "kstdio.h"
 
 
 #define MOUSE_IRQ   12

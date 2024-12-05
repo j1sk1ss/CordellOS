@@ -39,7 +39,7 @@ typedef struct bitmap {
     unsigned int width;
     unsigned int height;
 
-    struct FATContent* file;
+    int file;
     uint32_t header_offset;
 
     unsigned int total_size;

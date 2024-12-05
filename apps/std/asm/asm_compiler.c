@@ -14,7 +14,7 @@ static blctable** block_tab = NULL;
 int main(int args, char* argv[]) {
 	if (args <= 0) return -1;
 
-	char* file_data = NULL; // TODO
+	char* file_data = NULL; // TODO read
 	char* file_pointer = file_data;
 
 	intermediate_index = 0;
@@ -790,12 +790,12 @@ void _asm_executor(int *memory_array, int memory_index, int start, int end) {
 			break;
 
 			case WFILE_INSTRUCTION:
-				if (cexists(intermediate_table[i]->string_params[0]) == 1) fwrite(intermediate_table[i]->string_params[0], intermediate_table[i]->string_params[1]);
+				// if (cexists(intermediate_table[i]->string_params[0]) == 1) fwrite(intermediate_table[i]->string_params[0], intermediate_table[i]->string_params[1]);
 			break;
 
 			case RFILE_INSTRUCTION:
 				if (cexists(intermediate_table[i]->string_params[0]) == 1) {
-					char* fat_data = NULL; // TODO
+					char* fat_data = NULL; // TODO read
 					int data = atoi(fat_data);
 					free(fat_data);
 

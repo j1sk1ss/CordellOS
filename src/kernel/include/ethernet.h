@@ -1,14 +1,13 @@
 #ifndef ETHERNET_H_
 #define ETHERNET_H_
 
-
 #include <stdint.h>
 #include <memory.h>
 #include <netutils.h>
 
-#include "rtl8139.h"
 #include "ip.h"
 #include "arp.h"
+#include "rtl8139.h"
 #include "allocator.h"
 
 

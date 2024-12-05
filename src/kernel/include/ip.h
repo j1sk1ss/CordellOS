@@ -1,14 +1,13 @@
 #ifndef IP_H
 #define IP_H
 
-
 #include <memory.h>
 #include <netutils.h>
 
-#include "stdio.h"
-#include "ethernet.h"
-#include "dhcp.h"
 #include "udp.h"
+#include "dhcp.h"
+#include "kstdio.h"
+#include "ethernet.h"
 #include "allocator.h"
 
 
