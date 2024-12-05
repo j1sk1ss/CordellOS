@@ -65,7 +65,7 @@ void main(int argc, char* argv[]) {
 
 void shell_start_screen() {
     printf("\n");
-    printf("Cordell Shell [ver. 0.6c | 23.11.2024]\n");
+    printf("Cordell Shell [ver. 0.6d | 5.12.2024]\n");
     printf("Stai entrando nella shell del kernel leggero. Usa [aiuto] per ottenere aiuto.\n\n");
 }
 
@@ -205,24 +205,24 @@ void shell_start_screen() {
                         dir_path = path;
                     } else dir_path = FSLIB_change_path(current_path, path);
 
-                    if (cexists(current_path) == 0) {
+                    if (cexists(current_path)) {
                         free(dir_path);
                         printf("\nLA DIRECTORY NON ESISTE");
                         return;
                     }
 
-                    int content = fopen(dir_path);
+                    int content = copen(dir_path);
                     CInfo_t content_info;
-                    fstat(content, &content_info);
+                    cstat(content, &content_info);
 
                     if (content_info.type == STAT_FILE) {
-                        fclose(content);
+                        cclose(content);
                         free(dir_path);
                         printf("\nQUESTA NON E` UNA DIRECTORY");
                         return;
                     }
 
-                    fclose(content);
+                    cclose(content);
                     free(current_path);
                     current_path = dir_path;
                 }
@@ -245,7 +245,7 @@ void shell_start_screen() {
 
             else if (strcmp(command_line[0], COMMAND_LIST_DIR) == 0) {
                 int step = 0;
-                int dir_ci = fopen(current_path);
+                int dir_ci = copen(current_path);
                 int root_ci = opendir(dir_ci);
                 
                 while (step != -1) {
@@ -254,8 +254,8 @@ void shell_start_screen() {
                     printf("%s\t", name);
                 }
 
-                fclose(root_ci);
-                fclose(dir_ci);
+                cclose(root_ci);
+                cclose(dir_ci);
             }
 
             else if (strcmp(command_line[0], COMMAND_FILE_VIEW) == 0) {
@@ -268,10 +268,10 @@ void shell_start_screen() {
                 
                 printf("\n");
 
-                int content = fopen(file_path);
+                int content = copen(file_path);
                 int data_size = 0;
                 CInfo_t content_info;
-                fstat(content, &content_info);
+                cstat(content, &content_info);
 
                 while (data_size < content_info.size) {
                     int copy_size = min(content_info.size - data_size, 128);
@@ -284,7 +284,7 @@ void shell_start_screen() {
                     data_size += copy_size;
                 }
                 
-                fclose(content);
+                cclose(content);
                 free(file_path);
             }
 
@@ -330,9 +330,9 @@ void shell_start_screen() {
                 }
 
                 printf("\n");
-                int content = fopen(info_file);
+                int content = copen(info_file);
                 CInfo_t content_info;
-                fstat(content, &content_info);
+                cstat(content, &content_info);
 
                 if (content_info.type == STAT_DIR) {
                     Date* creation_date  = FSLIB_get_date(content_info.creation_date, 1);
@@ -361,7 +361,7 @@ void shell_start_screen() {
                     free(accesed_date);
                 }
 
-                fclose(content);
+                cclose(content);
                 free(info_file);
             }
 
@@ -439,7 +439,7 @@ int ulogin(char* login, char* password) {
     int pos = 0;
     
     char content_text[512] = { 0 };
-    int users = fopen("boot\\users.txt");
+    int users = copen("boot\\users.txt");
     fread(users, 0, (uint8_t*)content_text, 512);
     char* token = strtok(content_text, "\n");
     while (token) {

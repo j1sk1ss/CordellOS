@@ -3,7 +3,7 @@
 
 bitmap_t* BMP_create(char* file_path, int screen_x, int screen_y) {
     bitmap_t* ret = (bitmap_t*)clralloc(sizeof(bitmap_t));
-    int content = fopen(file_path);
+    int content = copen(file_path);
     if (content == -1) {
         printf("File not found\n");
         BMP_unload(ret);
@@ -87,6 +87,6 @@ void BMP_display(bitmap_t* bmp) {
 }
 
 void BMP_unload(bitmap_t* bitmap) {
-    if (bitmap->file != NULL) fclose(bitmap->file);
+    if (bitmap->file != -1) cclose(bitmap->file);
     if (bitmap != NULL) free(bitmap);
 }

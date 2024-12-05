@@ -26,7 +26,7 @@
 //     }
     
 //     current_line = 0;
-//     edit_content = fopen(edit_path);
+//     edit_content = copen(edit_path);
 //     edit_file    = edit_content->file;
 
 //     display_text();

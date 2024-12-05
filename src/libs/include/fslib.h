@@ -51,8 +51,8 @@ void mkdir(const char* path, const char* name);
 
 int opendir(int ci);
 int lsdir(int ci, char* name, int step);
-int fstat(int ci, CInfo_t* info);
-int fopen(const char* path);
-int fclose(int ci);
+int cstat(int ci, CInfo_t* info);
+int copen(const char* path);
+int cclose(int ci);
 
 #endif

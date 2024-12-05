@@ -121,9 +121,9 @@ void scroll(int lines) {
 static uint8_t* _cur_font = NULL;
 
 void load_font(char* path) {
-    int font_file = fopen(path);
+    int font_file = copen(path);
     CInfo_t content_info;
-    fstat(font_file, &content_info);
+    cstat(font_file, &content_info);
 
     _cur_font = (uint8_t*)malloc(content_info.size);
     fread(font_file, 0, _cur_font, content_info.size);
@@ -179,11 +179,13 @@ void display_gui_object(GUIobject_t* object) {
     if (object == NULL) return;
     for (int y = object->height - 1; y >= 0; y--)
         for (int x = 0; x < object->width; x++)
-            pput_pixel(x + object->x, y + object->y, object->background_color);
+            vput_pixel(x + object->x, y + object->y, object->background_color);
 
     for (int i = 0; i < object->children_count; i++) display_gui_object(object->childrens[i]);
     for (int i = 0; i < object->bitmap_count; i++) BMP_display(object->bitmaps[i]);
     for (int i = 0; i < object->text_count; i++) put_text(object->texts[i]);
+
+    swipe_buffers();
 }
 
 GUIobject_t* create_gui_object(int x, int y, int height, int width, uint32_t background) {

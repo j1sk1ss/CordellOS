@@ -257,9 +257,8 @@ void syscall(struct Registers* regs) {
         }
 
         else if (regs->eax == SYS_CEXISTS) {
-            int* result = (int*)regs->ecx;
-            char* path  = (char *)regs->ebx;
-            result[0]   = current_vfs->objexist(path);
+            char* path = (char*)regs->ebx;
+            regs->eax = current_vfs->objexist(path);
         } 
         
         else if (regs->eax == SYS_FCREATE) {

@@ -48,7 +48,7 @@ char* FSLIB_change_path(const char* currentPath, const char* content) {
     }
     
     else {
-        int newPathLen = strlen(currentPath) + strlen(content) + 2;
+        size_t newPathLen = strlen(currentPath) + strlen(content) + 2;
         char* newPath  = malloc(newPathLen);
         if (newPath == NULL) return NULL;
 
@@ -138,7 +138,7 @@ int lsdir(int ci, char* name, int step) {
     return lstep;
 }
 
-int fopen(const char* path) {
+int copen(const char* path) {
     int content = -1;
     __asm__ volatile(
         "movl $30, %%eax\n"
@@ -158,11 +158,11 @@ int cexists(const char* path) {
     int result = 0;
     __asm__ volatile(
         "movl $15, %%eax\n"
-        "movl %0, %%ebx\n"
-        "movl %1, %%ecx\n"
+        "movl %1, %%ebx\n"
         "int $0x80\n"
-        : 
-        : "r"((uint32_t)path), "r"(&result)
+        "movl %%eax, %0\n"
+        : "=r"(result)
+        : "r"((uint32_t)path)
         : "eax", "ebx"
     );
 
@@ -216,7 +216,7 @@ void chgcontent(const char* path, const char* new_name) {
     );
 }
 
-int fstat(int ci, CInfo_t* info) {
+int cstat(int ci, CInfo_t* info) {
     __asm__ volatile(
         "movl $65, %%eax\n"
         "movl %0, %%ebx\n"
@@ -230,7 +230,7 @@ int fstat(int ci, CInfo_t* info) {
     return 1;
 }
 
-int fclose(int ci) {
+int cclose(int ci) {
     __asm__ volatile(
         "movl $66, %%eax\n"
         "movl %0, %%ebx\n"
