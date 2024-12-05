@@ -803,12 +803,8 @@
 				memset(fileNamePart, '\0', 256);
 				memcpy(fileNamePart, filePath + start, iterator - start);
 
-				int retVal = _directory_search(fileNamePart, active_cluster, &file_info, NULL);
-				if (retVal == -2) return 0;
-				else if (retVal == -1) {
-					kprintf("Function FAT_content_exists: An error occurred in _directory_search. Aborting...\n");
-					return -1;
-				}
+				int result = _directory_search(fileNamePart, active_cluster, &file_info, NULL);
+				if (result != 0) return 0;
 
 				start = iterator + 1;
 				active_cluster = GET_CLUSTER_FROM_ENTRY(file_info, FAT_data.fat_type);

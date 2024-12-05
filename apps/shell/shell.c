@@ -203,9 +203,10 @@ void shell_start_screen() {
                     if (path[0] == '\\') {
                         memmove(path, path + 1, strlen(path));
                         dir_path = path;
-                    } else dir_path = FSLIB_change_path(current_path, path);
+                    } 
+                    else dir_path = FSLIB_change_path(current_path, path);
 
-                    if (cexists(current_path)) {
+                    if (!cexists(dir_path)) {
                         free(dir_path);
                         printf("\nLA DIRECTORY NON ESISTE");
                         return;
