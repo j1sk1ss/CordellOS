@@ -60,7 +60,7 @@ ELF32_program* ELF_read(int ci, int type) {
     //==========================
 
         Elf32_Ehdr* header = ALC_malloc(sizeof(Elf32_Ehdr), type);
-        current_vfs->read(ci, header, 0, sizeof(Elf32_Ehdr));
+        current_vfs->read(ci, (uint8_t*)header, 0, sizeof(Elf32_Ehdr));
         if (header->e_ident[0] != '\x7f' || header->e_ident[1] != 'E') {
             kprintf("\n[%s %i] Error: Not ELF.\n", __FILE__, __LINE__);
             ALC_free(header, type);
@@ -80,7 +80,7 @@ ELF32_program* ELF_read(int ci, int type) {
     //==========================
 
         Elf32_Phdr* program_headers = ALC_malloc(sizeof(Elf32_Phdr) * header->e_phnum, type);
-        current_vfs->read(ci, program_headers, header->e_phoff, sizeof(Elf32_Phdr) * header->e_phnum);
+        current_vfs->read(ci, (uint8_t*)program_headers, header->e_phoff, sizeof(Elf32_Phdr) * header->e_phnum);
 
         program->entry_point = (void*)header->e_entry;
         uint32_t header_num  = header->e_phnum;
