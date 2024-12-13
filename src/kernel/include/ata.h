@@ -156,7 +156,7 @@ int ATA_write_sector(uint32_t lba, const uint8_t* buffer);
 int ATA_writeoff_sector(uint32_t lba, const uint8_t* buffer, uint32_t offset, uint32_t size);
 int ATA_write_sectors(uint32_t lba, const uint8_t* buffer, uint32_t sector_count);
 int ATA_writeoff_sectors(uint32_t lba, const uint8_t* buffer, uint32_t sector_count, uint32_t offset, uint32_t size);
-int ATA_cpy_sectors2sectors(uint32_t source_lba, uint32_t sector_count, uint32_t distenation_lba);
+int ATA_copy_sectors2sectors(uint32_t source_lba, uint32_t sector_count, uint32_t distenation_lba);
 
 void ATA_append_sector(uint32_t lba, uint8_t* data, uint32_t len, uint32_t offset);
 int ATA_clear_sector(uint32_t LBA);

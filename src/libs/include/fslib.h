@@ -9,6 +9,7 @@
 
 #define STAT_FILE	0x00
 #define STAT_DIR	0x01
+#define NOT_PRESENT	0x02
 
 
 typedef struct FATDate {
