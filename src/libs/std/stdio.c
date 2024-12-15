@@ -5,25 +5,6 @@ static int _curr_x = 0;
 static int _curr_y = 0;
 
 
-void cursor_set32(uint32_t x, uint32_t y) {
-    _curr_x = x;
-    _curr_y = y;
-}
-
-uint32_t cursor_get_x32() {
-    return _curr_x;
-}
-
-uint32_t cursor_get_y32() {
-    return _curr_y;
-}
-
-void clrscr() {
-    set_vcolor(BLACK, 0, 0, get_resolution_x(), get_resolution_y());
-    cursor_set32(0, 0);
-    swipe_buffers();
-}
-
 void __scrollback(int lines) {
     int max_h = get_resolution_y();
     scroll(lines);
@@ -40,47 +21,6 @@ void __newline() {
         __scrollback(char_h);
         _curr_y = max_h - char_h;
     }
-}
-
-void putc(char c, uint32_t fcolor, uint32_t bcolor) {
-    int char_w = _psf_get_width(get_font());
-    int max_w = get_resolution_x();
-
-    if (_curr_x + char_w >= max_w) __newline();
-    switch (c) {
-        case '\n':
-            __newline();
-        break;
-
-        case '\t':
-            for (int i = 0; i < 4 - ((max_w) / char_w % 4); i++)
-                putc(' ', fcolor, bcolor);
-            break;
-
-        default:
-            display_char(_curr_x, _curr_y, c, fcolor, bcolor);
-            _curr_x += char_w;
-        break;
-    }
-}
-
-void puts(const char* str, uint32_t fcolor, uint32_t bcolor) {
-    while (*str) {
-        putc(*str, fcolor, bcolor);
-        str++;
-    }
-}
-
-void set_pcolor(uint32_t color, int start_x, int start_y, int end_x, int end_y) {
-    for (int i = start_x; i < end_x; i++)
-        for (int j = start_y; j < end_y; j++)
-            pput_pixel(i, j, color);
-}
-
-void set_vcolor(uint32_t color, int start_x, int start_y, int end_x, int end_y) {
-    for (int i = start_x; i < end_x; i++)
-        for (int j = start_y; j < end_y; j++)
-            vput_pixel(i, j, color);
 }
 
 void _fprintf_unsigned(unsigned long long number, int radix, uint32_t fcolor, uint32_t bcolor) {
@@ -155,7 +95,6 @@ void _vsprintf(
                 break;
             }
         }
-
         else if (state == PRINTF_STATE_LENGTH) {
             switch (*fmt) {
                 case 'h':   
@@ -171,7 +110,6 @@ void _vsprintf(
                 default: goto PRINTF_STATE_SPEC_;
             }
         }
-
         else if (state == PRINTF_STATE_LENGTH_SHORT) {
             if (*fmt == 'h') {
                 length  = PRINTF_LENGTH_SHORT_SHORT;
@@ -179,7 +117,6 @@ void _vsprintf(
             }
             else goto PRINTF_STATE_SPEC_;           
         }
-
         else if (state == PRINTF_STATE_LENGTH_LONG) {
             if (*fmt == 'l') {
                 length  = PRINTF_LENGTH_LONG_LONG;
@@ -187,7 +124,6 @@ void _vsprintf(
             }
             else goto PRINTF_STATE_SPEC_;            
         }
-
         else if (state == PRINTF_STATE_SPEC) {
             PRINTF_STATE_SPEC_:
             if (*fmt == 'c') {
@@ -205,30 +141,25 @@ void _vsprintf(
                     }
                 }
             }
-
             else if (*fmt == '%') {
                 if (type == STDOUT) putc('%', fcolor, bcolor);
                 else buffer[pos] = '%';
             }
-            
             else if (*fmt == 'd' || *fmt == 'i') {
                 radix   = 10; 
                 sign    = true; 
                 number  = true;
             }
-
             else if (*fmt == 'u') {
                 radix   = 10; 
                 sign    = false; 
                 number  = true;
             }
-
             else if (*fmt == 'X' || *fmt == 'x' || *fmt == 'p') {
                 radix   = 16; 
                 sign    = false; 
                 number  = true;
             }
-
             else if (*fmt == 'o') {
                 radix   = 8; 
                 sign    = false; 
@@ -284,6 +215,66 @@ void _vsprintf(
 
         fmt++;
     }
+}
+
+void cursor_set32(uint32_t x, uint32_t y) {
+    _curr_x = x;
+    _curr_y = y;
+}
+
+uint32_t cursor_get_x32() {
+    return _curr_x;
+}
+
+uint32_t cursor_get_y32() {
+    return _curr_y;
+}
+
+void clrscr() {
+    set_vcolor(BLACK, 0, 0, get_resolution_x(), get_resolution_y());
+    cursor_set32(0, 0);
+    swipe_buffers();
+}
+
+void putc(char c, uint32_t fcolor, uint32_t bcolor) {
+    int char_w = _psf_get_width(get_font());
+    int max_w = get_resolution_x();
+
+    if (_curr_x + char_w >= max_w) __newline();
+    switch (c) {
+        case '\n':
+            __newline();
+        break;
+
+        case '\t':
+            for (int i = 0; i < 4 - ((max_w) / char_w % 4); i++)
+                putc(' ', fcolor, bcolor);
+            break;
+
+        default:
+            display_char(_curr_x, _curr_y, c, fcolor, bcolor);
+            _curr_x += char_w;
+        break;
+    }
+}
+
+void puts(const char* str, uint32_t fcolor, uint32_t bcolor) {
+    while (*str) {
+        putc(*str, fcolor, bcolor);
+        str++;
+    }
+}
+
+void set_pcolor(uint32_t color, int start_x, int start_y, int end_x, int end_y) {
+    for (int i = start_x; i < end_x; i++)
+        for (int j = start_y; j < end_y; j++)
+            pput_pixel(i, j, color);
+}
+
+void set_vcolor(uint32_t color, int start_x, int start_y, int end_x, int end_y) {
+    for (int i = start_x; i < end_x; i++)
+        for (int j = start_y; j < end_y; j++)
+            vput_pixel(i, j, color);
 }
 
 void printf(const char* fmt, ...) {

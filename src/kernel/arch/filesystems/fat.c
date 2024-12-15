@@ -106,7 +106,7 @@
 		return 0;
 	}
 
-	int _set_cluster_bad(uint32_t cluster, int fatType) {
+	inline int _set_cluster_bad(uint32_t cluster, int fatType) {
 		if (FAT_data.fat_type == 32) return __write_fat(cluster, BAD_CLUSTER_32);
 		if (FAT_data.fat_type == 16) return __write_fat(cluster, BAD_CLUSTER_16);
 		if (FAT_data.fat_type == 12) return __write_fat(cluster, BAD_CLUSTER_12);
@@ -265,9 +265,9 @@
 	uint8_t* _cluster_read_stop(uint32_t cluster, uint8_t* stop) {
 		assert(cluster >= 2 && cluster < FAT_data.total_clusters);
 		uint32_t start_sect = (cluster - 2) * (uint16_t)FAT_data.sectors_per_cluster + FAT_data.first_data_sector;
-		uint8_t* response = ATA_read_sectors_stop(start_sect, FAT_data.sectors_per_cluster, stop);
-		assert(response != NULL);
-		return response;
+		uint8_t* cluster_data = ATA_read_sectors_stop(start_sect, FAT_data.sectors_per_cluster, stop);
+		assert(cluster_data != NULL);
+		return cluster_data;
 	}
 
 	// Read cluster with seek

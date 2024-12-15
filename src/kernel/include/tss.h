@@ -38,9 +38,6 @@ typedef struct tss_entry {
 } tss_entry_t;
 
 
-extern tss_entry_t kernel_tss;
-
-
 void TSS_init(uint32_t idx, uint32_t kss, uint32_t kesp);
 void TSS_set_stack(uint32_t kss, uint32_t kesp);
 void __attribute__((cdecl)) TSS_flush();

@@ -1,7 +1,7 @@
 #include "../../include/tss.h"
 
 
-tss_entry_t kernel_tss;
+static tss_entry_t kernel_tss;
 
 
 void TSS_init(uint32_t idx, uint32_t kss, uint32_t kesp) {

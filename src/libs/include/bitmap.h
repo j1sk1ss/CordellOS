@@ -49,13 +49,12 @@ typedef struct bitmap {
 } bitmap_t;
 
 typedef struct palette {
-
     unsigned char r;
     unsigned char g;
     unsigned char b;
     unsigned char a;
-
 } palette_t;
+
 
 bitmap_t* BMP_create(char* filename, int screen_x, int screen_y);
 

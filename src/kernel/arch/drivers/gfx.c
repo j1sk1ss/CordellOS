@@ -6,10 +6,10 @@ vbe_mode_info_t GFX_data;
 
 void GFX_init(struct multiboot_info* mb_info) {
     GFX_data.physical_base_pointer = mb_info->framebuffer_addr;
-    GFX_data.x_resolution          = mb_info->framebuffer_width;
-    GFX_data.y_resolution          = mb_info->framebuffer_height;
-    GFX_data.bits_per_pixel        = mb_info->framebuffer_bpp;
-    GFX_data.pitch                 = mb_info->framebuffer_pitch;
+    GFX_data.x_resolution   = mb_info->framebuffer_width;
+    GFX_data.y_resolution   = mb_info->framebuffer_height;
+    GFX_data.bits_per_pixel = mb_info->framebuffer_bpp;
+    GFX_data.pitch          = mb_info->framebuffer_pitch;
 
     GFX_data.linear_red_mask_size      = mb_info->framebuffer_red_mask_size;
     GFX_data.linear_red_field_position = mb_info->framebuffer_red_field_position;

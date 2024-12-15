@@ -1,7 +1,6 @@
 #ifndef RTL8139_H
 #define RTL8139_H
 
-
 #include "irq.h"
 #include "pci.h"
 #include "x86.h"
@@ -101,8 +100,7 @@ void rtl8139_send_packet(void* data, uint32_t len);
 void rtl8139_handler(struct Registers* reg);
 
 void i386_init_rtl8139();
-void receive_packet();
+void __rtl_receive_packetpacket();
 void get_mac_addr(uint8_t* src_mac_addr);
-
 
 #endif

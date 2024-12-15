@@ -29,12 +29,6 @@ void switch_disk(int index);
 
 void get_fs_info(uint32_t* buffer);
 
-void envar_add(char* name, char* value);
-int envar_exists(char* name);
-void envar_set(char* name, char* value);
-char* envar_get(char* name);
-void envar_delete(char* name);
-
 void switch2user();
 
 #endif

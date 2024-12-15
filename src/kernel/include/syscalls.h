@@ -9,7 +9,6 @@
 #include "isr.h"
 #include "vesa.h"
 #include "time.h"
-#include "vars.h"
 #include "kstdio.h"
 #include "tasking.h"
 #include "rtl8139.h"

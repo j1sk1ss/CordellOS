@@ -1,9 +1,9 @@
 #include "shell.h"
 
 
-char* current_path = "HOME";
-int current_command = 0;
-int exit = 1;
+static vars_entry_t vars[50];
+static char* current_path = "HOME";
+static int exit = 1;
 
 
 void main(int argc, char* argv[]) {
@@ -18,8 +18,9 @@ void main(int argc, char* argv[]) {
     //====================
     //  SET INIT ENVARS
 
-        if (envar_exists("clc") == -1) envar_add("clc", "\\HOME\\APPS\\STD\\CALC\\CALC.ELF");
-        if (envar_exists("asm") == -1) envar_add("asm", "\\HOME\\APPS\\STD\\ASM\\ASM.ELF");
+        envar_init_stack(vars, 50);
+        if (envar_exist("clc", vars, 50) == -1) envar_add("clc", "\\HOME\\APPS\\STD\\CALC\\CALC.ELF", vars, 50);
+        if (envar_exist("asm", vars, 50) == -1) envar_add("asm", "\\HOME\\APPS\\STD\\ASM\\ASM.ELF", vars, 50);
 
     //  SET INIT ENVARS
      //====================
@@ -65,7 +66,7 @@ void main(int argc, char* argv[]) {
 
 void shell_start_screen() {
     printf("\n");
-    printf("Cordell Shell [ver. 0.6d | 5.12.2024]\n");
+    printf("Cordell Shell [ver. 0.6e | 14.12.2024]\n");
     printf("Stai entrando nella shell del kernel leggero. Usa [aiuto] per ottenere aiuto.\n\n");
 }
 
@@ -89,12 +90,17 @@ void shell_start_screen() {
                 char* token = (char*)clralloc(strlen(splitted) + 1);
                 strncpy(token, splitted, strlen(splitted));
 
-                if (token[0] == '$') {
-                    memmove(splitted, splitted + 1, strlen(splitted));
-                    if (envar_exists(splitted) != -1) command_line[tokenCount++] = envar_get(splitted);
-                    else command_line[tokenCount++] = token;
+                if (token[0] != '$') command_line[tokenCount++] = splitted;
+                else {
+                    splitted++;
+                    char envar_buffer[128] = { 0 };
+                    if (envar_exist(splitted, vars, 50) != -1) {
+                        command_line[tokenCount++] = envar_get(splitted, envar_buffer, vars, 50);
+                    }
+                    else {
+                        command_line[tokenCount++] = splitted;
+                    }
                 }
-                else command_line[tokenCount++] = splitted;
 
                 splitted = strtok(NULL, " ");
                 free(token);
@@ -135,7 +141,7 @@ void shell_start_screen() {
             else if (strcmp(command_line[0], COMMAND_CLEAR)     == 0) clrscr();
                 
             else if (strcmp(command_line[0], COMMAND_DISK_DATA) == 0) {
-                uint32_t fs_data[8];
+                uint32_t fs_data[8] = { 0 };
                 get_fs_info(fs_data);
 
                 printf("\nUTILITY KERNEL DISCO-DATI VER 0.2c\n");
@@ -154,28 +160,19 @@ void shell_start_screen() {
             }
 
             else if (strcmp(command_line[0], COMMAND_TIME) == 0) {
-                short time[6];
+                short time[6] = { 0 };
                 get_datetime(time);
                 printf("\nGIORNO: %i/%i/%i\tTEMPO: %i:%i:%i", time[3], time[4], time[5], 
                                                                 time[2], time[1], time[0]);
             }
 
             else if (strcmp(command_line[0], COMMAND_SET_ENVAR) == 0) {
-                char* name  = (char*)clralloc(strlen(command_line[1]) + 1);
-                char* value = (char*)clralloc(strlen(command_line[2]) + 1);
-
-                strncpy(name, command_line[1], strlen(command_line[1]));
-                strncpy(value, command_line[2], strlen(command_line[2]));
-
-                if (envar_exists(command_line[1]) == -1) envar_add(name, value);
-                else {
-                    envar_set(name, value);
-                    free(name);
-                }
+                if (envar_exist(command_line[1], vars, 50) == -1) envar_add(command_line[1], command_line[2], vars, 50);
+                else envar_set(command_line[1], command_line[2], vars, 50);
             }
-
+            
             else if (strcmp(command_line[0], COMMAND_DEL_ENVAR) == 0) {
-                if (envar_exists(command_line[1]) != -1) envar_delete(command_line[1]);
+                envar_delete(command_line[1], vars, 50);
             }
 
         //====================
@@ -461,9 +458,7 @@ int ulogin(char* login, char* password) {
 char* get_path(char* path) {
     if (path[0] == '\\') {
         char* new_path = (char*)clralloc(strlen(path) + 1);
-        strncpy(new_path, path, strlen(path));
-
-        memmove(new_path, new_path + 1, strlen(new_path));
+        strncpy(new_path, path + 1, strlen(path));
         return new_path;
     } 
 

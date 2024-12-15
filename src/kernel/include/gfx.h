@@ -81,31 +81,6 @@ typedef struct {
     uint8_t reserved4[190];
 } __attribute__ ((packed)) vbe_mode_info_t;
 
-typedef struct {
-	
-    char signature[4];
-    uint16_t version;
-    uint32_t oem_string_ptr;
-    uint32_t capabilities;
-    uint32_t video_mode_ptr;
-    uint16_t total_memory;
-    uint16_t oem_software_rev;
-    uint32_t oem_vendor_name_ptr;
-    uint32_t oem_product_name_ptr;
-    uint32_t oem_product_rev_ptr;
-    uint8_t reserved[222];
-    uint8_t oem_data[256];
-} __attribute__((packed)) vbe_controller_info_t;
-
-typedef struct {
-    uint32_t fg_color;
-    uint32_t bg_color;
-} user_gfx_info_t;
-
-typedef struct point {
-    uint16_t X, Y;
-} Point;
-
 
 extern vbe_mode_info_t GFX_data;
 

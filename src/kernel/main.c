@@ -12,7 +12,6 @@
 #include "include/tss.h"
 #include "include/elf.h"
 #include "include/dhcp.h"
-#include "include/vars.h"
 #include "include/mouse.h"
 #include "include/kstdio.h"
 #include "include/tasking.h"
@@ -321,7 +320,6 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
         i386_syscalls_init();
         i386_task_init();
         i386_init_keyboard();
-        i386_init_mouse();
 
     //===================
 
@@ -349,7 +347,6 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
 
 #pragma region [Preparations for user land]
 
-        VARS_init(); // Init env vars manager
         START_PROCESS("idle", (uint32_t)_idle, KERNEL, 1);
 
         if (current_vfs->objexist(CONFIG_PATH) == 1) {
@@ -393,7 +390,7 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
             // Network initialization
             //===================
 
-            if (config[CONFIG_MOUSE] == CONFIG_ENABLED) show_mouse = 1;
+            if (config[CONFIG_MOUSE] == CONFIG_ENABLED) i386_init_mouse(1);
 
 #ifdef USERMODE
             if (config[CONFIG_KSHELL] == CONFIG_ENABLED) START_PROCESS("shell", (uint32_t)_shell, USER, 10);

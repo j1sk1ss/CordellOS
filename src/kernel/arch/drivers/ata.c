@@ -2,13 +2,13 @@
 #include "../../include/ata.h"
 
 
-pci_dev_t ata_device = { 0 };
-struct ata_dev* current_ata_device = NULL;
+static pci_dev_t ata_device = { 0 };
+static struct ata_dev* current_ata_device = NULL;
 
-ata_dev_t primary_master   = {.slave = 0};
-ata_dev_t primary_slave    = {.slave = 1};
-ata_dev_t secondary_master = {.slave = 0};
-ata_dev_t secondary_slave  = {.slave = 1};
+static ata_dev_t primary_master   = {.slave = 0};
+static ata_dev_t primary_slave    = {.slave = 1};
+static ata_dev_t secondary_master = {.slave = 0};
+static ata_dev_t secondary_slave  = {.slave = 1};
 
 
 //====================
@@ -202,7 +202,6 @@ ata_dev_t secondary_slave  = {.slave = 1};
 
         uint8_t* buffer = (uint8_t*)_kmalloc(SECTOR_SIZE);
         uint8_t dummy_buffer[SECTOR_SIZE] = { 0 };
-
         uint8_t* buffer_pointer = buffer;
         memset(buffer, 0, SECTOR_SIZE);
         
@@ -237,7 +236,6 @@ ata_dev_t secondary_slave  = {.slave = 1};
         ATA_ata_wait();
         uint8_t* buffer = (uint8_t*)_kmalloc(SECTOR_SIZE);
         uint8_t dummy_buffer[SECTOR_SIZE] = { 0 };
-
         uint8_t* buffer_pointer = buffer;
         memset(buffer, 0, SECTOR_SIZE);
         
@@ -291,7 +289,6 @@ ata_dev_t secondary_slave  = {.slave = 1};
         uint32_t sectors_seek = offset / SECTOR_SIZE;
         uint32_t data_seek    = offset % SECTOR_SIZE;
         uint32_t size         = (SECTOR_SIZE * (sector_count - 1)) + (SECTOR_SIZE - data_seek);
-
         uint8_t* buffer = (uint8_t*)_kmalloc(size);
         if (buffer == NULL) return NULL;
 
@@ -340,7 +337,6 @@ ata_dev_t secondary_slave  = {.slave = 1};
         uint32_t sectors_seek = offset / SECTOR_SIZE;
         uint32_t data_seek    = offset % SECTOR_SIZE;
         uint32_t size         = (SECTOR_SIZE * (sector_count - 1)) + (SECTOR_SIZE - data_seek);
-
         uint8_t* buffer = (uint8_t*)_kmalloc(size);
         if (buffer == NULL) return NULL;
 
