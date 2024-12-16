@@ -70,7 +70,7 @@ void IP_send_packet(uint8_t* dst_ip, void* data, int len, uint8_t protocol) {
 
     uint8_t dst_hardware_addr[6];
     int delay = 9999999;
-    while (!arp_lookup(dst_hardware_addr, dst_ip)) {
+    while (!ARP_lookup(dst_hardware_addr, dst_ip)) {
         if (--delay < 0) {
             kprintf("\nARP not found MAC!!\n");
             return;

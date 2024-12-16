@@ -43,9 +43,4 @@ int i386_init_mouse(int show_mouse);
 void i386_mouse_handler(struct Registers* regs);
 int i386_detect_ps2_mouse();
 
-uint8_t __mouse_read();
-void __mouse_write(uint8_t write);
-void __mouse_wait(uint8_t a_type);
-void __place_cursor();
-
 #endif

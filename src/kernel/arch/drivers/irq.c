@@ -16,7 +16,7 @@ void i386_irq_handler(struct Registers* regs) {
     _PICDriver->SendEndOfInterrupt(irq);
 }
 
-void i386_irq_initialize() {
+int i386_irq_initialize() {
     const PICDriver* drivers[] = { i8259_getDriver(), };
 
     for (int i = 0; i < SIZE(drivers); i++) 
@@ -24,7 +24,7 @@ void i386_irq_initialize() {
 
     if (_PICDriver == NULL) {
         kprintf("[%s %i] WARN: NO PIC!\n", __FILE__, __LINE__);
-        return;
+        return 0;
     }
     
     kprintf("PIC %s FOUND!\n", _PICDriver->Name);
@@ -33,6 +33,7 @@ void i386_irq_initialize() {
     for (int i = 0; i < 16; i++) i386_isr_registerHandler(PIC_REMAP_OFFSET + i, i386_irq_handler);
     i386_enableInterrupts();
     _PICDriver->Unmask(2); // slave interrupt controller allowing for IRQ 8-15
+    return 1;
 }
 
 void i386_irq_registerHandler(int irq, IRQHandler handler) {

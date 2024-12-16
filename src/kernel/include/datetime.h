@@ -8,7 +8,7 @@
 #define CURRENT_YEAR    2024
 #define CURRENT_CENTURY 21
 #define TICK_DELAY      1000000
-#define MAX_TICK        0xFFFFFFFC
+#define MAX_TICK        0xFFFFFFFF
 
 
 typedef struct datetime {
@@ -19,6 +19,12 @@ typedef struct datetime {
     uint8_t datetime_month;
     uint16_t datetime_year;
 } datetime_t;
+
+enum {
+    cmos_address = 0x70,
+    cmos_data    = 0x71
+};
+
 
 extern datetime_t DTM_datetime;
 

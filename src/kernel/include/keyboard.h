@@ -4,15 +4,10 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <memory.h>
-#include <stdlib.h>
-#include <string.h>
 
+#include "kstdio.h"
 #include "x86.h"
 #include "irq.h"
-#include "vga.h"
-#include "vesa.h"
-#include "kstdio.h"
 
 
 #define KBD_DATA_PORT           0x60
@@ -50,13 +45,9 @@ typedef struct keyboard_data {
 
 struct Registers;
 void i386_keyboard_handler(struct Registers* regs);
-int _key_presss();
-char _get_character(char character);
 
 void _enable_keyboard();
 char pop_character();
-char keyboard_navigation();
-void keyboard_wait(char symbol);
 
 void i386_init_keyboard();
 

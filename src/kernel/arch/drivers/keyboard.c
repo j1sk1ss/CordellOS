@@ -2,13 +2,6 @@
 
 // Shift keyboard converter from https://github.com/cstack/osdev/blob/master/drivers/keyboard.c#L8
 
-//   _  _________   __  ____   ___    _    ____  ____  
-//  | |/ / ____\ \ / / | __ ) / _ \  / \  |  _ \|  _ \ 
-//  | ' /|  _|  \ V /  |  _ \| | | |/ _ \ | |_) | | | |
-//  | . \| |___  | |   | |_) | |_| / ___ \|  _ <| |_| |
-//  |_|\_\_____| |_|   |____/ \___/_/   \_\_| \_\____/
-
-
 /* 
 *  KBDUS means US keyboard Layout. This is a scancode table
 *  used to layout a standard US keyboard. I have left some
@@ -137,48 +130,30 @@ void i386_init_keyboard() {
     i386_irq_registerHandler(1, i386_keyboard_handler);
 }
 
-int _key_press() {
-    if (i386_inb(0x64) & 0x1) return 1;
-    return 0;
+void _enable_keyboard() {
+    _curr_char = EMPTY_KEYBOARD;
 }
 
-char _get_character(char character) {
-    return _alphabet[(int)character];
+char pop_character() {
+    char character = _curr_char;
+    _curr_char = EMPTY_KEYBOARD;
+    return character;
 }
 
-//==================================================================================
-//   _  _________   ______   ___    _    ____  ____  
-//  | |/ / ____\ \ / / __ ) / _ \  / \  |  _ \|  _ \ 
-//  | ' /|  _|  \ V /|  _ \| | | |/ _ \ | |_) | | | |
-//  | . \| |___  | | | |_) | |_| / ___ \|  _ <| |_| |
-//  |_|\_\_____| |_| |____/ \___/_/   \_\_| \_\____/ 
+void i386_keyboard_handler(struct Registers* regs) {
+    char character = i386_inb(0x60);
+    if (character < 0 || character >= 128) return;
 
-    void _enable_keyboard() {
-        _curr_char = EMPTY_KEYBOARD;
+    _keyboard_data.key_pressed[(int)character] = false;
+    if (!(character & 0x80)) {
+        _keyboard_data.key_pressed[(int)character] = true;
+        _curr_char = _alphabet[(int)character];
+        if (_keyboard_data.key_pressed[LSHIFT] || _keyboard_data.key_pressed[RSHIFT]) _curr_char = _shift_alphabet[(int)character];
+        if (_curr_char == LSHIFT_BUTTON || _curr_char == RSHIFT_BUTTON) return;
     }
 
-    char pop_character() {
-        char character = _curr_char;
-        _curr_char = EMPTY_KEYBOARD;
-        return character;
+    if (_keyboard_data.key_pressed[LSHIFT] || _keyboard_data.key_pressed[RSHIFT]) {
+        _keyboard_data.key_pressed[LSHIFT] = false;
+        _keyboard_data.key_pressed[RSHIFT] = false;
     }
-
-    void i386_keyboard_handler(struct Registers* regs) {
-        char character = i386_inb(0x60);
-        if (character < 0 || character >= 128) return;
-
-        _keyboard_data.key_pressed[(int)character] = false;
-        if (!(character & 0x80)) {
-            _keyboard_data.key_pressed[(int)character] = true;
-            _curr_char = _alphabet[(int)character];
-            if (_keyboard_data.key_pressed[LSHIFT] || _keyboard_data.key_pressed[RSHIFT]) _curr_char = _shift_alphabet[(int)character];
-            if (_curr_char == LSHIFT_BUTTON || _curr_char == RSHIFT_BUTTON) return;
-        }
-
-        if (_keyboard_data.key_pressed[LSHIFT] || _keyboard_data.key_pressed[RSHIFT]) {
-            _keyboard_data.key_pressed[LSHIFT] = false;
-            _keyboard_data.key_pressed[RSHIFT] = false;
-        }
-    }
-
-//==================================================================================
+}

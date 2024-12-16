@@ -4,11 +4,30 @@
 
 static pci_dev_t ata_device = { 0 };
 static struct ata_dev* current_ata_device = NULL;
-
 static ata_dev_t primary_master   = {.slave = 0};
 static ata_dev_t primary_slave    = {.slave = 1};
 static ata_dev_t secondary_master = {.slave = 0};
 static ata_dev_t secondary_slave  = {.slave = 1};
+
+
+#pragma region [Other]
+
+    // Delay for working with ATA
+    void _ata_wait() {
+        int delay = 150000;
+        while (--delay > 0)
+            continue;
+    }
+
+    int _is_ata_ready() {
+        int timeout = 9000000;
+        while ((i386_inb(STATUS_REGISTER) & ATA_SR_BSY) == 0) 
+            if (--timeout < 0) return 0;
+
+        return 1;
+    }
+
+#pragma endregion
 
 
 //====================
@@ -165,7 +184,7 @@ static ata_dev_t secondary_slave  = {.slave = 1};
 
 #pragma region [Read operations]
 
-    void ATA_prepare4reading(uint32_t lba) {
+    void _prepare_for_reading(uint32_t lba) {
         i386_outb(current_ata_device->drive, 0xE0 | (current_ata_device->slave << 4) | ((lba >> 24) & 0x0F));
         i386_outb(FEATURES_REGISTER, 0x00);
         i386_outb(current_ata_device->sector_count, 1);
@@ -176,12 +195,12 @@ static ata_dev_t secondary_slave  = {.slave = 1};
     }
 
     uint8_t* ATA_read_sector(uint32_t lba) {
-        ATA_ata_wait();
+        _ata_wait();
         uint8_t* buffer = (uint8_t*)_kmalloc(SECTOR_SIZE);
         if (buffer == NULL) return NULL;
 
-        ATA_prepare4reading(lba);
-        if (ATA_ata_ready() == -1) {
+        _prepare_for_reading(lba);
+        if (!_is_ata_ready()) {
             _kfree(buffer);
             return NULL;
         }
@@ -198,15 +217,15 @@ static ata_dev_t secondary_slave  = {.slave = 1};
     // Return two values
     // stop == ERROR_SYMBOL (error), stop == STOP_SYMBOL (found)
     uint8_t* ATA_read_sector_stop(uint32_t lba, uint8_t* stop) {
-        ATA_ata_wait();
+        _ata_wait();
 
         uint8_t* buffer = (uint8_t*)_kmalloc(SECTOR_SIZE);
         uint8_t dummy_buffer[SECTOR_SIZE] = { 0 };
         uint8_t* buffer_pointer = buffer;
         memset(buffer, 0, SECTOR_SIZE);
         
-        ATA_prepare4reading(lba);
-        if (ATA_ata_ready() == -1) {
+        _prepare_for_reading(lba);
+        if (!_is_ata_ready()) {
             _kfree(buffer);
             return NULL;
         }
@@ -233,14 +252,14 @@ static ata_dev_t secondary_slave  = {.slave = 1};
 
     // TODO: issue with pointer moving 
     uint8_t* ATA_read_sector_stopoff(uint32_t lba, uint32_t offset, uint8_t* stop) {
-        ATA_ata_wait();
+        _ata_wait();
         uint8_t* buffer = (uint8_t*)_kmalloc(SECTOR_SIZE);
         uint8_t dummy_buffer[SECTOR_SIZE] = { 0 };
         uint8_t* buffer_pointer = buffer;
         memset(buffer, 0, SECTOR_SIZE);
         
-        ATA_prepare4reading(lba);
-        if (ATA_ata_ready() == -1) {
+        _prepare_for_reading(lba);
+        if (!_is_ata_ready()) {
             _kfree(buffer);
             return NULL;
         }
@@ -267,7 +286,7 @@ static ata_dev_t secondary_slave  = {.slave = 1};
 
     // Function to read a sectors from the disk.
     uint8_t* ATA_read_sectors(uint32_t lba, uint32_t sector_count) {
-        ATA_ata_wait();
+        _ata_wait();
         uint8_t* buffer = (uint8_t*)_kmalloc(SECTOR_SIZE * sector_count);
         if (buffer == NULL) return NULL;
 
@@ -284,7 +303,7 @@ static ata_dev_t secondary_slave  = {.slave = 1};
     }
 
     uint8_t* ATA_readoff_sectors(uint32_t lba, uint32_t offset, uint32_t sector_count) {
-        ATA_ata_wait();
+        _ata_wait();
 
         uint32_t sectors_seek = offset / SECTOR_SIZE;
         uint32_t data_seek    = offset % SECTOR_SIZE;
@@ -310,7 +329,7 @@ static ata_dev_t secondary_slave  = {.slave = 1};
     // data[0] - Find (1) or not found (0) stop data in data
     // data[1] - Loaded data from disk
     uint8_t* ATA_read_sectors_stop(uint32_t lba, uint32_t sector_count, uint8_t* stop) {
-        ATA_ata_wait();
+        _ata_wait();
 
         uint8_t* buffer = (uint8_t*)_kmalloc(SECTOR_SIZE * sector_count);
         if (buffer == NULL) return NULL;
@@ -332,7 +351,7 @@ static ata_dev_t secondary_slave  = {.slave = 1};
     // Read sectors with start seek
     // Stop reading when meet stop value
     uint8_t* ATA_readoff_sectors_stop(uint32_t lba, uint32_t offset, uint32_t sector_count, uint8_t* stop) {
-        ATA_ata_wait();
+        _ata_wait();
 
         uint32_t sectors_seek = offset / SECTOR_SIZE;
         uint32_t data_seek    = offset % SECTOR_SIZE;
@@ -366,7 +385,7 @@ static ata_dev_t secondary_slave  = {.slave = 1};
 
 #pragma region [Write operations]
 
-    void ATA_prepare4writing(uint32_t lba) {
+    void _prepare_for_writing(uint32_t lba) {
         i386_outb(current_ata_device->drive, 0xE0 | (current_ata_device->slave << 4) | ((lba >> 24) & 0x0F));
         i386_outb(FEATURES_REGISTER, 0x00);
         i386_outb(current_ata_device->sector_count, 1);
@@ -379,8 +398,8 @@ static ata_dev_t secondary_slave  = {.slave = 1};
     int ATA_write_sector(uint32_t lba, const uint8_t* buffer) {
         if (lba == BOOT_SECTOR) return -1;
 
-        ATA_ata_wait();
-        ATA_prepare4writing(lba);
+        _ata_wait();
+        _prepare_for_writing(lba);
 
         int timeout = 9000000;
         while ((i386_inb(STATUS_REGISTER) & ATA_SR_BSY) == 0) 
@@ -398,8 +417,8 @@ static ata_dev_t secondary_slave  = {.slave = 1};
     int ATA_writeoff_sector(uint32_t lba, const uint8_t* buffer, uint32_t offset, uint32_t size) {
         if (lba == BOOT_SECTOR) return -1;
 
-        ATA_ata_wait();
-        ATA_prepare4writing(lba);
+        _ata_wait();
+        _prepare_for_writing(lba);
 
         int timeout = 9000000;
         while ((i386_inb(STATUS_REGISTER) & ATA_SR_BSY) == 0) 
@@ -416,7 +435,7 @@ static ata_dev_t secondary_slave  = {.slave = 1};
 
     // Function to write a sector on the disk.
     int ATA_write_sectors(uint32_t lba, const uint8_t* buffer, uint32_t sector_count) {
-        ATA_ata_wait();
+        _ata_wait();
         for(uint32_t i = 0; i < sector_count; i++) {
             if (ATA_write_sector(lba + i, buffer) == -1) 
                 return -1;
@@ -428,7 +447,7 @@ static ata_dev_t secondary_slave  = {.slave = 1};
     }
 
     int ATA_writeoff_sectors(uint32_t lba, const uint8_t* buffer, uint32_t sector_count, uint32_t offset, uint32_t size) {
-        ATA_ata_wait();
+        _ata_wait();
 
         uint32_t sectors_seek  = offset / SECTOR_SIZE;
         uint32_t sector_seek   = offset % SECTOR_SIZE;
@@ -448,7 +467,7 @@ static ata_dev_t secondary_slave  = {.slave = 1};
     }
 
     int ATA_copy_sectors2sectors(uint32_t source_lba, uint32_t sector_count, uint32_t distenation_lba) {
-        ATA_ata_wait();
+        _ata_wait();
         uint8_t* source = ATA_read_sectors(source_lba, sector_count);
         int result = ATA_write_sectors(distenation_lba, source, sector_count);
         _kfree(source);
@@ -459,115 +478,4 @@ static ata_dev_t secondary_slave  = {.slave = 1};
 
 //====================
 //  WRITE DATA TO SECTOR ON DISK BY LBA ADRESS
-//====================
-//  OTHER FUNCTIONS
-//====================
-
-#pragma region [Other]
-
-    // Function that add data to sector
-    void ATA_append_sector(uint32_t lba, uint8_t* data, uint32_t len, uint32_t offset) {
-        uint8_t buffer[SECTOR_SIZE] = { 0 };
-        uint8_t* sector_data = ATA_read_sector(lba);
-        memcpy(buffer, sector_data, SECTOR_SIZE);
-        _kfree(sector_data);
-        
-        memcpy(buffer + offset, data, len);
-        ATA_write_sector(lba, buffer);
-    }
-
-    // Function that clear sector
-    int ATA_clear_sector(uint32_t lba) {
-        uint8_t buffer[SECTOR_SIZE] = { 0 };
-        if (ATA_write_sector(lba, buffer) == -1) {
-            kprintf("\nPulizia del settore non completata!");
-            return -1;
-        }
-
-        return 1;
-    }
-
-    // Function to check if a sector (by LBA) is empty (all bytes are zero)
-    bool ATA_is_current_sector_empty(uint32_t lba) {
-        uint8_t* sector_data = ATA_read_sector(lba);
-        if (ATA_is_sector_empty(sector_data)) {
-            _kfree(sector_data);
-            return true;
-        }
-
-        _kfree(sector_data);
-        return false;
-    }
-
-    // Function to check if a sector is empty (contains all zeros).
-    bool ATA_is_sector_empty(const uint8_t* sector_data) {
-        for (int i = 0; i < SECTOR_SIZE; i++) 
-            if (sector_data[i] != 0x00) return false;
-
-        return true;
-    }
-
-    // Function that find first empty sector
-    uint32_t ATA_find_empty_sector(uint32_t offset) {
-        for (uint32_t lba = offset; lba <= SECTOR_COUNT; lba++) {
-            uint8_t* sector_data = ATA_read_sector(lba);
-            if (sector_data == NULL) continue;
-            if (ATA_is_sector_empty((const uint8_t*)sector_data)) {
-                _kfree(sector_data);
-                return lba;
-            }
-                
-            _kfree(sector_data);
-        }
-
-        return -1;
-    }
-
-    // Delay for working with ATA
-    void ATA_ata_wait() {
-        int delay = 150000;
-        while (--delay > 0)
-            continue;
-    }
-
-    int ATA_ata_ready() {
-        int timeout = 9000000;
-        while ((i386_inb(STATUS_REGISTER) & ATA_SR_BSY) == 0) 
-            if (--timeout < 0) return -1;
-
-        return 1;
-    }
-
-    // Function for getting avaliable sector count in disk
-    int ATA_global_sector_count() {
-        int sectors = 0;
-        for (uint32_t lba = 0; lba < SECTOR_COUNT; lba++) {
-            uint8_t* sector_data = ATA_read_sector(lba);
-            if (sector_data != NULL) {
-                sectors++;
-                _kfree(sector_data);
-            }
-        }
-
-        return sectors;
-    }
-
-    // Function for getting empty sector count
-    int ATA_global_sector_empty() {
-        int sectors = 0;
-        for (uint32_t lba = 0; lba < SECTOR_COUNT; lba++) {
-            uint8_t* sector_data = ATA_read_sector(lba);
-            if (sector_data != NULL) {
-                if (ATA_is_sector_empty((const uint8_t*)sector_data)) sectors++;
-                _kfree(sector_data);
-            }
-        }
-
-        return sectors;
-    }
-
-#pragma endregion
-
-//====================
-//  OTHER FUNCTIONS
 //====================

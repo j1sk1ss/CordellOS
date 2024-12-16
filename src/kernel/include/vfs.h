@@ -1,7 +1,6 @@
 #ifndef VFS_H_
 #define VFS_H_
 
-
 #include <memory.h>
 
 #include "ata.h"
@@ -81,7 +80,5 @@ extern vfs_node_t* current_vfs;
 void VFS_initialize(struct ata_dev* dev, uint32_t fs_type);
 void VFS_add_node(struct ata_dev* dev, uint32_t fs_type);
 void VFS_switch_device(int index);
-
-vfs_node_t* _fat_vfs_setup(vfs_node_t* node);
 
 #endif

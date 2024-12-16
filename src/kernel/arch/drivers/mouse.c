@@ -13,7 +13,6 @@ static uint32_t __cursor_bitmap__[] = {
 };
 
 
-
 void __mouse_wait(uint8_t a_type) {
 	uint32_t timeout = 100000;
 	if (!a_type) { 
@@ -39,6 +38,30 @@ void __mouse_write(uint8_t write) {
 uint8_t __mouse_read() {
 	__mouse_wait(0);
 	return i386_inb(MOUSE_PORT);
+}
+
+void __place_cursor() {
+    if (screen_state.x < 0 || screen_state.y < 0) {
+        screen_state.x = mouse_state.x;
+        screen_state.y = mouse_state.y;
+    }
+
+    if (screen_state.x == mouse_state.x && screen_state.y == mouse_state.y) return;
+    if (screen_state.x != -1 && screen_state.y != -1) 
+        for (uint16_t i = screen_state.x; i < min(GFX_data.x_resolution, screen_state.x + MOUSE_XSIZE); i++)
+            for (uint16_t j = screen_state.y; j < min(GFX_data.y_resolution, screen_state.y + MOUSE_YSIZE); j++) 
+                GFX_pdraw_pixel(i, j, screen_state.buffer[(i - screen_state.x) * MOUSE_XSIZE + (j - screen_state.y)]);
+                
+    screen_state.x = mouse_state.x;
+    screen_state.y = mouse_state.y;
+    
+    for (uint16_t i = screen_state.x; i < min(GFX_data.x_resolution, screen_state.x + MOUSE_XSIZE); i++)
+        for (uint16_t j = screen_state.y; j < min(GFX_data.y_resolution, screen_state.y + MOUSE_YSIZE); j++) {
+            screen_state.buffer[(i - screen_state.x) * MOUSE_XSIZE + (j - screen_state.y)] = GFX_get_pixel(i, j);
+
+            int32_t color = __cursor_bitmap__[(i - screen_state.x) * MOUSE_XSIZE + (j - screen_state.y)];
+            GFX_pdraw_pixel(i, j, color);
+        }
 }
 
 void i386_mouse_handler(struct Registers* regs) {
@@ -71,30 +94,6 @@ void i386_mouse_handler(struct Registers* regs) {
     }
 
     if (_is_mouse_showing) __place_cursor();
-}
-
-void __place_cursor() {
-    if (screen_state.x < 0 || screen_state.y < 0) {
-        screen_state.x = mouse_state.x;
-        screen_state.y = mouse_state.y;
-    }
-
-    if (screen_state.x == mouse_state.x && screen_state.y == mouse_state.y) return;
-    if (screen_state.x != -1 && screen_state.y != -1) 
-        for (uint16_t i = screen_state.x; i < min(GFX_data.x_resolution, screen_state.x + MOUSE_XSIZE); i++)
-            for (uint16_t j = screen_state.y; j < min(GFX_data.y_resolution, screen_state.y + MOUSE_YSIZE); j++) 
-                GFX_pdraw_pixel(i, j, screen_state.buffer[(i - screen_state.x) * MOUSE_XSIZE + (j - screen_state.y)]);
-                
-    screen_state.x = mouse_state.x;
-    screen_state.y = mouse_state.y;
-    
-    for (uint16_t i = screen_state.x; i < min(GFX_data.x_resolution, screen_state.x + MOUSE_XSIZE); i++)
-        for (uint16_t j = screen_state.y; j < min(GFX_data.y_resolution, screen_state.y + MOUSE_YSIZE); j++) {
-            screen_state.buffer[(i - screen_state.x) * MOUSE_XSIZE + (j - screen_state.y)] = GFX_get_pixel(i, j);
-
-            int32_t color = __cursor_bitmap__[(i - screen_state.x) * MOUSE_XSIZE + (j - screen_state.y)];
-            GFX_pdraw_pixel(i, j, color);
-        }
 }
 
 int i386_init_mouse(int show_mouse) {
@@ -138,5 +137,5 @@ int i386_init_mouse(int show_mouse) {
 // 1 - mouse
 int i386_detect_ps2_mouse() {
     if (__mouse_read() != 0xFA) return 0;
-    else return 1;
+    return 1;
 }

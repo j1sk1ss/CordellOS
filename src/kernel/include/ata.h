@@ -6,8 +6,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "x86.h"
+#include "allocator.h"
 #include "kstdio.h"
+#include "x86.h"
 #include "irq.h"
 #include "pci.h"
 #include "vmm.h"
@@ -136,13 +137,6 @@ void ATA_software_reset(ata_dev_t* dev);
 void ATA_device_detect(ata_dev_t* dev, int primary);
 void ATA_device_init(ata_dev_t* dev, int primary);
 
-bool ATA_is_sector_empty(const uint8_t* sector_data);
-bool ATA_is_current_sector_empty(uint32_t LBA);
-
-void ATA_ata_wait();
-int ATA_ata_ready();
-
-void ATA_prepare4reading(uint32_t lba);
 uint8_t* ATA_read_sector(uint32_t lba);
 uint8_t* ATA_read_sector_stop(uint32_t lba, uint8_t* stop);
 uint8_t* ATA_read_sector_stopoff(uint32_t lba, uint32_t offset, uint8_t* stop);
@@ -151,20 +145,10 @@ uint8_t* ATA_readoff_sectors(uint32_t lba, uint32_t offset, uint32_t sector_coun
 uint8_t* ATA_read_sectors_stop(uint32_t lba, uint32_t sector_count, uint8_t* stop);
 uint8_t* ATA_readoff_sectors_stop(uint32_t lba, uint32_t offset, uint32_t sector_count, uint8_t* stop);
 
-void ATA_prepare4writing(uint32_t lba);
 int ATA_write_sector(uint32_t lba, const uint8_t* buffer);
 int ATA_writeoff_sector(uint32_t lba, const uint8_t* buffer, uint32_t offset, uint32_t size);
 int ATA_write_sectors(uint32_t lba, const uint8_t* buffer, uint32_t sector_count);
 int ATA_writeoff_sectors(uint32_t lba, const uint8_t* buffer, uint32_t sector_count, uint32_t offset, uint32_t size);
 int ATA_copy_sectors2sectors(uint32_t source_lba, uint32_t sector_count, uint32_t distenation_lba);
-
-void ATA_append_sector(uint32_t lba, uint8_t* data, uint32_t len, uint32_t offset);
-int ATA_clear_sector(uint32_t LBA);
-
-uint32_t ATA_find_empty_sector(uint32_t offset);
-
-int ATA_global_sector_count();
-int ATA_global_sector_empty();
-
 
 #endif

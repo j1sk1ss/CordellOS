@@ -4,7 +4,7 @@
 #include <memory.h>
 #include <netutils.h>
 
-#include "stdio.h"
+#include "kstdio.h"
 #include "rtl8139.h"
 #include "ethernet.h"
 #include "allocator.h"
@@ -43,7 +43,7 @@ typedef struct arp_data {
 
 void ARP_handle_packet(arp_packet_t* arp_packet, int len);
 void ARP_send_packet(uint8_t* dst_hardware_addr, uint8_t* dst_protocol_addr);
-int arp_lookup(uint8_t* ret_hardware_addr, uint8_t* ip_addr);
+int ARP_lookup(uint8_t* ret_hardware_addr, uint8_t* ip_addr);
 void ARP_lookup_add(uint8_t* ret_hardware_addr, uint8_t* ip_addr);
 void ARP_init();
 
