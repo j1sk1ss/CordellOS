@@ -179,42 +179,7 @@ extern fat_data_t FAT_data;
 //===================================
 
 	int FAT_initialize(); 
-	int __read_fat(uint32_t cluster);
-	int __write_fat(uint32_t cluster, uint32_t value);
-
-//===================================
-//    ____ _    _   _ ____ _____ _____ ____  
-//   / ___| |  | | | / ___|_   _| ____|  _ \ 
-//  | |   | |  | | | \___ \ | | |  _| | |_) |
-//  | |___| |__| |_| |___) || | | |___|  _ < 
-//   \____|_____\___/|____/ |_| |_____|_| \_\
-//===================================
-
-	uint32_t _cluster_allocate();
-	int _cluster_deallocate(const uint32_t cluster);
-	uint8_t* _cluster_read(uint32_t cluster);
-	uint8_t* _cluster_read_stop(uint32_t cluster, uint8_t* stop);
-	uint8_t* _cluster_readoff(uint32_t cluster, uint32_t offset);
-	uint8_t* _cluster_readoff_stop(uint32_t cluster, uint32_t offset, uint8_t* stop);
-	int _cluster_write(uint8_t* data, uint32_t cluster);
-	int _cluster_writeoff(uint8_t* data, uint32_t cluster, uint32_t offset, uint32_t size);
-	int _clear_cluster(uint32_t cluster);
-	void _add_cluster_to_content(int ci);
-	int _copy_cluster2cluster(uint32_t source, uint32_t destination);
-
-//===================================
-//   _____ _   _ _____ ______   __
-//  | ____| \ | |_   _|  _ \ \ / /
-//  |  _| |  \| | | | | |_) \ V / 
-//  | |___| |\  | | | |  _ < | |  
-//  |_____|_| \_| |_| |_| \_\|_| 
-//===================================
-
 	int FAT_directory_list(int ci, uint8_t attrs, int exclusive);
-	int _directory_search(const char* filepart, const uint32_t cluster, directory_entry_t* file, uint32_t* entryOffset);
-	int _directory_add(const uint32_t cluster, directory_entry_t* file_to_add);
-	int _directory_remove(const uint32_t cluster, const char* fileName);
-	int _directory_edit(const uint32_t cluster, directory_entry_t* old_meta, const char* new_name);
 
 //===================================
 //    ____ ___  _   _ _____ _____ _   _ _____ 
@@ -251,17 +216,14 @@ extern fat_data_t FAT_data;
 	int _name_check(const char* input);
 
 	int _add_content2table(Content* content);
-	Content* _get_content_from_table(int ci) ;
+	Content* FAT_get_content_from_table(int ci) ;
 	int _remove_content_from_table(int index);
 
 	Content* FAT_create_object(char* name, int is_directory, char* extension);
 	Content* FAT_create_content();
 	int FAT_unload_content_system(Content* content);
-	directory_entry_t* _create_entry(const char* name, const char* ext, int isDir, uint32_t firstCluster, uint32_t filesize);
 	Directory* _create_directory();
 	File* _create_file();
-	int _unload_directory_system(Directory* directory);
-	int _unload_file_system(File* file);
 
 //===================================
 

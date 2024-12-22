@@ -1,10 +1,6 @@
 #include "../include/stdlib.h"
 
 
-//====================================================================
-// Function start task at address with entered name
-// EBX - name
-// ECX - address 
 void tstart(char* name, uint32_t address, uint32_t delay) {
     __asm__ volatile(
         "movl $26, %%eax\n"
@@ -18,10 +14,8 @@ void tstart(char* name, uint32_t address, uint32_t delay) {
     );
 }
 
-//====================================================================
-// Function return PID of current task
 int tpid() {
-    int pid;
+    int pid = -1;
     __asm__ volatile(
         "movl $52, %%eax\n"
         "int $0x80\n"
@@ -34,8 +28,6 @@ int tpid() {
     return pid;
 }
 
-//====================================================================
-// Function kill current task
 void tkill() {
     __asm__ volatile(
         "movl $27, %%eax\n"
@@ -46,31 +38,17 @@ void tkill() {
     );
 }
 
-//====================================================================
-//  Return date time from cmos in short*
-//  ECX - pointer to array
-//
-//  data[0] - seconds
-//  data[1] - minute
-//  data[2] - hour
-//  data[3] - day
-//  data[4] - month
-//  data[5] - year
-void get_datetime(short* data) {
+void get_datetime(DateInfo_t* info) {
     __asm__ volatile(
         "movl $6, %%eax\n"
         "movl %0, %%ecx\n"
         "int %1\n"
         :
-        : "r"(data), "i"(SYSCALL_INTERRUPT)
+        : "r"(info), "i"(SYSCALL_INTERRUPT)
         : "eax", "ecx"
     );
 }
 
-//====================================================================
-//  Allocate memory and return pointer
-//  EBX - size
-//  EAX - returned pointer to allocated memory
 void* malloc(uint32_t size) {
     void* allocated_memory;
     __asm__ volatile(
@@ -86,12 +64,8 @@ void* malloc(uint32_t size) {
     return allocated_memory;
 }
 
-//====================================================================
-//  Allocate memory and return pointer
-//  EBX - v_addr
-//  EAX - returned v_addr of page
 void* mallocp(uint32_t v_addr) {
-    void* allocated_v_addr;
+    void* allocated_v_addr = NULL;
     __asm__ volatile(
         "movl $35, %%eax\n"
         "movl %1, %%ebx\n"
@@ -136,9 +110,6 @@ void* clralloc(size_t size) {
     return tgt;
 }
 
-//====================================================================
-//  Free alocated memory
-//  EBX - pointer to allocated memory
 void free(void* ptr) {
     if (ptr == NULL) return;
     __asm__ volatile(
@@ -151,9 +122,6 @@ void free(void* ptr) {
     );
 }
 
-//====================================================================
-//  Free alocated memory
-//  EBX - pointer to allocated memory
 void freep(void* ptr) {
     if (ptr == NULL) return;
     __asm__ volatile(
@@ -166,8 +134,6 @@ void freep(void* ptr) {
     );
 }
 
-//====================================================================
-// Function restart machine
 void machine_restart() {
     __asm__ volatile(
         "movl $44, %%eax\n"
@@ -180,28 +146,6 @@ void machine_restart() {
 
 void switch_disk(int index) {
 
-}
-
-//====================================================================
-// Function that get FS info
-//
-// buffer[0] - mountpoint
-// buffer[1] - name
-// buffer[2] - fat type
-// buffer[3] - total clusters
-// buffer[4] - total sectors
-// buffer[5] - bytes per_sector
-// buffer[6] - sectors per cluster
-// buffer[7] - fat size
-void get_fs_info(uint32_t* buffer) {
-     __asm__ volatile(
-        "movl $45, %%eax\n"
-        "movl %0, %%ebx\n"
-        "int $0x80\n"
-        :
-        : "r"(buffer)
-        : "%eax", "%ebx"
-    );
 }
 
 void switch2user() {

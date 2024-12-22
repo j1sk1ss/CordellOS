@@ -113,7 +113,8 @@
 //      23) Refactor STDIO in userland                            [V]
 //          23.1) Font lib, draw instead kprint                   [V]
 //      24) FAT separation (Content table and descriptors)        [V]
-//      23) DOOM?                                                 [ ]
+//      25) ATA/Clusters with buffers, instead dyn. alloc         [ ]
+//      26) DOOM?                                                 [ ]
 //======================================================================================================================================
 
 
@@ -349,9 +350,9 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
 
         START_PROCESS("idle", (uint32_t)_idle, KERNEL, 1);
 
-        if (current_vfs->objexist(CONFIG_PATH) == 1) {
+        if (current_vfs->objexist(CONFIG_PATH)) { // TODO: PF
             int boot_config = current_vfs->openobj(CONFIG_PATH);
-            uint8_t config[128] = { 0 };
+            static uint8_t config[128] = { 0 };
             current_vfs->read(boot_config, config, 0, 128);
             current_vfs->closeobj(boot_config);
             
@@ -389,7 +390,6 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
             //===================
             // Network initialization
             //===================
-
             if (config[CONFIG_MOUSE] == CONFIG_ENABLED) i386_init_mouse(1);
 
 #ifdef USERMODE
@@ -397,8 +397,6 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
 #else
             if (config[CONFIG_KSHELL] == CONFIG_ENABLED) START_PROCESS("shell", (uint32_t)_shell, KERNEL, 10);
 #endif
-
-            _kfree(config);
         } else START_PROCESS("shell", (uint32_t)_shell, KERNEL, 10);
 
         TASK_start_tasking();

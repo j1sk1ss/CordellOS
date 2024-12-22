@@ -64,13 +64,7 @@ void syscall(struct Registers* regs) {
 
         else if (regs->eax == SYS_TIME) {
             _datetime_read_rtc();
-            short* date_buffer = (short*)regs->ecx;
-            date_buffer[0] = DTM_datetime.datetime_second;
-            date_buffer[1] = DTM_datetime.datetime_minute;
-            date_buffer[2] = DTM_datetime.datetime_hour;
-            date_buffer[3] = DTM_datetime.datetime_day;
-            date_buffer[4] = DTM_datetime.datetime_month;
-            date_buffer[5] = DTM_datetime.datetime_year;
+            memcpy((datetime_t*)regs->ecx, &DTM_datetime, sizeof(datetime_t));
         } 
 
         else if (regs->eax == SYS_GET_TICKS) regs->eax = DTM_get_ticks();
@@ -165,7 +159,7 @@ void syscall(struct Registers* regs) {
             char* cname = (char*)regs->ecx;
 
             int local_step = 0;
-            Content* root_node = _get_content_from_table(root_ci);
+            Content* root_node = FAT_get_content_from_table(root_ci);
             
             if (root_node != NULL) {
                 Directory* root_dir = root_node->directory;
@@ -310,15 +304,13 @@ ls_end:
         else if (regs->eax == SYS_RESTART) i386_reboot();
         
         else if (regs->eax == SYS_GET_FS_INFO) {
-            uint32_t* buffer = (uint32_t*)regs->ebx;
-            buffer[0] = (uint32_t)current_vfs->device->mountpoint;
-            buffer[1] = (uint32_t)current_vfs->name; // TODO: Copy to user space with malloc
-            buffer[2] = (uint32_t)FAT_data.fat_type;
-            buffer[3] = (uint32_t)FAT_data.total_clusters;
-            buffer[4] = (uint32_t)FAT_data.total_sectors;
-            buffer[5] = (uint32_t)FAT_data.bytes_per_sector;
-            buffer[6] = (uint32_t)FAT_data.sectors_per_cluster;
-            buffer[7] = (uint32_t)FAT_data.fat_size;
+            FSInfo_t* info = (FSInfo_t*)regs->ebx;
+            strcpy(info->mount, current_vfs->device->mountpoint);
+            strcpy(info->name, current_vfs->name);
+            info->type = FAT_data.fat_type;
+            info->clusters = FAT_data.total_clusters;
+            info->spc = FAT_data.sectors_per_cluster;
+            info->size = FAT_data.fat_size;
         }
 
     //=======================

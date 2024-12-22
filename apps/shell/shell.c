@@ -141,18 +141,16 @@ void shell_start_screen() {
             else if (strcmp(command_line[0], COMMAND_CLEAR)     == 0) clrscr();
                 
             else if (strcmp(command_line[0], COMMAND_DISK_DATA) == 0) {
-                uint32_t fs_data[8] = { 0 };
-                get_fs_info(fs_data);
+                FSInfo_t info;
+                get_fs_info(&info);
 
-                printf("\nUTILITY KERNEL DISCO-DATI VER 0.2c\n");
-                printf("DEV:                             [%s]\n", (char*)fs_data[0]);
-                printf("FS TYPE:                         [%s]\n", (char*)fs_data[1]);
-                printf("FAT TYPE:                        [%i]\n", fs_data[2]);
-                printf("CLUSTER TOTALI x32:              [%i]\n", fs_data[3]);
-                printf("TOTALE SETTORI x32:              [%i]\n", fs_data[4]);
-                printf("BYTE PER SETTORE x32:            [%i]\n", fs_data[5]);
-                printf("SETTORI PER CLUSTER:             [%i]\n", fs_data[6]);
-                printf("DIMENSIONE DELLA TABELLA GRASSO: [%i]\n", fs_data[7]);
+                printf("\nUTILITY KERNEL DISCO-DATI VER 0.3a\n");
+                printf("DEV:                             [%s]\n", info.mount);
+                printf("FS TYPE:                         [%s]\n", info.name);
+                printf("TYPE:                            [%i]\n", info.type);
+                printf("CLUSTER TOTALI x32:              [%i]\n", info.clusters);
+                printf("SETTORI PER CLUSTER:             [%i]\n", info.spc);
+                printf("DIMENSIONE DELLA TABELLA GRASSO: [%i]\n", info.size);
             }
             
             else if (strcmp(command_line[0], COMMAND_TICKS) == 0) {
@@ -160,10 +158,12 @@ void shell_start_screen() {
             }
 
             else if (strcmp(command_line[0], COMMAND_TIME) == 0) {
-                short time[6] = { 0 };
-                get_datetime(time);
-                printf("\nGIORNO: %i/%i/%i\tTEMPO: %i:%i:%i", time[3], time[4], time[5], 
-                                                                time[2], time[1], time[0]);
+                DateInfo_t info;
+                get_datetime(&info);
+                printf(
+                    "\nGIORNO: %i/%i/%i\tTEMPO: %i:%i:%i", 
+                    info.day, info.month, info.year, info.hour, info.minute, info.second 
+                );
             }
 
             else if (strcmp(command_line[0], COMMAND_SET_ENVAR) == 0) {

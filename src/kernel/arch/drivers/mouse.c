@@ -102,7 +102,7 @@ int i386_init_mouse(int show_mouse) {
 
     i386_disableInterrupts();
 
-	uint8_t status;
+	uint8_t status = 0;
 	__mouse_wait(1);
 	i386_outb(MOUSE_STATUS, 0xA8);
 

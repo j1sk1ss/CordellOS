@@ -12,8 +12,9 @@ void HAL_initialize() {
     i386_isr_initialize();
     kprintf("ISR\t");
 
-    if (i386_irq_initialize()) 
+    if (i386_irq_initialize()) {
         kprintf("IRQ\t");
+    }
 
     TSS_init(0x5, 0x10, 0x0);
     kprintf("TSS)\n");

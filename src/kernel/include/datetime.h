@@ -11,13 +11,13 @@
 #define MAX_TICK        0xFFFFFFFF
 
 
-typedef struct datetime {
-    uint8_t datetime_second;
-    uint8_t datetime_minute;
-    uint8_t datetime_hour;
-    uint8_t datetime_day;
-    uint8_t datetime_month;
-    uint16_t datetime_year;
+typedef struct {
+    uint8_t second;
+    uint8_t minute;
+    uint8_t hour;
+    uint8_t day;
+    uint8_t month;
+    uint16_t year;
 } datetime_t;
 
 enum {
