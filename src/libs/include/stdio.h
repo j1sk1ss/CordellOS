@@ -88,10 +88,4 @@ void printf(const char* fmt, ...);
 void cprintf(uint32_t fcolor, uint32_t bcolor, const char* fmt, ...);
 void sprintf(char* buffer, int len, const char* fmt, ...);
 
-void _fprintf_signed(long long number, int radix, uint32_t fcolor, uint32_t bcolor);
-void _fprintf_unsigned(unsigned long long number, int radix, uint32_t fcolor, uint32_t bcolor);
-int _vsprintf_signed(char* buffer, long long number, int radix, int position);
-int _vsprintf_unsigned(char* buffer, unsigned long long number, int radix, int position);
-void _vsprintf(int type, char* buffer, int len, const char* fmt, uint32_t fcolor, uint32_t bcolor, va_list args);
-
 #endif

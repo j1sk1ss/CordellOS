@@ -12,8 +12,7 @@ void syscall(struct Registers* regs) {
     //=======================
         
         if (regs->eax == SYS_SCROLL) {
-            int lines = (int)regs->ebx;
-            GFX_scrollback_buffer(lines, GFX_data.physical_base_pointer);
+            GFX_scrollback_buffer((int)regs->ebx, GFX_data.physical_base_pointer);
         }
 
         //=======================
@@ -25,9 +24,7 @@ void syscall(struct Registers* regs) {
                 key_buffer[0] = pop_character();
             } 
             
-            else if (regs->eax == SYS_AREAD_KEYBOARD) {
-                _enable_keyboard();
-            } 
+            else if (regs->eax == SYS_AREAD_KEYBOARD) _enable_keyboard();
 
         //=======================
         //  KEYBOARD SYSCALLS
@@ -67,25 +64,17 @@ void syscall(struct Registers* regs) {
 
         else if (regs->eax == SYS_TIME) {
             _datetime_read_rtc();
-            short* date_buffer = (short*)regs->ecx;
-            date_buffer[0] = DTM_datetime.datetime_second;
-            date_buffer[1] = DTM_datetime.datetime_minute;
-            date_buffer[2] = DTM_datetime.datetime_hour;
-            date_buffer[3] = DTM_datetime.datetime_day;
-            date_buffer[4] = DTM_datetime.datetime_month;
-            date_buffer[5] = DTM_datetime.datetime_year;
+            memcpy((datetime_t*)regs->ecx, &DTM_datetime, sizeof(datetime_t));
         } 
 
-        else if (regs->eax == SYS_GET_TICKS) {
-            regs->eax = DTM_get_ticks();
-        }
+        else if (regs->eax == SYS_GET_TICKS) regs->eax = DTM_get_ticks();
 
         //=======================
         //  SYSTEM TASKING SYSCALLS
         //=======================
 
             else if (regs->eax == SYS_KILL_PROCESS) __kill();
-            
+
             else if (regs->eax == SYS_START_PROCESS) {
                 char* process_name = (char*)regs->ebx;
                 uint32_t address   = (uint32_t)regs->ecx;
@@ -155,39 +144,6 @@ void syscall(struct Registers* regs) {
         //=======================
         //  SYSTEM MEMMANAGER SYSCALLS
         //=======================
-        //  SYSTEM VARS SYSCALLS
-        //=======================
-
-            else if (regs->eax == SYS_ADD_VAR) {
-                char* name  = (char*)regs->ebx;
-                char* value = (char*)regs->ecx;
-                VARS_add(name, value);
-            }
-
-            else if (regs->eax == SYS_EXST_VAR) {
-                char* name = (char*)regs->ebx;
-                regs->eax  = VARS_exist(name);
-            }
-
-            else if (regs->eax == SYS_SET_VAR) {
-                char* name  = (char*)regs->ebx;
-                char* value = (char*)regs->ecx;
-                VARS_set(name, value);
-            }
-
-            else if (regs->eax == SYS_GET_VAR) {
-                char* name = (char*)regs->ebx;
-                regs->eax  = (uint32_t)VARS_get(name);
-            }
-
-            else if (regs->eax == SYS_DEL_VAR) {
-                char* name = (char*)regs->ebx;
-                VARS_delete(name);
-            }
-
-        //=======================
-        //  SYSTEM VARS SYSCALLS
-        //=======================
 
     //=======================
     //  SYSTEM SYSCALLS
@@ -195,9 +151,7 @@ void syscall(struct Registers* regs) {
     //  FILE SYSTEMS SYSCALLS
     //=======================
         
-        else if (regs->eax == SYS_OPENDIR) {
-            regs->eax = current_vfs->lsdir((int)regs->ebx, (char)0, 0);
-        }
+        else if (regs->eax == SYS_OPENDIR) regs->eax = current_vfs->lsdir((int)regs->ebx, (char)0, 0);
 
         else if (regs->eax == SYS_LSDIR) {
             int root_ci = (int)regs->ebx;
@@ -205,7 +159,7 @@ void syscall(struct Registers* regs) {
             char* cname = (char*)regs->ecx;
 
             int local_step = 0;
-            Content* root_node = _get_content_from_table(root_ci);
+            Content* root_node = FAT_get_content_from_table(root_ci);
             
             if (root_node != NULL) {
                 Directory* root_dir = root_node->directory;
@@ -240,9 +194,7 @@ ls_end:
             else regs->eax = -1;
         } 
         
-        else if (regs->eax == SYS_OPEN_CONTENT) {
-            regs->eax = current_vfs->openobj((char*)regs->ebx);
-        } 
+        else if (regs->eax == SYS_OPEN_CONTENT) regs->eax = current_vfs->openobj((char*)regs->ebx);
         
         else if (regs->eax == SYS_CONTENT_STAT) {
             CInfo_t info;
@@ -250,20 +202,15 @@ ls_end:
             memcpy((CInfo_t*)regs->ecx, &info, sizeof(CInfo_t));
         }
 
-        else if (regs->eax == SYS_CLOSE_CONTENT) {
-            current_vfs->closeobj(regs->ebx);
-        }
-
-        else if (regs->eax == SYS_CEXISTS) {
-            regs->eax = current_vfs->objexist((char*)regs->ebx);
-        } 
+        else if (regs->eax == SYS_CLOSE_CONTENT) current_vfs->closeobj(regs->ebx);
+        else if (regs->eax == SYS_CEXISTS) regs->eax = current_vfs->objexist((char*)regs->ebx);
         
         else if (regs->eax == SYS_FCREATE) {
             char* mkfile_path = (char*)regs->ebx;
             char* mkfile_name = (char*)regs->ecx;
 
             char* fname = strtok(mkfile_name, ".");
-            char* fexec = strtok(NULL, "."); 
+            char* fexec = strtok(NULL, "."); // TODO: add extention variable in syscall instead strtok
 
             Content* mkfile_content = FAT_create_object(fname, 0, fexec);
             current_vfs->putobj(mkfile_path, mkfile_content);
@@ -271,28 +218,14 @@ ls_end:
         } 
         
         else if (regs->eax == SYS_DIRCREATE) {
-            char* mkdir_path = (char*)regs->ebx;
-            char* mkdir_name = (char*)regs->ecx;
-
-            Content* mkdir_content = FAT_create_object(mkdir_name, 1, "\0");
-            current_vfs->putobj(mkdir_path, mkdir_content);
+            Content* mkdir_content = FAT_create_object((char*)regs->ecx, 1, "\0");
+            current_vfs->putobj((char*)regs->ebx, mkdir_content);
             FAT_unload_content_system(mkdir_content);
         } 
         
-        else if (regs->eax == SYS_CDELETE) {
-            char* delete_path = (char*)regs->ebx;
-            current_vfs->delobj(delete_path);
-        } 
-        
-        else if (regs->eax == SYS_CHANGE_META) {
-            char* meta_path = (char*)regs->ebx;
-            char* meta = (char*)regs->ecx;
-            current_vfs->objmetachg(meta_path, meta);
-        } 
-
-        else if (regs->eax == SYS_READ_FILE_OFF) {
-            current_vfs->read((int)regs->ebx, (uint8_t*)regs->edx, (int)regs->ecx, (int)regs->esi);
-        }
+        else if (regs->eax == SYS_CDELETE) current_vfs->delobj((char*)regs->ebx);
+        else if (regs->eax == SYS_CHANGE_META) current_vfs->objmetachg((char*)regs->ebx, (char*)regs->ecx);
+        else if (regs->eax == SYS_READ_FILE_OFF) current_vfs->read((int)regs->ebx, (uint8_t*)regs->edx, (int)regs->ecx, (int)regs->esi);
 
         else if (regs->eax == SYS_READ_FILE_OFF_STP) {
             current_vfs->read_stop(
@@ -300,9 +233,7 @@ ls_end:
             );
         }
 
-        else if (regs->eax == SYS_WRITE_FILE_OFF) {
-            current_vfs->write((int)regs->ebx, (uint8_t*)regs->edx, (int)regs->ecx, (int)regs->esi);
-        }
+        else if (regs->eax == SYS_WRITE_FILE_OFF) current_vfs->write((int)regs->ebx, (uint8_t*)regs->edx, (int)regs->ecx, (int)regs->esi);
 
         else if (regs->eax == SYS_READ_ELF) {
             int ci = current_vfs->openobj((char*)regs->ebx);
@@ -321,23 +252,16 @@ ls_end:
     //  GRAPHICS SYSCALLS
     //=======================
     
-        else if (regs->eax == SYS_VPUT_PIXEL) {
-            GFX_vdraw_pixel((uint16_t)regs->ebx, (uint16_t)regs->ecx, (uint32_t)regs->edx);
-        } 
+        else if (regs->eax == SYS_VPUT_PIXEL) GFX_vdraw_pixel((uint16_t)regs->ebx, (uint16_t)regs->ecx, (uint32_t)regs->edx);
+        else if (regs->eax == SYS_PPUT_PIXEL) GFX_pdraw_pixel((uint16_t)regs->ebx, (uint16_t)regs->ecx, (uint32_t)regs->edx);
         
-        else if (regs->eax == SYS_PPUT_PIXEL) {
-            GFX_pdraw_pixel((uint16_t)regs->ebx, (uint16_t)regs->ecx, (uint32_t)regs->edx);
-        } 
-
         else if (regs->eax == SYS_GET_PIXEL) {
             uint32_t* pixel = (uint32_t*)regs->edx;
             pixel[0] = GFX_get_pixel((uint16_t)regs->ebx, (uint16_t)regs->ecx);
         } 
 
-        else if (regs->eax == SYS_FBUFFER_SWIPE) {
-            GFX_swap_buffers();
-        }
-
+        else if (regs->eax == SYS_FBUFFER_SWIPE) GFX_swap_buffers();
+        
         else if (regs->eax == SYS_GET_RESOLUTION_X) {
             int* resolution = (int*)regs->edx;
             resolution[0] = GFX_data.x_resolution;
@@ -354,55 +278,39 @@ ls_end:
     //  NETWORKING SYSCALLS
     //=======================
 
-        else if (regs->eax == SYS_SET_IP) {
-            uint8_t* ip = (uint8_t*)regs->ebx;
-            IP_set(ip);
-        }
-
-        else if (regs->eax == SYS_GET_IP) {
-            uint8_t* buffer = (uint8_t*)regs->ebx;
-            IP_get(buffer);
-        }
-
-        else if (regs->eax == SYS_GET_MAC) {
-            uint8_t* buffer = (uint8_t*)regs->ebx;
-            get_mac_addr(buffer);
-        }
-
+        else if (regs->eax == SYS_SET_IP) IP_set((uint8_t*)regs->ebx);
+        else if (regs->eax == SYS_GET_IP) IP_get((uint8_t*)regs->ebx);
+        else if (regs->eax == SYS_GET_MAC) get_mac_addr((uint8_t*)regs->ebx);
+        
         else if (regs->eax == SYS_SEND_ETH_PACKET) {
-            uint8_t* dst_ip   = (uint8_t*)regs->ebx;
-            uint16_t src_port = (uint16_t)regs->ecx;
-            uint16_t dst_port = (uint16_t)regs->edx;
-            void* data = (void*)regs->esi;
-            int len    = (int)regs->edi;
-            UDP_send_packet(dst_ip, src_port, dst_port, data, len);
+            UDP_send_packet(
+                (uint8_t*)regs->ebx, 
+                (uint16_t)regs->ecx, 
+                (uint16_t)regs->edx, 
+                (void*)regs->esi, 
+                (int)regs->edi
+            );
         }
 
         else if (regs->eax == SYS_GET_ETH_PACKETS) {
-            uint8_t* data = (uint8_t*)regs->ebx;
             struct UDPpacket* packet = UDP_pop_packet();
             if (packet == NULL) return;
 
-            memcpy(data, packet->data, packet->data_size);
-
+            memcpy((uint8_t*)regs->ebx, packet->data, packet->data_size);
             free(packet->data);
             free(packet);
         }
 
-        else if (regs->eax == SYS_RESTART) {
-            i386_reboot();
-        }
-
+        else if (regs->eax == SYS_RESTART) i386_reboot();
+        
         else if (regs->eax == SYS_GET_FS_INFO) {
-            uint32_t* buffer = (uint32_t*)regs->ebx;
-            buffer[0] = (uint32_t)current_vfs->device->mountpoint;
-            buffer[1] = (uint32_t)current_vfs->name; // TODO: Copy to user space with malloc
-            buffer[2] = (uint32_t)FAT_data.fat_type;
-            buffer[3] = (uint32_t)FAT_data.total_clusters;
-            buffer[4] = (uint32_t)FAT_data.total_sectors;
-            buffer[5] = (uint32_t)FAT_data.bytes_per_sector;
-            buffer[6] = (uint32_t)FAT_data.sectors_per_cluster;
-            buffer[7] = (uint32_t)FAT_data.fat_size;
+            FSInfo_t* info = (FSInfo_t*)regs->ebx;
+            strcpy(info->mount, current_vfs->device->mountpoint);
+            strcpy(info->name, current_vfs->name);
+            info->type = FAT_data.fat_type;
+            info->clusters = FAT_data.total_clusters;
+            info->spc = FAT_data.sectors_per_cluster;
+            info->size = FAT_data.fat_size;
         }
 
     //=======================

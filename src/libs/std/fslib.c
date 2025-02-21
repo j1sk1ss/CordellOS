@@ -63,6 +63,17 @@ char* FSLIB_change_path(const char* currentPath, const char* content) {
     }
 }
 
+void get_fs_info(FSInfo_t* info) {
+     __asm__ volatile(
+        "movl $45, %%eax\n"
+        "movl %0, %%ebx\n"
+        "int $0x80\n"
+        :
+        : "r"(info)
+        : "%eax", "%ebx"
+    );
+}
+
 void fread(int ci, int offset, uint8_t* buffer, int len) {
     __asm__ volatile(
         "movl $33, %%eax\n"

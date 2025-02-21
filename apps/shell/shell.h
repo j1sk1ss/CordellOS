@@ -1,6 +1,7 @@
 #ifndef _KSHELL_H_
 #define _KSHELL_H_
 
+#include <vars.h>
 #include <graphics.h>
 #include <stdlib.h>
 #include <stddef.h>

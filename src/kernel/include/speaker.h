@@ -97,15 +97,6 @@ typedef enum {
 } beat_type_t;
 
 
-extern uint32_t bpm_ms;
-extern uint32_t whole_note_duration;
-extern uint32_t half_note_duration;
-extern uint32_t quarter_note_duration;
-extern uint32_t eigth_note_duration;
-extern uint32_t sixteenth_note_duration;
-extern uint32_t thirty2nd_note_duration;
-
-
 void enable_pc_speaker();
 void disable_pc_speaker();
 

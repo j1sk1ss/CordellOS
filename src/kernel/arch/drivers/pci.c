@@ -1,8 +1,8 @@
 #include "../../include/pci.h"
 
 
-uint32_t pci_size_map[100] = { 0 };
-pci_dev_t dev_zero = { 0 };
+static pci_dev_t dev_zero = { 0 };
+static uint32_t pci_size_map[100] = { 0 };
 
 
 /*
@@ -19,12 +19,10 @@ uint32_t pci_read(pci_dev_t dev, uint32_t field) {
 		uint8_t t = i386_inb(PCI_CONFIG_DATA + (field & 3));
 		return t;
 	}
-
 	else if (size == 2) {
 		uint16_t t = i386_inw(PCI_CONFIG_DATA + (field & 2));
 		return t;
 	}
-
 	else if (size == 4) {
 		uint32_t t = i386_inl(PCI_CONFIG_DATA);
 		return t;

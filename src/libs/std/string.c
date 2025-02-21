@@ -79,19 +79,19 @@ unsigned strlen(const char* str) {
 }
 
 int strcmp(const char* firstStr, const char* secondStr) {
-    if (firstStr == NULL || secondStr == NULL) return -1;
+    if (firstStr == NULL || secondStr == NULL) return 0;
     while (*firstStr && *secondStr && *firstStr == *secondStr) {
         ++firstStr;
         ++secondStr;
     }
 
-    return (unsigned char)(*firstStr) - (unsigned char)(*secondStr);
+    return (uint8_t)(*firstStr) - (uint8_t)(*secondStr);
 }
 
 int strcasecmp(const char *s1, const char *s2) {
-    unsigned char us1;
-    unsigned char us2;
-    size_t index;
+    uint8_t us1 = 0;
+    uint8_t us2 = 0;
+    size_t index = 0;
 
     us1 = tolower(*s1);
     us2 = tolower(*s2);
@@ -107,10 +107,11 @@ int strcasecmp(const char *s1, const char *s2) {
 }
 
 int strncmp(const char* str1, const char* str2, size_t n) {
-    for (size_t i = 0; i < n; ++i) 
+    for (size_t i = 0; i < n; ++i) {
         if (str1[i] != str2[i] || str1[i] == '\0' || str2[i] == '\0') 
-            return (unsigned char)str1[i] - (unsigned char)str2[i];
-        
+            return (uint8_t)str1[i] - (uint8_t)str2[i];
+    }
+
     return 0;
 }
 
@@ -175,7 +176,7 @@ double atof(const char *str) {
 }
 
 char* ftoa(double value) {
-    static char buffer[DOUBLE_STR_BUFFER_SIZE];
+    static char buffer[DOUBLE_STR_BUFFER_SIZE] = { 0 };
 
     int int_part            = (int)value;
     double fractional_part  = value - int_part;
@@ -217,17 +218,17 @@ char* strcat(char* dest, const char* src) {
     return dest;
 }
 
-void* __rawmemchr (const void* s, int c_in) {
-  const unsigned char *char_ptr;
-  const unsigned long int *longword_ptr;
-  unsigned long int longword, magic_bits, charmask;
-  unsigned char c;
+void* __rawmemchr(const void* s, int c_in) {
+  const uint8_t* char_ptr = NULL;
+  const unsigned long int* longword_ptr = NULL;
+  unsigned long int longword = 0, magic_bits = 0, charmask = 0;
+  uint8_t c = 0;
 
-  c = (unsigned char) c_in;
+  c = (uint8_t) c_in;
 
   /* Handle the first few characters by reading one character at a time.
      Do this until CHAR_PTR is aligned on a longword boundary.  */
-  for (char_ptr = (const unsigned char *) s;
+  for (char_ptr = (const uint8_t *) s;
        ((unsigned long int) char_ptr & (sizeof (longword) - 1)) != 0;
        ++char_ptr)
     if (*char_ptr == c)
@@ -256,7 +257,7 @@ void* __rawmemchr (const void* s, int c_in) {
 
         /* Add MAGIC_BITS to LONGWORD.  */
         if ((((longword + magic_bits) ^ ~longword) & ~magic_bits) != 0) {
-                const unsigned char *cp = (const unsigned char *) (longword_ptr - 1);
+                const uint8_t *cp = (const uint8_t *) (longword_ptr - 1);
 
                 if (cp[0] == c) return (void*)cp;
                 if (cp[1] == c) return (void*)&cp[1];
@@ -544,7 +545,7 @@ void str2uppercase(char* str) {
         return;
 
     for (int i = 0; str[i] != '\0'; i++) {
-        str[i] = toupper((unsigned char)str[i]);
+        str[i] = toupper((uint8_t)str[i]);
     }
 }
 

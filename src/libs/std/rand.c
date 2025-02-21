@@ -7,10 +7,10 @@ int rand_r(int seed) {
 }
 
 int srand_r(int fseed) {
-	short date_time[7];
-    get_datetime(date_time);
+	DateInfo_t info;
+    get_datetime(&info);
 
-	int seed = date_time[0] * date_time[2] * 11015245 + 12345;
+	int seed = info.second * info.hour * 11015245 + 12345;
 	return ((fseed * seed) & 2147483647);
 }
 

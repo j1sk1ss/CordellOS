@@ -37,20 +37,10 @@ extern stdio_mode_t KSTDIO_data;
 
 
 void kclrscr();
-void kvfprintf(const char* fmt, va_list args);
-void kfprintf(const char* fmt, ...);
 
 void kputc(char c);
 void kputs(const char* str);
 void kprintf(const char* fmt, ...);
-void kprint_buffer(const char* msg, const void* buffer, uint32_t count);
-
-void _kfputc(char c);
-void _kfputs(const char* str);
-void _kfprintf_unsigned(unsigned long long number, int radix);
-void _kfprintf_signed(long long number, int radix);
-
-void _kfprint_buffer(const char* msg, const void* buffer, uint32_t count);
 
 void kset_color(int color);
 

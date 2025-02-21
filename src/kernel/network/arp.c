@@ -22,7 +22,7 @@ void ARP_handle_packet(arp_packet_t* arp_packet, int len) {
             
             if (DHCP_data.allocated) {
                 DHCP_get_host_addr(arp_packet->src_protocol_addr);
-                arp_lookup(arp_packet->src_hardware_addr, arp_packet->src_protocol_addr);
+                ARP_lookup(arp_packet->src_hardware_addr, arp_packet->src_protocol_addr);
             }
             else {
                 get_mac_addr(arp_packet->src_hardware_addr);
@@ -95,7 +95,7 @@ void ARP_lookup_add(uint8_t* ret_hardware_addr, uint8_t* ip_addr) {
     if (ARP_data.arp_table_curr >= ARP_TABLE_SIZE) ARP_data.arp_table_curr = 0;
 }
 
-int arp_lookup(uint8_t* ret_hardware_addr, uint8_t* ip_addr) {
+int ARP_lookup(uint8_t* ret_hardware_addr, uint8_t* ip_addr) {
     uint32_t ip_entry = *((uint32_t*)(ip_addr));
     for (int i = 0; i < ARP_TABLE_SIZE; i++) 
         if (ARP_data.arp_table[i].ip_addr == ip_entry) {

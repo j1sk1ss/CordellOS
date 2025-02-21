@@ -1,5 +1,6 @@
 #include "../../include/pit.h"
 
+
 void i386_pit_init() {
     // Set PIT to generate interrupts at a specific frequency
     uint16_t divisor = 1193180 / TIMER_FREQUENCY_HZ;

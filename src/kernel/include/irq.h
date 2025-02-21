@@ -19,7 +19,7 @@ struct Registers;
 typedef void (*IRQHandler)(struct Registers* regs);
 
 
-void i386_irq_initialize();
+int i386_irq_initialize();
 void i386_irq_registerHandler(int irq, IRQHandler handler);
 
 #endif

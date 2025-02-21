@@ -4,13 +4,15 @@
  */
 #include "../../include/speaker.h"
 
-uint32_t bpm_ms                  = 0;
-uint32_t whole_note_duration     = 0;
-uint32_t half_note_duration      = 0;
-uint32_t quarter_note_duration   = 0;
-uint32_t eigth_note_duration     = 0;
-uint32_t sixteenth_note_duration = 0;
-uint32_t thirty2nd_note_duration = 0;
+
+static uint32_t bpm_ms                  = 0;
+static uint32_t whole_note_duration     = 0;
+static uint32_t half_note_duration      = 0;
+static uint32_t quarter_note_duration   = 0;
+static uint32_t eigth_note_duration     = 0;
+static uint32_t sixteenth_note_duration = 0;
+static uint32_t thirty2nd_note_duration = 0;
+
 
 void set_pit_channel_mode_frequency(const uint8_t channel, const uint8_t operating_mode, const uint16_t frequency) {
     // Invalid input

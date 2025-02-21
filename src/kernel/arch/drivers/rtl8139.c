@@ -1,17 +1,17 @@
 #include "../../include/rtl8139.h"
 
 
-int packet_meta[100];
-ethernet_frame_t* ethernet_packets[100];
-int current_ethernet_packet = 0;
+static int packet_meta[100] = { 0 };
+static ethernet_frame_t* ethernet_packets[100] = { NULL };
+static int current_ethernet_packet = 0;
 
-pci_dev_t pci_rtl8139_device;
-rtl8139_dev_t rtl8139_device;
+static pci_dev_t pci_rtl8139_device;
+static rtl8139_dev_t rtl8139_device;
 
-uint32_t current_packet_ptr;
+static uint32_t current_packet_ptr = 0;
 
-uint8_t TSAD_array[4] = { 0x20, 0x24, 0x28, 0x2C };
-uint8_t TSD_array[4]  = { 0x10, 0x14, 0x18, 0x1C };
+static uint8_t TSAD_array[4] = { 0x20, 0x24, 0x28, 0x2C };
+static uint8_t TSD_array[4]  = { 0x10, 0x14, 0x18, 0x1C };
 
 
 struct ethernet_packet* pop_packet() {
@@ -22,7 +22,7 @@ struct ethernet_packet* pop_packet() {
     return packet;
 }
 
-void receive_packet() {
+void __rtl_receive_packet() {
     uint8_t* rx_buffer     = rtl8139_device.rx_buffer;
     uint16_t* t            = (uint16_t*)(rx_buffer + current_packet_ptr);
     uint16_t packet_length = *(t + 1);
@@ -47,7 +47,7 @@ void rtl8139_handler(struct Registers* reg) {
     i386_outw(rtl8139_device.io_base + IntrStatus, 0x05);
 
     if (status & TOK) if (NETWORK_DEBUG) kprintf("\nRLT8139 packet sent");
-    if (status & ROK) receive_packet();
+    if (status & ROK) __rtl_receive_packet();
 }
 
 void get_mac_addr(uint8_t* src_mac_addr) {

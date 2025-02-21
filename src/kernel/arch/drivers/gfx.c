@@ -6,10 +6,10 @@ vbe_mode_info_t GFX_data;
 
 void GFX_init(struct multiboot_info* mb_info) {
     GFX_data.physical_base_pointer = mb_info->framebuffer_addr;
-    GFX_data.x_resolution          = mb_info->framebuffer_width;
-    GFX_data.y_resolution          = mb_info->framebuffer_height;
-    GFX_data.bits_per_pixel        = mb_info->framebuffer_bpp;
-    GFX_data.pitch                 = mb_info->framebuffer_pitch;
+    GFX_data.x_resolution   = mb_info->framebuffer_width;
+    GFX_data.y_resolution   = mb_info->framebuffer_height;
+    GFX_data.bits_per_pixel = mb_info->framebuffer_bpp;
+    GFX_data.pitch          = mb_info->framebuffer_pitch;
 
     GFX_data.linear_red_mask_size      = mb_info->framebuffer_red_mask_size;
     GFX_data.linear_red_field_position = mb_info->framebuffer_red_field_position;
@@ -68,7 +68,8 @@ uint32_t GFX_convert_color(const uint32_t color) {
         convert_r = 0;
         convert_g = 0;
         convert_b = orig_b;
-    } else {
+    } 
+    else {
         const uint8_t r_bits_to_shift = 8 - GFX_data.linear_red_mask_size; 
         const uint8_t g_bits_to_shift = 8 - GFX_data.linear_green_mask_size;
         const uint8_t b_bits_to_shift = 8 - GFX_data.linear_blue_mask_size;
@@ -106,5 +107,5 @@ void GFX_set_vbuffer(uint32_t value) {
 }
 
 void __set_buffer(uint32_t value, uint32_t addr, size_t size) {
-    for (size_t i = 0; i < size; i++) ((uint32_t*)addr)[i] = value;
+    memset((void*)addr, value, size);
 }

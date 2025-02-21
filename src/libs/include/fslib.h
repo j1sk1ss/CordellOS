@@ -9,6 +9,7 @@
 
 #define STAT_FILE	0x00
 #define STAT_DIR	0x01
+#define NOT_PRESENT	0x02
 
 
 typedef struct FATDate {
@@ -33,10 +34,20 @@ typedef struct {
 	uint16_t last_modification_date;
 } CInfo_t;
 
+typedef struct {
+	char mount[32];
+	char name[24];
+	uint32_t type;
+	uint32_t clusters;
+	uint16_t spc;
+	uint32_t size;
+} FSInfo_t;
+
 
 char* FSLIB_change_path(const char* currentPath, const char* content);
 Date* FSLIB_get_date(short data, int type);
 
+void get_fs_info(FSInfo_t* info);
 int cexists(const char* path);
 void rmcontent(const char* path);
 void chgcontent(const char* path, const char* meta);

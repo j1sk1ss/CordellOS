@@ -10,11 +10,21 @@
 #define PAGE_SIZE           4096
 
 
+typedef struct {
+    uint8_t second;
+    uint8_t minute;
+    uint8_t hour;
+    uint8_t day;
+    uint8_t month;
+    uint16_t year;
+} DateInfo_t;
+
+
 void tstart(char* name, uint32_t address, uint32_t delay);
 int tpid();
 void tkill();
 
-void get_datetime(short* data);
+void get_datetime(DateInfo_t* info);
 
 void* malloc(uint32_t size);
 void* mallocp(uint32_t v_addr);
@@ -26,14 +36,6 @@ void freep(void* ptr);
 
 void machine_restart();
 void switch_disk(int index);
-
-void get_fs_info(uint32_t* buffer);
-
-void envar_add(char* name, char* value);
-int envar_exists(char* name);
-void envar_set(char* name, char* value);
-char* envar_get(char* name);
-void envar_delete(char* name);
 
 void switch2user();
 
