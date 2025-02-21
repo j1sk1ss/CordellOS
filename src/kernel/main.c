@@ -33,8 +33,8 @@
 #define CONFIG_NETWORK  2
 #define CONFIG_SPEAKER  3
 
-#define CONFIG_DISABLED 48
-#define CONFIG_ENABLED  49
+#define CONFIG_DISABLED '0'
+#define CONFIG_ENABLED  '1'
 
 #define MMAP_LOCATION   0x30000
 
@@ -122,15 +122,15 @@
 
 void _shell() {
 
-    int ci = current_vfs->openobj(SHELL_PATH);
+    int shell_ci = current_vfs->openobj(SHELL_PATH);
 
 #ifdef USERMODE
     uint32_t esp = 0;
     asm("mov %%esp, %0" : "=r"(esp));
     TSS_set_stack(0x10, esp);
-    current_vfs->objexec(ci, 0, NULL, USER);
+    current_vfs->objexec(shell_ci, 0, NULL, USER);
 #else
-    current_vfs->objexec(ci, 0, NULL, KERNEL);
+    current_vfs->objexec(shell_ci, 0, NULL, KERNEL);
 #endif
 
 }
@@ -171,8 +171,8 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
         ELF_build_symbols_from_multiboot(mb_info->u.elf_sec);
 
         kprintf("\n\t\t =    CORDELL  KERNEL    =");
-        kprintf("\n\t\t =     [ ver.   21 ]     =");
-        kprintf("\n\t\t =     [ 29.11  24 ]     = \n\n");
+        kprintf("\n\t\t =     [ ver.   22 ]     =");
+        kprintf("\n\t\t =     [ 21.02  25 ]     = \n\n");
         kprintf("\n\t\t = INFORMAZIONI GENERALI = \n\n");
         kprintf("\tMB FLAGS:        [0x%p]\n", mb_info->flags);
         kprintf("\tMEM LOW:         [%uKB] => MEM UP: [%uKB]\n", mb_info->mem_lower, mb_info->mem_upper);
@@ -350,12 +350,13 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
 
         START_PROCESS("idle", (uint32_t)_idle, KERNEL, 1);
 
-        if (current_vfs->objexist(CONFIG_PATH)) { // TODO: PF
-            int boot_config = current_vfs->openobj(CONFIG_PATH);
+        if (!current_vfs->objexist(CONFIG_PATH)) START_PROCESS("shell", (uint32_t)_shell, KERNEL, 10); // TODO! If config exist, it cause page fault.
+        else {
+            int boot_ci = current_vfs->openobj(CONFIG_PATH);
             static uint8_t config[128] = { 0 };
-            current_vfs->read(boot_config, config, 0, 128);
-            current_vfs->closeobj(boot_config);
-            
+            current_vfs->read(boot_ci, config, 0, 5);
+            current_vfs->closeobj(boot_ci);
+
             //===================
             // Speaker test
             //===================
@@ -390,6 +391,7 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
             //===================
             // Network initialization
             //===================
+
             if (config[CONFIG_MOUSE] == CONFIG_ENABLED) i386_init_mouse(1);
 
 #ifdef USERMODE
@@ -397,7 +399,7 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
 #else
             if (config[CONFIG_KSHELL] == CONFIG_ENABLED) START_PROCESS("shell", (uint32_t)_shell, KERNEL, 10);
 #endif
-        } else START_PROCESS("shell", (uint32_t)_shell, KERNEL, 10);
+        }
 
         TASK_start_tasking();
     
