@@ -29,30 +29,25 @@ char* strrchr(const char *s, int c) {
 }
 
 int strstr(const char* haystack, const char* needle) {
-    if (*needle == '\0')    // If the needle is an empty string, return 0 (position 0).
-        return 0;
+    if (*needle == '\0') return 0;
     
-    int position = 0;       // Initialize the position to 0.
+    int position = 0;
     while (*haystack) {
-        const char* hay_ptr     = haystack;
-        const char* needle_ptr  = needle;
+        const char* hay_ptr = haystack;
+        const char* needle_ptr = needle;
 
-        // Compare characters in the haystack and needle.
         while (*hay_ptr == *needle_ptr && *needle_ptr) {
             hay_ptr++;
             needle_ptr++;
         }
 
-        // If we reached the end of the needle, we found a match.
-        if (*needle_ptr == '\0') 
-            return position;
+        if (*needle_ptr == '\0') return position;
 
-        // Move to the next character in the haystack.
         haystack++;
         position++;
     }
 
-    return -1;  // Needle not found, return -1 to indicate that.
+    return -1;
 }
 
 char* strcpy(char* dst, const char* src) {
@@ -137,18 +132,15 @@ double atof(const char *str) {
     bool is_decimal     = false;
     int decimal_places  = 0;
 
-    // Skip whitespace characters
-    while (isspace(*str)) 
-        str++;
-
-    // Determine sign
+    while (isspace(*str)) str++;
     if (*str == '-') {
         sign = -1;
         str++;
-    } else if (*str == '+') 
+    } 
+    else if (*str == '+') {
         str++;
+    }
     
-    // Process the string
     while (*str != '\0') {
         if (*str == '.' && !is_decimal) {
             is_decimal = true;
@@ -162,13 +154,11 @@ double atof(const char *str) {
                 decimal_places++;
             } else 
                 result = result * 10.0 + (*str - '0');
-        } else 
-            break;
+        } else break;
 
         str++;
     }
 
-    // Combine integer and fractional parts
     result += fraction / pow(10.0, decimal_places);
     result *= sign;
 
@@ -178,10 +168,10 @@ double atof(const char *str) {
 char* ftoa(double value) {
     static char buffer[DOUBLE_STR_BUFFER_SIZE] = { 0 };
 
-    int int_part            = (int)value;
-    double fractional_part  = value - int_part;
-    int i                   = 0;
-    bool is_negative        = false;
+    int i = 0;
+    int int_part = (int)value;
+    double fractional_part = value - int_part;
+    bool is_negative = false;
 
     if (value < 0) {
         is_negative     = true;
@@ -194,11 +184,8 @@ char* ftoa(double value) {
         int_part /= 10;
     } while (int_part != 0);
 
-    if (is_negative) 
-        buffer[i++] = '-';
-
+    if (is_negative) buffer[i++] = '-';
     reverse(buffer, i);
-
     buffer[i++] = '.';
 
     int num_decimal_digits = 6;
@@ -225,17 +212,11 @@ void* __rawmemchr(const void* s, int c_in) {
   uint8_t c = 0;
 
   c = (uint8_t) c_in;
-
-  /* Handle the first few characters by reading one character at a time.
-     Do this until CHAR_PTR is aligned on a longword boundary.  */
   for (char_ptr = (const uint8_t *) s;
        ((unsigned long int) char_ptr & (sizeof (longword) - 1)) != 0;
        ++char_ptr)
     if (*char_ptr == c)
       return (void*) char_ptr;
-
-  /* All these elucidatory comments refer to 4-byte longwords,
-     but the theory applies equally well to 8-byte longwords.  */
 
   longword_ptr = (unsigned long int *) char_ptr;
 
@@ -245,7 +226,6 @@ void* __rawmemchr(const void* s, int c_in) {
   magic_bits = ((unsigned long int) 0x7efefefe << 32) | 0xfefefeff;
 #endif
 
-  /* Set up a longword, each of whose bytes is C.  */
   charmask = c | (c << 8);
   charmask |= charmask << 16;
 #if LONG_MAX > LONG_MAX_32_BITS
@@ -254,8 +234,6 @@ void* __rawmemchr(const void* s, int c_in) {
 
     while (1) {
         longword = *longword_ptr++ ^ charmask;
-
-        /* Add MAGIC_BITS to LONGWORD.  */
         if ((((longword + magic_bits) ^ ~longword) & ~magic_bits) != 0) {
                 const uint8_t *cp = (const uint8_t *) (longword_ptr - 1);
 
@@ -458,7 +436,7 @@ char* codepoint_to_utf8(int codePoint, char* stringOutput) {
     return stringOutput;
 }
 
-int	atoi(char *str) {
+int atoi(char *str) {
 	int neg = 1;
 	int num = 0;
 	int i   = 0;
@@ -485,17 +463,15 @@ char* itoa(int n) {
     char* str = (char*)malloc(10);
     int i, sign;
 
-    if ((sign = n) < 0)        /* record sign */
-        n = -n;                /* make n positive */
+    if ((sign = n) < 0)
+        n = -n;
     i = 0;
 
-    do {                         /* generate digits in reverse order */
-        str[i++] = n % 10 + '0'; /* get next digit */
-    } while ((n /= 10) > 0);     /* delete it */
+    do {
+        str[i++] = n % 10 + '0';
+    } while ((n /= 10) > 0);
 
-    if (sign < 0)
-        str[i++] = '-';
-
+    if (sign < 0) str[i++] = '-';
     reverse(str, strlen(str));
     str[i] = '\0';
 
