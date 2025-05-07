@@ -122,7 +122,7 @@ ELF32_program* ELF_read(int ci, int type) {
 
 void ELF_free_program(ELF32_program* program, uint8_t type) {
     for (uint32_t i = 0; i < program->pages_count; i++) 
-        _kfreep((void*)program->pages[i]);
+        ALC_freep((void*)program->pages[i], type);
 
     ALC_free(program->pages, type);
     ALC_free(program, type);

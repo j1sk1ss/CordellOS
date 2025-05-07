@@ -125,9 +125,6 @@ void _shell() {
     int shell_ci = current_vfs->openobj(SHELL_PATH);
 
 #ifdef USERMODE
-    uint32_t esp = 0;
-    asm("mov %%esp, %0" : "=r"(esp));
-    TSS_set_stack(0x10, esp);
     current_vfs->objexec(shell_ci, 0, NULL, USER);
 #else
     current_vfs->objexec(shell_ci, 0, NULL, KERNEL);
@@ -346,12 +343,21 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
     // Kernel2user part
     //===================
 
-#pragma region [Preparations for user land]
+#pragma region [Preparations for userland]
+        
+        uint32_t current_esp;
+        asm ("mov %%esp, %0" : "=r"(current_esp));
+        TSS_set_stack(0x10, current_esp);
 
         START_PROCESS("idle", (uint32_t)_idle, KERNEL, 1);
 
-        if (!current_vfs->objexist(CONFIG_PATH)) START_PROCESS("shell", (uint32_t)_shell, KERNEL, 10); // TODO! If config exist, it cause page fault.
-        else {
+        ADDRESS_SPACE shell_addr_space = KERNEL;
+        #ifdef USERMODE
+            shell_addr_space = USER;
+        #endif
+
+        if (!current_vfs->objexist(CONFIG_PATH)) START_PROCESS("shell", (uint32_t)_shell, shell_addr_space, 10); 
+        else { // TODO! If config exist, it cause page fault.
             int boot_ci = current_vfs->openobj(CONFIG_PATH);
             static uint8_t config[128] = { 0 };
             current_vfs->read(boot_ci, config, 0, 5);
@@ -393,12 +399,7 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
             //===================
 
             if (config[CONFIG_MOUSE] == CONFIG_ENABLED) i386_init_mouse(1);
-
-#ifdef USERMODE
-            if (config[CONFIG_KSHELL] == CONFIG_ENABLED) START_PROCESS("shell", (uint32_t)_shell, USER, 10);
-#else
-            if (config[CONFIG_KSHELL] == CONFIG_ENABLED) START_PROCESS("shell", (uint32_t)_shell, KERNEL, 10);
-#endif
+            if (config[CONFIG_KSHELL] == CONFIG_ENABLED) START_PROCESS("shell", (uint32_t)_shell, shell_addr_space, 10);
         }
 
         TASK_start_tasking();

@@ -34,33 +34,12 @@ typedef struct malloc_head {
 
 
 void* ALC_malloc(size_t size, uint8_t type);
-void* _kmalloc(size_t size);
-void* _umalloc(size_t size);
-
 void* ALC_realloc(void* ptr, size_t size, uint8_t type);
-void* _krealloc(void* ptr, size_t size);
-void* _urealloc(void* ptr, size_t size);
-
 int ALC_mallocp(uint32_t v_addr, uint8_t type);
-int _kmallocp(uint32_t v_addr);
-int _umallocp(uint32_t v_addr);
-
 int ALC_free(void* ptr, uint8_t type);
-int _kfree(void* ptr);
-int _ufree(void* ptr);
-
-void _kfreep(void* v_addr);
-
-int __mm_init(size_t bytes, malloc_head_t* head);
-void* __kmalloc(size_t size, malloc_head_t* head, uint8_t type);
-int __kmallocp(uint32_t virt, malloc_head_t* head, uint8_t type);
-void* __krealloc(void* ptr, size_t size, malloc_head_t* head, uint8_t type);
-int __kfree(void* ptr, malloc_head_t* head);
-int __block_split(malloc_block_t *node, size_t size);
-int __merge_free_blocks(malloc_block_t* block);
+int ALC_freep(void* v_addr, uint8_t type);
 
 int kprint_kmalloc();
 int kprint_umalloc();
-int _print_malloc(malloc_head_t* head);
 
 #endif
