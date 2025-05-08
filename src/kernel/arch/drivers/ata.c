@@ -197,7 +197,7 @@ static ata_dev_t secondary_slave  = {.slave = 1};
     uint8_t* ATA_read_sector(uint32_t lba) {
         _ata_wait();
         uint8_t* buffer = (uint8_t*)ALC_malloc(SECTOR_SIZE, KERNEL);
-        if (buffer == NULL) return NULL;
+        if (!buffer) return NULL;
 
         _prepare_for_reading(lba);
         if (!_is_ata_ready()) {
@@ -218,8 +218,9 @@ static ata_dev_t secondary_slave  = {.slave = 1};
     // stop == ERROR_SYMBOL (error), stop == STOP_SYMBOL (found)
     uint8_t* ATA_read_sector_stop(uint32_t lba, uint8_t* stop) {
         _ata_wait();
-
         uint8_t* buffer = (uint8_t*)ALC_malloc(SECTOR_SIZE, KERNEL);
+        if (!buffer) return NULL;
+
         uint8_t dummy_buffer[SECTOR_SIZE] = { 0 };
         uint8_t* buffer_pointer = buffer;
         memset(buffer, 0, SECTOR_SIZE);
@@ -254,6 +255,8 @@ static ata_dev_t secondary_slave  = {.slave = 1};
     uint8_t* ATA_read_sector_stopoff(uint32_t lba, uint32_t offset, uint8_t* stop) {
         _ata_wait();
         uint8_t* buffer = (uint8_t*)ALC_malloc(SECTOR_SIZE, KERNEL);
+        if (!buffer) return NULL;
+
         uint8_t dummy_buffer[SECTOR_SIZE] = { 0 };
         uint8_t* buffer_pointer = buffer;
         memset(buffer, 0, SECTOR_SIZE);
@@ -268,15 +271,15 @@ static ata_dev_t secondary_slave  = {.slave = 1};
             uint16_t value = i386_inw(DATA_REGISTER);
             uint8_t first = (uint8_t)(value & 0xFF);
             buffer_pointer[n * 2] = first;
-            if (first == stop[0] && n * 2 >= offset) {
-                stop[0] = STOP_SYMBOL;
+            if (first == *stop && n * 2 >= offset) {
+                *stop = STOP_SYMBOL;
                 buffer_pointer = dummy_buffer;
             }
 
             uint8_t second = (uint8_t)(value >> 8);
             buffer_pointer[n * 2 + 1] = second;
-            if (second == stop[0] && n * 2 + 1 >= offset) {
-                stop[0] = STOP_SYMBOL;
+            if (second == *stop && n * 2 + 1 >= offset) {
+                *stop = STOP_SYMBOL;
                 buffer_pointer = dummy_buffer;
             }
         }
@@ -288,7 +291,7 @@ static ata_dev_t secondary_slave  = {.slave = 1};
     uint8_t* ATA_read_sectors(uint32_t lba, uint32_t sector_count) {
         _ata_wait();
         uint8_t* buffer = (uint8_t*)ALC_malloc(SECTOR_SIZE * sector_count, KERNEL);
-        if (buffer == NULL) return NULL;
+        if (!buffer) return NULL;
 
         memset(buffer, 0, SECTOR_SIZE * sector_count);
         for (uint32_t i = 0; i < sector_count; i++) {
@@ -303,18 +306,16 @@ static ata_dev_t secondary_slave  = {.slave = 1};
     }
 
     uint8_t* ATA_readoff_sectors(uint32_t lba, uint32_t offset, uint32_t sector_count) {
-        _ata_wait();
-
         uint32_t sectors_seek = offset / SECTOR_SIZE;
-        uint32_t data_seek    = offset % SECTOR_SIZE;
-        uint32_t size         = (SECTOR_SIZE * (sector_count - 1)) + (SECTOR_SIZE - data_seek);
+        uint32_t data_seek = offset % SECTOR_SIZE;
+        uint32_t size = (SECTOR_SIZE * (sector_count - 1)) + (SECTOR_SIZE - data_seek);
         uint8_t* buffer = (uint8_t*)ALC_malloc(size, KERNEL);
-        if (buffer == NULL) return NULL;
+        if (!buffer) return NULL;
 
         memset(buffer, 0, size);
         for (uint32_t i = sectors_seek; i < sector_count; i++) {
             uint8_t* sector_data = ATA_read_sector(lba + i);
-            if (sector_data == NULL) return NULL;
+            if (!sector_data) return NULL;
             
             memcpy(buffer + i * (SECTOR_SIZE - data_seek), sector_data + data_seek, SECTOR_SIZE - data_seek);
             ALC_free(sector_data, KERNEL);
@@ -330,7 +331,6 @@ static ata_dev_t secondary_slave  = {.slave = 1};
     // data[1] - Loaded data from disk
     uint8_t* ATA_read_sectors_stop(uint32_t lba, uint32_t sector_count, uint8_t* stop) {
         _ata_wait();
-
         uint8_t* buffer = (uint8_t*)ALC_malloc(SECTOR_SIZE * sector_count, KERNEL);
         if (buffer == NULL) return NULL;
 
@@ -342,7 +342,7 @@ static ata_dev_t secondary_slave  = {.slave = 1};
             memcpy(buffer + i * SECTOR_SIZE, sector_data, SECTOR_SIZE);
             ALC_free(sector_data, KERNEL);
 
-            if (stop[0] == STOP_SYMBOL) break;
+            if (*stop == STOP_SYMBOL) break;
         }
 
         return buffer;
@@ -369,7 +369,7 @@ static ata_dev_t secondary_slave  = {.slave = 1};
 
             data_seek = 0;
 
-            if (stop[0] == STOP_SYMBOL) break;
+            if (*stop == STOP_SYMBOL) break;
         }
 
         return buffer;

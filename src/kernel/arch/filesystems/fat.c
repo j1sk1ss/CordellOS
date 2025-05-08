@@ -257,7 +257,7 @@
 		assert(cluster >= 2 && cluster < FAT_data.total_clusters);
 		uint32_t start_sect = (cluster - 2) * (uint16_t)FAT_data.sectors_per_cluster + FAT_data.first_data_sector;
 		uint8_t* cluster_data = ATA_readoff_sectors(start_sect, offset, FAT_data.sectors_per_cluster);
-		assert(cluster_data != NULL);
+		assert(cluster_data);
 		return cluster_data;
 	}
 
@@ -271,7 +271,7 @@
 		assert(cluster >= 2 && cluster < FAT_data.total_clusters);
 		uint32_t start_sect = (cluster - 2) * (uint16_t)FAT_data.sectors_per_cluster + FAT_data.first_data_sector;
 		uint8_t* cluster_data = ATA_readoff_sectors_stop(start_sect, offset, FAT_data.sectors_per_cluster, stop);
-		assert(cluster_data != NULL);
+		assert(cluster_data);
 		return cluster_data;
 	}
 
@@ -887,7 +887,7 @@
 		uint32_t data_position = 0;
 
 		Content* data = FAT_get_content_from_table(ci);
-		if (data == NULL) return -1;
+		if (!data) return -1;
 
 		for (int i = cluster_seek; i < data->file->data_size && data_position < size; i++) {
 			uint32_t copy_size = min(SECTOR_SIZE * FAT_data.sectors_per_cluster - data_seek, size - data_position);
