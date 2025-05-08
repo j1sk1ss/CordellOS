@@ -6,6 +6,8 @@
 
 #define i386_GDT_CODE_SEGMENT 0x08
 #define i386_GDT_DATA_SEGMENT 0x10
+#define i386_GDT_USER_CODE_SEGMENT 0x18
+#define i386_GDT_USER_DATA_SEGMENT 0x20
 
 #define GDT_LIMIT_LOW(limit)             (limit & 0xFFFF)
 #define GDT_BASE_LOW(base)               (base & 0xFFFF)
@@ -49,7 +51,7 @@ typedef enum {
     GDT_ACCESS_DATA_SEGMENT          = 0x10,
     GDT_ACCESS_CODE_SEGMENT          = 0x18,
 
-    GDT_ACCESS_DISCRIPTOR_TSS        = 0x00,
+    GDT_ACCESS_DISCRIPTOR_TSS        = 0x89,
 
     GDT_ACCESS_RING0                 = 0x00,
     GDT_ACCESS_RING1                 = 0x20,
@@ -57,7 +59,6 @@ typedef enum {
     GDT_ACCESS_RING3                 = 0x60,
 
     GDT_ACCESS_SEGMENT_PRESENT       = 0x80,
-
 } GDT_ACCESS;
 
 typedef enum {

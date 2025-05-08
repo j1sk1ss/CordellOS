@@ -121,15 +121,14 @@
 #pragma region [Default tasks]
 
 void _shell() {
-
     int shell_ci = current_vfs->openobj(SHELL_PATH);
-
 #ifdef USERMODE
-    current_vfs->objexec(shell_ci, 0, NULL, USER);
+    ELF32_program* program = ELF_read(shell_ci, USER);
+    i386_switch2user(program->entry_point);
+    ELF_free_program(program, USER);
 #else
     current_vfs->objexec(shell_ci, 0, NULL, KERNEL);
 #endif
-
 }
 
 void _idle() {

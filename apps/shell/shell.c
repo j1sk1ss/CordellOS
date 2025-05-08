@@ -8,8 +8,6 @@ static int exit = 1;
 
 void main(int argc, char* argv[]) {
     load_font("home\\shell.psf");
-    // switch2user();
-
     clrscr();
     shell_start_screen();
 

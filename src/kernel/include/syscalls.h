@@ -37,7 +37,6 @@
 #define SYS_GET_VAR     55
 #define SYS_DEL_VAR     56
 #define SYS_EXST_VAR    57
-#define SYS_SWITCH_USER 60
 #define SYS_GET_TICKS   3
 
 // FS managment

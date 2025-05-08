@@ -38,7 +38,6 @@ void syscall(struct Registers* regs) {
             else if (destination == 2) memcpy((void*)GFX_data.physical_base_pointer, (void*)VMM_virtual2physical((void*)source), size);
             else memcpy((void*)destination, (void*)VMM_virtual2physical((void*)source), size);
         break;
-        case SYS_SWITCH_USER: i386_switch2user(); break;
         case SYS_TIME:
             _datetime_read_rtc();
             memcpy((datetime_t*)regs->ecx, &DTM_datetime, sizeof(datetime_t));
@@ -80,20 +79,20 @@ void syscall(struct Registers* regs) {
 #elif defined(USERMODE)
             case SYS_PAGE_FREE:
                 void* ptr_to_free = (void*)regs->ebx;
-                if (!ptr_to_free) ALC_freep(ptr_to_free, KERNEL);
+                if (!ptr_to_free) ALC_freep(ptr_to_free, USER);
             break;
             case SYS_MALLOC:
-                void* allocated_memory = ALC_malloc(regs->ebx, KERNEL);
+                void* allocated_memory = ALC_malloc(regs->ebx, USER);
                 regs->eax = (uint32_t)allocated_memory;
             break;
             case SYS_PAGE_MALLOC:
                 uint32_t address = regs->ebx;
-                ALC_mallocp(address, KERNEL);
+                ALC_mallocp(address, USER);
                 regs->eax = address;
             break;
             case SYS_FREE:
                 void* ptr_to_free = (void*)regs->ebx;
-                if (!ptr_to_free) ALC_free(ptr_to_free, KERNEL);
+                if (!ptr_to_free) ALC_free(ptr_to_free, USER);
             break;
 #endif
 

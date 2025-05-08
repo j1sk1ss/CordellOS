@@ -147,13 +147,3 @@ void machine_restart() {
 void switch_disk(int index) {
 
 }
-
-void switch2user() {
-    __asm__ volatile(
-        "movl $60, %%eax\n"
-        "int $0x80\n"
-        :
-        :
-        : "eax"
-    );
-}

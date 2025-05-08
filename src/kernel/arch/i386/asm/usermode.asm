@@ -1,26 +1,24 @@
-; from https://github.com/szhou42/osdev/blob/master
-
 global i386_switch2user
 i386_switch2user:
     cli
 
+    ; Set user data (0x23)
     mov ax, 0x23
     mov ds, ax
     mov es, ax
     mov fs, ax
     mov gs, ax
 
-    push 0x23
-    push esp
-    pushfd
-    
-    push 0x1b
-    lea eax, [user_start]
-    push eax
-    
-    iretd
+    ; setup stack: SS, ESP, EFLAGS, CS, EIP
+    mov eax, [esp]
+    push 0x23        ; SS (user data selector)
+    push user_stack_top
+    pushfd           ; EFLAGS
+    push 0x1B        ; CS (user code selector)
+    push eax         ; EIP
 
-; Create page fault
-user_start:
-    add esp, 4
-    ret
+    iretd            ; Entry to userspace
+
+user_stack:
+    resb 4096
+user_stack_top:

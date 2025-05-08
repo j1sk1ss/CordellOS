@@ -26,7 +26,7 @@ static GDTEntry _gtd[] = {
         (GDT_FLAG_32BIT | GDT_FLAG_GRANULARITY_4K)),
 
     // TSS empty segment
-    GDT_ENTRY(0, 0, 0, 0),
+    GDT_ENTRY(0, 0, GDT_ACCESS_DISCRIPTOR_TSS, 0),
 };
 
 static GDTDescriptor _GDTDescriptor = { sizeof(_gtd) - 1, (GDTEntry*)&_gtd };
