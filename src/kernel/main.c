@@ -26,7 +26,7 @@
 
 
 // #define USERMODE
-#define DEBUG_MODE
+// #define DEBUG_MODE
 
 #define CONFIG_KSHELL   0
 #define CONFIG_MOUSE    1
@@ -152,7 +152,7 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
 #pragma region [Basic kernel info]
 
         if (mb_magic != MULTIBOOT2_BOOTLOADER_MAGIC) {
-            kprintf("[%s %i] MB HEADER ERROR (MAGIC IS WRONG [%u]).\n", __FILE__, __LINE__, mb_magic);
+            LOG("MB HEADER ERROR (MAGIC IS WRONG [%u]).\n", mb_magic);
             goto end;
         }
 
@@ -167,8 +167,8 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
         ELF_build_symbols_from_multiboot(mb_info->u.elf_sec);
 
         kprintf("\n\t\t =    CORDELL  KERNEL    =");
-        kprintf("\n\t\t =     [ ver.   22 ]     =");
-        kprintf("\n\t\t =     [ 21.02  25 ]     = \n\n");
+        kprintf("\n\t\t =     [ ver.   23 ]     =");
+        kprintf("\n\t\t =     [ 08.05  25 ]     = \n\n");
         kprintf("\n\t\t = INFORMAZIONI GENERALI = \n\n");
         kprintf("\tMB FLAGS:        [0x%p]\n", mb_info->flags);
         kprintf("\tMEM LOW:         [%uKB] => MEM UP: [%uKB]\n", mb_info->mem_lower, mb_info->mem_upper);
@@ -261,10 +261,9 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
         PMM_deinitialize_memory_region(0x1000, 0x11000);
         PMM_deinitialize_memory_region(MMAP_LOCATION, PMM_map.max_blocks / BLOCKS_PER_BYTE);
         if (VMM_init(0x100000) == 0) {
-            kprintf("[%s %i] VMM INIT ERROR!\n",__FILE__ ,__LINE__);
+            LOG("VMM INIT ERROR!");
             goto end;
         }
-
         
 #pragma endregion
 
@@ -276,16 +275,18 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
 
             uint32_t framebuffer_pages = GFX_data.buffer_size / PAGE_SIZE;
             if (framebuffer_pages % PAGE_SIZE > 0) framebuffer_pages++;
-    
-            // multiplication 2 for hardware
+
             framebuffer_pages *= 2;
             PMM_deinitialize_memory_region(GFX_data.physical_base_pointer, framebuffer_pages * BLOCK_SIZE);
-            for (uint32_t i = 0, fb_start = GFX_data.physical_base_pointer; i < framebuffer_pages; i++, fb_start += PAGE_SIZE)
+            for (uint32_t i = 0, fb_start = GFX_data.physical_base_pointer; i < framebuffer_pages; i++, fb_start += PAGE_SIZE) {
                 VMM_kmap_page((void*)fb_start, (void*)fb_start);
+            }
 
+            GFX_data.virtual_second_buffer = (GFX_data.physical_base_pointer + framebuffer_pages * BLOCK_SIZE) + BLOCK_SIZE;
             PMM_deinitialize_memory_region(GFX_data.virtual_second_buffer, framebuffer_pages * BLOCK_SIZE);
-            for (uint32_t i = 0, fb_start = GFX_data.virtual_second_buffer; i < framebuffer_pages; i++, fb_start += PAGE_SIZE)
+            for (uint32_t i = 0, fb_start = GFX_data.virtual_second_buffer; i < framebuffer_pages; i++, fb_start += PAGE_SIZE) {
                 VMM_kmap_page((void*)fb_start, (void*)fb_start);
+            }
 
 #pragma endregion
 

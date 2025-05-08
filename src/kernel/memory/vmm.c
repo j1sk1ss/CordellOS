@@ -114,13 +114,15 @@ int VMM_init(uint32_t memory_start) {
         pd_entry* entry = &pd->entries[PD_INDEX((virtual_address)v_addr)];
 
         // Create table, if table not present
-        if ((*entry & PTE_PRESENT) != PTE_PRESENT) 
+        if ((*entry & PTE_PRESENT) != PTE_PRESENT) {
             _map_table(pd, VMM_mkptable((virtual_address)v_addr, type), type, PD_INDEX((virtual_address)v_addr));
+        }
 
         page_table* table = (page_table*)PAGE_PHYS_ADDRESS(entry);
         pt_entry* page = &table->entries[PT_INDEX((virtual_address)v_addr)];
 
         SET_ATTRIBUTE(page, PTE_PRESENT);
+        SET_ATTRIBUTE(page, PTE_READ_WRITE);
         if (type == USER) { SET_ATTRIBUTE(page, PTE_USER); }
         SET_FRAME(page, (physical_address)p_addr);
         return 1;    

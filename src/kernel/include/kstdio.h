@@ -40,6 +40,8 @@ void kclrscr();
 
 void kputc(char c);
 void kputs(const char* str);
+
+#define LOG(fmt, ...) kprintf("[%s.%i] %s\n", __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 void kprintf(const char* fmt, ...);
 
 void kset_color(int color);

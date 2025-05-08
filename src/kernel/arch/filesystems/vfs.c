@@ -24,7 +24,7 @@ vfs_node_t* _fat_vfs_setup(vfs_node_t* node) {
 }
 
 void VFS_initialize(ata_dev_t* dev, uint32_t fs_type) {
-    vfs_list = (vfs_node_t*)_kmalloc(sizeof(vfs_node_t));
+    vfs_list = (vfs_node_t*)ALC_malloc(sizeof(vfs_node_t), KERNEL);
     vfs_list->fs_type = fs_type;
     vfs_list->device  = dev;
 
@@ -36,7 +36,7 @@ void VFS_initialize(ata_dev_t* dev, uint32_t fs_type) {
 }
 
 void VFS_add_node(ata_dev_t* dev, uint32_t fs_type) {
-    vfs_node_t* new_node = _kmalloc(sizeof(vfs_node_t));
+    vfs_node_t* new_node = ALC_malloc(sizeof(vfs_node_t), KERNEL);
     new_node->fs_type = fs_type;
     new_node->device  = dev;
 

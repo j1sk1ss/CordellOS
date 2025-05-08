@@ -2,7 +2,7 @@
 
 
 static void* __kmalloc(size_t, malloc_head_t*, uint8_t);
-static int __kmallocp(uint32_t, malloc_head_t*, uint8_t);
+static int __kmallocp(uint32_t, malloc_head_t*);
 static void* __krealloc(void*, size_t, malloc_head_t*, uint8_t);
 static int __kfree(void*, malloc_head_t*);
 static int __block_split(malloc_block_t*, size_t);
@@ -77,11 +77,11 @@ mallocp - Malloc whole page.
 */
 
 	static int _kmallocp(uint32_t v_addr) {
-		return __kmallocp(v_addr, &kernel_malloc, KERNEL);
+		return __kmallocp(v_addr, &kernel_malloc);
 	}
 	
 	static int _umallocp(uint32_t v_addr) {
-		return __kmallocp(v_addr, &user_malloc, USER);
+		return __kmallocp(v_addr, &user_malloc);
 	}
 
 	int ALC_mallocp(uint32_t v_addr, uint8_t type) {
@@ -160,12 +160,10 @@ freep - Free allocated page.
 		return _kfreep(v_addr);
 	}
 
-	static int __kmallocp(uint32_t virt, malloc_head_t* head, uint8_t type) {
-		void* block = PMM_allocate_blocks(1);
-		memset(block, 0, PAGE_SIZE);
-
-		VMM_mkpage((physical_address)PMM_allocate_blocks(1), type);
-		head->map_page(block, (void*)virt);
+	static int __kmallocp(uint32_t virt, malloc_head_t* head) {
+		uint32_t* phys = PMM_allocate_blocks(1);
+		if (!phys) return -1;
+		head->map_page((void*)phys, (void*)virt);
 		return 1;
 	}
 
@@ -221,7 +219,7 @@ freep - Free allocated page.
 
 					uint32_t virt = head->virt_address + head->total_pages * PAGE_SIZE; // TODO: new pages to new blocks. Don`t mix them to avoid pagedir errors in contswitch
 					for (uint8_t i = 0; i < num_pages; i++) {
-						__kmallocp(virt, head, type);
+						__kmallocp(virt, head);
 
 						virt += PAGE_SIZE;
 						cur->size += PAGE_SIZE;

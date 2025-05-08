@@ -60,7 +60,7 @@
 		FAT_data.ext_root_cluster = ((fat_extBS_32_t*)(bootstruct->extended_section))->root_cluster;
 		FAT_data.cluster_size = FAT_data.bytes_per_sector * FAT_data.sectors_per_cluster;
 
-		_kfree(cluster_data);
+		ALC_free(cluster_data, KERNEL);
 		for (int i = 0; i < CONTENT_TABLE_SIZE; i++) {
 			_content_table[i] = NULL;
 		}
@@ -100,7 +100,7 @@
 		uint32_t table_value = *(uint32_t*)&cluster_data[fat_offset % FAT_data.cluster_size];
 		if (FAT_data.fat_type == 32) table_value &= 0x0FFFFFFF;
 
-		_kfree(cluster_data);
+		ALC_free(cluster_data, KERNEL);
 		return table_value;
 	}
 
@@ -135,7 +135,7 @@
 			return -1;
 		}
 
-		_kfree(cluster_data);
+		ALC_free(cluster_data, KERNEL);
 		return 0;
 	}
 
@@ -499,11 +499,11 @@
 					if (_is_cluster_end(next_cluster, FAT_data.fat_type) == 1) break;
 					else if (next_cluster < 0) {
 						kprintf("Function _directory_search: __read_fat encountered an error. Aborting...\n");
-						_kfree(cluster_data);
+						ALC_free(cluster_data, KERNEL);
 						return -1;
 					} 
 					else {
-						_kfree(cluster_data);
+						ALC_free(cluster_data, KERNEL);
 						return _directory_search(filepart, next_cluster, file, entryOffset);
 					}
 				}
@@ -512,12 +512,12 @@
 				if (file != NULL) memcpy(file, file_metadata, sizeof(directory_entry_t));
 				if (entryOffset != NULL) *entryOffset = meta_pointer_iterator_count;
 
-				_kfree(cluster_data);
+				ALC_free(cluster_data, KERNEL);
 				return 0;
 			}
 		}
 
-		_kfree(cluster_data);
+		ALC_free(cluster_data, KERNEL);
 		return -2;
 	}
 
@@ -553,18 +553,18 @@
 						next_cluster = _cluster_allocate();
 						if (_is_cluster_bad(next_cluster, FAT_data.fat_type) == 1) {
 							kprintf("Function _directory_add: allocation of new cluster failed. Aborting...\n");
-							_kfree(cluster_data);
+							ALC_free(cluster_data, KERNEL);
 							return -1;
 						}
 
 						if (__write_fat(cluster, next_cluster) != 0) {
 							kprintf("Function _directory_add: extension of the cluster chain with new cluster failed. Aborting...\n");
-							_kfree(cluster_data);
+							ALC_free(cluster_data, KERNEL);
 							return -1;
 						}
 					}
 
-					_kfree(cluster_data);
+					ALC_free(cluster_data, KERNEL);
 					return _directory_add(next_cluster, file_to_add);
 				}
 			}
@@ -579,7 +579,7 @@
 				uint32_t new_cluster = _cluster_allocate();
 				if (_is_cluster_bad(new_cluster, FAT_data.fat_type) == 1) {
 					kprintf("Function _directory_add: allocation of new cluster failed. Aborting...\n");
-					_kfree(cluster_data);
+					ALC_free(cluster_data, KERNEL);
 
 					return -1;
 				}
@@ -590,16 +590,16 @@
 				memcpy(file_metadata, file_to_add, sizeof(directory_entry_t));
 				if (_cluster_write(cluster_data, cluster) != 0) {
 					kprintf("Function _directory_add: Writing new directory entry failed. Aborting...\n");
-					_kfree(cluster_data);
+					ALC_free(cluster_data, KERNEL);
 					return -1;
 				}
 
-				_kfree(cluster_data);
+				ALC_free(cluster_data, KERNEL);
 				return 0;
 			}
 		}
 
-		_kfree(cluster_data);
+		ALC_free(cluster_data, KERNEL);
 		return -1; //return error.
 	}
 
@@ -640,7 +640,7 @@
 				
 				if (_cluster_write(cluster_data, cluster) != 0) {
 					kprintf("Function _directory_edit: Writing updated directory entry failed. Aborting...\n");
-					_kfree(cluster_data);
+					ALC_free(cluster_data, KERNEL);
 					return -1;
 				}
 
@@ -656,16 +656,16 @@
 				uint32_t next_cluster = __read_fat(cluster);
 				if ((next_cluster >= END_CLUSTER_32 && FAT_data.fat_type == 32) || (next_cluster >= END_CLUSTER_16 && FAT_data.fat_type == 16) || (next_cluster >= END_CLUSTER_12 && FAT_data.fat_type == 12)) {
 					kprintf("Function _directory_edit: End of cluster chain reached. File not found. Aborting...\n");
-					_kfree(cluster_data);
+					ALC_free(cluster_data, KERNEL);
 					return -2;
 				}
 
-				_kfree(cluster_data);
+				ALC_free(cluster_data, KERNEL);
 				return _directory_edit(next_cluster, old_meta, new_name);
 			}
 		}
 
-		_kfree(cluster_data);
+		ALC_free(cluster_data, KERNEL);
 		return -1;
 	}
 
@@ -677,7 +677,7 @@
 //  |____/___|_| \_\_____\____| |_| \___/|_| \_\|_|   |_| \_\_____|_|  |_|\___/  \_/  |_____|
 //
 //========================================================================================
-// This function mark data in FAT table as _kfree and deallocates all clusters
+// This function mark data in FAT table as ALC_free and deallocates all clusters
 
 	static int _directory_remove(const uint32_t cluster, const char* fileName) {
 		if (_name_check(fileName) != 0) {
@@ -698,7 +698,7 @@
 				file_metadata->file_name[0] = ENTRY_FREE;
 				if (_cluster_write(cluster_data, cluster) != 0) {
 					kprintf("Function _directory_remove: Writing updated directory entry failed. Aborting...\n");
-					_kfree(cluster_data);
+					ALC_free(cluster_data, KERNEL);
 					return -1;
 				}
 
@@ -712,16 +712,16 @@
 				uint32_t next_cluster = __read_fat(cluster);
 				if ((next_cluster >= END_CLUSTER_32 && FAT_data.fat_type == 32) || (next_cluster >= END_CLUSTER_16 && FAT_data.fat_type == 16) || (next_cluster >= END_CLUSTER_12 && FAT_data.fat_type == 12)) {
 					kprintf("Function _directory_remove: End of cluster chain reached. File not found. Aborting...\n");
-					_kfree(cluster_data);
+					ALC_free(cluster_data, KERNEL);
 					return -2;
 				}
 
-				_kfree(cluster_data);
+				ALC_free(cluster_data, KERNEL);
 				return _directory_remove(next_cluster, fileName);
 			}
 		}
 
-		_kfree(cluster_data);
+		ALC_free(cluster_data, KERNEL);
 		return -1; // Return error
 	}
 
@@ -817,9 +817,9 @@
 			
 			int cluster = GET_CLUSTER_FROM_ENTRY(content_meta, FAT_data.fat_type);
 			while (cluster < END_CLUSTER_32) {
-				uint32_t* new_content = (uint32_t*)_krealloc(content, (content_size + 1) * sizeof(uint32_t));
+				uint32_t* new_content = (uint32_t*)ALC_realloc(content, (content_size + 1) * sizeof(uint32_t), KERNEL);
 				if (new_content == NULL) {
-					_kfree(content);
+					ALC_free(content, KERNEL);
 					return -1;
 				}
 
@@ -830,20 +830,20 @@
 				cluster = __read_fat(cluster);
 				if (cluster == BAD_CLUSTER_32) {
 					kprintf("Function FAT_open_content: the cluster chain is corrupted with a bad cluster. Aborting...\n");
-					_kfree(content);
+					ALC_free(content, KERNEL);
 					return -1;
 				}
 				else if (cluster == -1) {
 					kprintf("Function FAT_open_content: an error occurred in __read_fat. Aborting...\n");
-					_kfree(content);
+					ALC_free(content, KERNEL);
 					return -1;
 				}
 			}
 			
-			fat_content->file->data = (uint32_t*)_kmalloc(content_size * sizeof(uint32_t));
+			fat_content->file->data = (uint32_t*)ALC_malloc(content_size * sizeof(uint32_t), KERNEL);
 			memcpy(fat_content->file->data, content, content_size * sizeof(uint32_t));
 			fat_content->file->data_size = content_size;
-			_kfree(content);
+			ALC_free(content, KERNEL);
 
 			fat_content->meta = content_meta;
 
@@ -894,7 +894,7 @@
 			uint8_t* content_part = _cluster_readoff(data->file->data[i], data_seek);	
 
 			memcpy(buffer + data_position, content_part, copy_size);
-			_kfree(content_part);
+			ALC_free(content_part, KERNEL);
 			
 			data_position += copy_size;
 			data_seek = 0;
@@ -922,7 +922,7 @@
 			uint8_t* content_part = _cluster_readoff_stop(data->file->data[i], data_seek, stop);
 
 			memcpy(buffer + data_position, content_part, copy_size);
-			_kfree(content_part);
+			ALC_free(content_part, KERNEL);
 			
 			data_position += copy_size;
 			data_seek = 0;
@@ -1414,7 +1414,7 @@
 	}
 
 	static directory_entry_t* _create_entry(const char* name, const char* ext, int isDir, uint32_t firstCluster, uint32_t filesize) {
-		directory_entry_t* data = (directory_entry_t*)_kmalloc(sizeof(directory_entry_t));
+		directory_entry_t* data = (directory_entry_t*)ALC_malloc(sizeof(directory_entry_t), KERNEL);
 
 		data->reserved0 			 = 0; 
 		data->creation_time_tenths 	 = 0;
@@ -1422,7 +1422,7 @@
 		data->creation_date 		 = 0;
 		data->last_modification_date = 0;
 
-		char* file_name = (char*)_kmalloc(25);
+		char* file_name = (char*)ALC_malloc(25, KERNEL);
 		strcpy(file_name, name);
 		if (ext) {
 			strcat(file_name, ".");
@@ -1448,7 +1448,7 @@
 			_name2fatname(file_name);
 
 		strncpy((char*)data->file_name, file_name, min(11, strlen(file_name)));
-		_kfree(file_name);
+		ALC_free(file_name, KERNEL);
 
 		return data; 
 	}
@@ -1477,7 +1477,7 @@
 	}
 
 	Content* FAT_create_content() {
-		Content* content = (Content*)_kmalloc(sizeof(Content));
+		Content* content = (Content*)ALC_malloc(sizeof(Content), KERNEL);
 		content->directory      = NULL;
 		content->file           = NULL;
 		content->parent_cluster = -1;
@@ -1485,7 +1485,7 @@
 	}
 
 	Directory* _create_directory() {
-		Directory* directory = (Directory*)_kmalloc(sizeof(Directory));
+		Directory* directory = (Directory*)ALC_malloc(sizeof(Directory), KERNEL);
 		directory->files        = NULL;
 		directory->subDirectory = NULL;
 		directory->next         = NULL;
@@ -1493,7 +1493,7 @@
 	}
 
 	File* _create_file() {
-		File* file = (File*)_kmalloc(sizeof(File));
+		File* file = (File*)ALC_malloc(sizeof(File), KERNEL);
 		file->next = NULL;
 		file->data = NULL;
 		return file;
@@ -1502,8 +1502,8 @@
 	static int _unload_file_system(File* file) {
 		if (file == NULL) return -1;
 		if (file->next != NULL) _unload_file_system(file->next);
-		if (file->data != NULL) _kfree(file->data);
-		_kfree(file);
+		if (file->data != NULL) ALC_free(file->data, KERNEL);
+		ALC_free(file, KERNEL);
 		return 1;
 	}
 
@@ -1512,7 +1512,7 @@
 		if (directory->files != NULL) _unload_file_system(directory->files);
 		if (directory->subDirectory != NULL) _unload_directory_system(directory->subDirectory);
 		if (directory->next != NULL) _unload_directory_system(directory->next);
-		_kfree(directory);
+		ALC_free(directory, KERNEL);
 		return 1;
 	}
 
@@ -1521,7 +1521,7 @@
 		if (content->directory != NULL) _unload_directory_system(content->directory);
 		if (content->file != NULL) _unload_file_system(content->file);
 		
-		_kfree(content);
+		ALC_free(content, KERNEL);
 		return 1;
 	}	
 

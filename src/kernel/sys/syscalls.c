@@ -57,11 +57,10 @@ void syscall(struct Registers* regs) {
         //=======================
         //  SYSTEM MEMMANAGER SYSCALLS
         //=======================
-
 #ifndef USERMODE
             case SYS_PAGE_FREE:
-                void* ptr_to_free = (void*)regs->ebx;
-                if (!ptr_to_free) ALC_freep(ptr_to_free, KERNEL);
+                void* page_ptr = (void*)regs->ebx;
+                if (!page_ptr) ALC_freep(page_ptr, KERNEL);
             break;
             case SYS_MALLOC:
                 void* allocated_memory = ALC_malloc(regs->ebx, KERNEL);
@@ -73,13 +72,13 @@ void syscall(struct Registers* regs) {
                 regs->eax = address;
             break;
             case SYS_FREE:
-                void* ptr_to_free = (void*)regs->ebx;
-                if (!ptr_to_free) ALC_free(ptr_to_free, KERNEL);
+                void* mem_ptr = (void*)regs->ebx;
+                if (!mem_ptr) ALC_free(mem_ptr, KERNEL);
             break;
 #elif defined(USERMODE)
             case SYS_PAGE_FREE:
-                void* ptr_to_free = (void*)regs->ebx;
-                if (!ptr_to_free) ALC_freep(ptr_to_free, USER);
+                void* page_ptr = (void*)regs->ebx;
+                if (!page_ptr) ALC_freep(page_ptr, USER);
             break;
             case SYS_MALLOC:
                 void* allocated_memory = ALC_malloc(regs->ebx, USER);
@@ -91,8 +90,8 @@ void syscall(struct Registers* regs) {
                 regs->eax = address;
             break;
             case SYS_FREE:
-                void* ptr_to_free = (void*)regs->ebx;
-                if (!ptr_to_free) ALC_free(ptr_to_free, USER);
+                void* mem_ptr = (void*)regs->ebx;
+                if (!mem_ptr) ALC_free(mem_ptr, USER);
             break;
 #endif
 

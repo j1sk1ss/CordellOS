@@ -293,7 +293,6 @@ void shell_start_screen() {
                 }
                 
                 bitmap_t* bitmap = BMP_create(file_path, atoi(command_line[2]), atoi(command_line[3]));
-                
                 BMP_display(bitmap);
                 BMP_unload(bitmap);
                 free(file_path);
