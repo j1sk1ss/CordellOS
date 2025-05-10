@@ -3,23 +3,25 @@
 #include "../../include/elf.h"
 
 
-static elf_symbols_t kernel_elf_symbols;
+static elf_symbols_t kernel_elf_symbols = { };
 
+int ELF_build_symbols_from_multiboot(uint32_t header_addr, uint32_t header_shndx, uint32_t header_num) {
+	Elf32_Shdr* sh = (Elf32_Shdr*)(header_addr);
+	uint32_t shstrtab = sh[header_shndx].sh_addr;
 
-void ELF_build_symbols_from_multiboot(multiboot_elf_section_header_table_t header) {
-	Elf32_Shdr* sh = (Elf32_Shdr*)(header.addr);
-	uint32_t shstrtab = sh[header.shndx].sh_addr;
-
-	for (uint32_t i = 0; i < header.num; i++) {
+	for (uint32_t i = 0; i < header_num; i++) {
 		const char* name = (const char*) (shstrtab + sh[i].sh_name);
 		if (!strcmp(name,".strtab")) {
 			kernel_elf_symbols.strtab = (const char*)sh[i].sh_addr;
 			kernel_elf_symbols.strtab_size = sh[i].sh_size;
-		} else if (!strcmp(name,".symtab")) {
+		} 
+        else if (!strcmp(name,".symtab")) {
 			kernel_elf_symbols.symtab = (elf_symbol_t*)sh[i].sh_addr;
 			kernel_elf_symbols.symtab_size = sh[i].sh_size;
 		}
 	}
+
+    return 1;
 }
 
 /*
@@ -27,31 +29,30 @@ void ELF_build_symbols_from_multiboot(multiboot_elf_section_header_table_t heade
  * Then, as we find functions, check if the symbol is within that
  * function's range (given by value and size)
  */
-const char* ELF_lookup_symbol_function(uint32_t addr, elf_symbols_t* elf) {
-    int i;
-    int num_symbols = elf->symtab_size / sizeof(elf_symbol_t);
-
-    for (i = 0; i < num_symbols; i++) {
+static const char* _lookup_symbol_function(uint32_t addr, elf_symbols_t* elf) {
+    for (int i = 0; i < elf->symtab_size / sizeof(elf_symbol_t); i++) {
         if ((addr >= elf->symtab[i].value) && (addr <= (elf->symtab[i].value + elf->symtab[i].size))) {
-            const char* name = (const char*)((uint32_t)elf->strtab + elf->symtab[i].name_offset_in_strtab);
-            return name;
+            return (const char*)((uint32_t)elf->strtab + elf->symtab[i].name_offset_in_strtab);
         }
     }
     
-    return "NOT FOUND";
+    return "<UNDEFINED>";
 }
 
 const char* ELF_lookup_function(uint32_t addr) {
-    return ELF_lookup_symbol_function(addr, &kernel_elf_symbols);
+    return _lookup_symbol_function(addr, &kernel_elf_symbols);
 }
 
 ELF32_program* ELF_read(int ci, int type) {
     ELF32_program* program = ALC_malloc(sizeof(ELF32_program), type);
+    if (!program) {
+        return NULL;
+    }
+
     CInfo_t info;
     current_vfs->objstat(ci, &info);
-    
     if (info.type != STAT_FILE) {
-        kprintf("\n[%s %i] Error: Not File.\n", __FILE__, __LINE__);
+        LOG("Error: Not a file!");
         return NULL;
     }
 
@@ -60,15 +61,17 @@ ELF32_program* ELF_read(int ci, int type) {
     //==========================
 
         Elf32_Ehdr* header = ALC_malloc(sizeof(Elf32_Ehdr), type);
+        if (!header) return NULL;
+
         current_vfs->read(ci, (uint8_t*)header, 0, sizeof(Elf32_Ehdr));
         if (header->e_ident[0] != '\x7f' || header->e_ident[1] != 'E') {
-            kprintf("\n[%s %i] Error: Not ELF.\n", __FILE__, __LINE__);
+            LOG("Error: Not ELF executable!");
             ALC_free(header, type);
             return NULL;
         }
 
         if (header->e_type != ET_EXEC && header->e_type != ET_DYN) {
-            kprintf("\n[%s %i] Error: Program is not an executable or dynamic executable.\n", __FILE__, __LINE__);
+            LOG("Error: Program is not an executable or dynamic executable.");
             ALC_free(header, type);
             return NULL;
         }
@@ -80,11 +83,14 @@ ELF32_program* ELF_read(int ci, int type) {
     //==========================
 
         Elf32_Phdr* program_headers = ALC_malloc(sizeof(Elf32_Phdr) * header->e_phnum, type);
-        current_vfs->read(ci, (uint8_t*)program_headers, header->e_phoff, sizeof(Elf32_Phdr) * header->e_phnum);
+        if (!program_headers) {
+            ALC_free(header, type);
+            return NULL;
+        }
 
+        current_vfs->read(ci, (uint8_t*)program_headers, header->e_phoff, sizeof(Elf32_Phdr) * header->e_phnum);
         program->entry_point = (void*)header->e_entry;
         uint32_t header_num  = header->e_phnum;
-
         ALC_free(header, type);
 
     //==========================
@@ -94,6 +100,11 @@ ELF32_program* ELF_read(int ci, int type) {
     //==========================
 
         program->pages = ALC_malloc(header_num * sizeof(uint32_t), type);
+        if (!program->pages) {
+            ALC_free(program_headers, type);
+            return NULL;
+        }
+
         program->pages_count = header_num;
         for (uint32_t i = 0; i < header_num; i++) {
             if (program_headers[i].p_type != PT_LOAD) continue;
@@ -120,10 +131,12 @@ ELF32_program* ELF_read(int ci, int type) {
     return program;
 }
 
-void ELF_free_program(ELF32_program* program, uint8_t type) {
-    for (uint32_t i = 0; i < program->pages_count; i++) 
+int ELF_free_program(ELF32_program* program, uint8_t type) {
+    for (uint32_t i = 0; i < program->pages_count; i++) {
         ALC_freep((void*)program->pages[i], type);
+    }
 
     ALC_free(program->pages, type);
     ALC_free(program, type);
+    return 1;
 }

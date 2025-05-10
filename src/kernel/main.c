@@ -164,7 +164,7 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
             VGA_init((uint8_t*)(uintptr_t)mb_info->framebuffer_addr);
         }
 
-        ELF_build_symbols_from_multiboot(mb_info->u.elf_sec);
+        ELF_build_symbols_from_multiboot(mb_info->u.elf_sec.addr, mb_info->u.elf_sec.shndx, mb_info->u.elf_sec.num);
 
         kprintf("\n\t\t =    CORDELL  KERNEL    =");
         kprintf("\n\t\t =     [ ver.   23 ]     =");

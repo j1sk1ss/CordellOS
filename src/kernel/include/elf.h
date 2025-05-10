@@ -7,14 +7,11 @@
 #include <math.h>
 #include <fslib.h>
 
-#include "elf.h"
 #include "vfs.h"
 #include "vmm.h"
 #include "pmm.h"
 #include "kstdio.h"
 #include "allocator.h"
-
-#include "../multiboot/multiboot.h"
 
 
 #define NULL_ADDRESS        -1
@@ -119,9 +116,9 @@ typedef struct {
 } __attribute__((packed)) elf_symbol_t;
 
 typedef struct {
-  elf_symbol_t *symtab;
+  elf_symbol_t* symtab;
   uint32_t      symtab_size;
-  const char   *strtab;
+  const char*   strtab;
   uint32_t      strtab_size;
 } elf_symbols_t;
 
@@ -134,11 +131,8 @@ typedef struct ELF32_symbols_desctiptor {
 
 
 ELF32_program* ELF_read(int ci, int type);
-void ELF_free_program(ELF32_program* program, uint8_t type);
-
-void ELF_kernel_trace();
-void ELF_build_symbols_from_multiboot(multiboot_elf_section_header_table_t mb);
-const char* ELF_lookup_symbol_function(uint32_t addr, elf_symbols_t* elf);
+int ELF_free_program(ELF32_program* program, uint8_t type);
+int ELF_build_symbols_from_multiboot(uint32_t header_addr, uint32_t header_shndx, uint32_t header_num);
 const char* ELF_lookup_function(uint32_t addr);
 
 #endif
