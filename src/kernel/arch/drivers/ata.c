@@ -170,10 +170,12 @@ static ata_dev_t secondary_slave  = {.slave = 1};
 //====================
 
     void ATA_device_switch(int device) {
-        if (device == 1) current_ata_device = &primary_master;
-        else if (device == 2) current_ata_device = &primary_slave;
-        else if (device == 3) current_ata_device = &secondary_master;
-        else if (device == 4) current_ata_device = &secondary_slave;
+        switch (device) {
+            case 1: current_ata_device = &primary_master; break;
+            case 2: current_ata_device = &primary_slave; break;
+            case 3: current_ata_device = &secondary_master; break;
+            case 4: current_ata_device = &secondary_slave; break;
+        }
     }
 
 //====================
