@@ -171,6 +171,8 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
         kprintf("\n\t\t =     [ 08.05  25 ]     = \n\n");
         kprintf("\n\t\t = INFORMAZIONI GENERALI = \n\n");
         kprintf("\tMB FLAGS:        [0x%p]\n", mb_info->flags);
+        uint32_t total_memory = mb_info->mem_upper + (mb_info->mem_lower << 10);
+        kprintf("\tMMAP:            [0x%p] => MEM SIZE: [%uKB]\n", mb_info->mmap_addr, total_memory);
         kprintf("\tMEM LOW:         [%uKB] => MEM UP: [%uKB]\n", mb_info->mem_lower, mb_info->mem_upper);
         kprintf("\tBOOT DEVICE:     [0x%p]\n", mb_info->boot_device);
         kprintf("\tCMD LINE:        [%s]\n", mb_info->cmdline);
@@ -192,7 +194,6 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
     
 #pragma region [Memory info & memory testing]
 
-        uint32_t total_memory = mb_info->mem_upper + (mb_info->mem_lower << 10);
         PMM_init(MMAP_LOCATION, total_memory);
 
         //===================
