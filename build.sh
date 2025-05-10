@@ -1,0 +1,1 @@
+scons && ./build/scripts/grub2_build_image.sh && ./build/build_image.sh && ./build/scripts/qemu_run.sh
