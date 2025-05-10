@@ -18,7 +18,6 @@ void main(int argc, char* argv[]) {
 
         envar_init_stack(vars, 50);
         if (envar_exist("clc", vars, 50) == -1) envar_add("clc", "\\HOME\\APPS\\STD\\CALC\\CALC.ELF", vars, 50);
-        if (envar_exist("asm", vars, 50) == -1) envar_add("asm", "\\HOME\\APPS\\STD\\ASM\\ASM.ELF", vars, 50);
 
     //  SET INIT ENVARS
      //====================

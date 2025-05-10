@@ -120,8 +120,13 @@
 
 #pragma region [Default tasks]
 
-void _shell() {
+int _shell() {
     int shell_ci = current_vfs->openobj(SHELL_PATH);
+    if (shell_ci < 0) {
+        LOG("SHELL NOT FOUND!");
+        return 0;
+    }
+
 #ifdef USERMODE
     ELF32_program* program = ELF_read(shell_ci, USER);
     i386_switch2user(program->entry_point);
@@ -129,6 +134,9 @@ void _shell() {
 #else
     current_vfs->objexec(shell_ci, 0, NULL, KERNEL);
 #endif
+
+    current_vfs->closeobj(shell_ci);
+    return 1;
 }
 
 void _idle() {
@@ -172,10 +180,9 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
         kprintf("\n\t\t = INFORMAZIONI GENERALI = \n\n");
         kprintf("\tMB FLAGS:        [0x%p]\n", mb_info->flags);
         uint32_t total_memory = mb_info->mem_upper + (mb_info->mem_lower << 10);
-        kprintf("\tMMAP:            [0x%p] => MEM SIZE: [%uKB]\n", mb_info->mmap_addr, total_memory);
-        kprintf("\tMEM LOW:         [%uKB] => MEM UP: [%uKB]\n", mb_info->mem_lower, mb_info->mem_upper);
+        kprintf("\tMMAP:            [0x%p]\t=> MEM SIZE: [%uKB]\n", mb_info->mmap_addr, total_memory);
+        kprintf("\tMEM LOW:         [%uKB]\t=> MEM UP: [%uKB]\n", mb_info->mem_lower, mb_info->mem_upper);
         kprintf("\tBOOT DEVICE:     [0x%p]\n", mb_info->boot_device);
-        kprintf("\tCMD LINE:        [%s]\n", mb_info->cmdline);
         kprintf("\tVBE MODE:        [%u]\n", mb_info->vbe_mode);
 
         kprintf("\n\n\t\t =       VBE  INFO       = \n\n");
@@ -358,11 +365,26 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
         #endif
 
         if (!current_vfs->objexist(CONFIG_PATH)) START_PROCESS("shell", (uint32_t)_shell, shell_addr_space, 10); 
-        else { // TODO! If config exist, it cause page fault.
-            int boot_ci = current_vfs->openobj(CONFIG_PATH);
+        else {
             static uint8_t config[128] = { 0 };
-            current_vfs->read(boot_ci, config, 0, 5);
-            current_vfs->closeobj(boot_ci);
+            int boot_ci = current_vfs->openobj(CONFIG_PATH);
+            if (boot_ci >= 0) {
+                current_vfs->read(boot_ci, config, 0, 5);
+                current_vfs->closeobj(boot_ci);
+            }
+
+#ifndef DEBUG_MODE
+            kclrscr();
+            kprintf(" =============== CONFIG STARTUP =============== \n");
+            kprintf(" | CONFIG READ BY PATH: [%s]\n", CONFIG_PATH);
+            kprintf(" | CONFIG BODY: [%s]\n", config);
+
+            for (int i = 1000000000; i >= 0; i--) {
+                if (i % 100000000 == 0) kprintf(" | STARTING AFTER [%is]...\n", i / 100000000);
+            }
+
+            kprintf(" ============================================= \n");
+#endif
 
             //===================
             // Speaker test

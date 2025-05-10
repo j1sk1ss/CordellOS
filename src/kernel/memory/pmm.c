@@ -11,10 +11,12 @@ pmma_map_t PMM_map = {
 
 static int _set_block(const uint32_t bit) {
     PMM_map.memory_map[bit / 32] |= (1 << (bit % 32));
+    return 1;
 }
 
 static int _unset_block(const uint32_t bit) {
     PMM_map.memory_map[bit / 32] &= ~(1 << (bit % 32));
+    return 1;
 }
 
 static int _find_first_free_blocks(size_t num_blocks) {

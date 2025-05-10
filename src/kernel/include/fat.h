@@ -159,11 +159,20 @@ typedef struct FATDirectory {
     struct FATDirectory* subDirectory;
 } Directory;
 
+typedef enum {
+	CONTENT_TYPE_FILE,
+	CONTENT_TYPE_DIRECTORY
+} ContentType;
+
 typedef struct FATContent {
-	Directory* directory;
-	File* file;
+	union {
+		Directory* directory;
+		File* file;
+	};
+	
 	uint32_t parent_cluster;
 	directory_entry_t meta;
+	ContentType content_type;
 } Content;
 
 
@@ -196,7 +205,7 @@ extern fat_data_t FAT_data;
 	int FAT_read_content2buffer_stop(int ci, uint8_t* buffer, uint32_t offset, uint32_t size, uint8_t* stop);
 	int FAT_put_content(const char* path, Content* content);
 	int FAT_delete_content(const char* path);
-	int FAT_write_buffer2content(int ci, uint8_t* buffer, uint32_t offset, uint32_t size);
+	int FAT_write_buffer2content(int ci, const uint8_t* buffer, uint32_t offset, uint32_t size);
 	int FAT_ELF_execute_content(int ci, int argc, char* argv[], int type);
 	int FAT_change_meta(const char* path, const char* new_name);
 	int FAT_stat_content(int ci, CInfo_t* info);

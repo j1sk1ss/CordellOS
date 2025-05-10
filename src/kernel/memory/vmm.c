@@ -207,11 +207,11 @@ int VMM_init(uint32_t memory_start) {
         //=======
         // PARAMS
 
-            if (present) kprintf("NOT PRESENT\t"); else kprintf("PAGE PROTECTION\t");
-            if (rw) kprintf("READONLY\t"); else kprintf("WRITEONLY\t");
-            if (us) kprintf("USERMODE\t");
+            if (present)  kprintf("NOT PRESENT\t"); else kprintf("PAGE PROTECTION\t");
+            if (rw)       kprintf("READONLY\t");    else kprintf("WRITEONLY\t");
+            if (us)       kprintf("USERMODE\t");
             if (reserved) kprintf("RESERVED\t");
-            if (id) kprintf("INST FETCH\t");
+            if (id)       kprintf("INST FETCH\t");
 
         //
         //=======

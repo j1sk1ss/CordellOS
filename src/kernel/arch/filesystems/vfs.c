@@ -19,12 +19,15 @@ vfs_node_t* _fat_vfs_setup(vfs_node_t* node) {
     node->objexec    = FAT_ELF_execute_content;
     node->objmetachg = FAT_change_meta;
     strncpy(node->name, "FATFS", 5);
-
     return node;
 }
 
-void VFS_initialize(ata_dev_t* dev, uint32_t fs_type) {
+int VFS_initialize(ata_dev_t* dev, uint32_t fs_type) {
     vfs_list = (vfs_node_t*)ALC_malloc(sizeof(vfs_node_t), KERNEL);
+    if (!vfs_list) {
+        return 0;
+    }
+
     vfs_list->fs_type = fs_type;
     vfs_list->device  = dev;
 
@@ -33,10 +36,15 @@ void VFS_initialize(ata_dev_t* dev, uint32_t fs_type) {
     } 
 
     current_vfs = vfs_list;
+    return 1;
 }
 
-void VFS_add_node(ata_dev_t* dev, uint32_t fs_type) {
+int VFS_add_node(ata_dev_t* dev, uint32_t fs_type) {
     vfs_node_t* new_node = ALC_malloc(sizeof(vfs_node_t), KERNEL);
+    if (!new_node) {
+        return 0;
+    }
+
     new_node->fs_type = fs_type;
     new_node->device  = dev;
 
@@ -47,6 +55,7 @@ void VFS_add_node(ata_dev_t* dev, uint32_t fs_type) {
     vfs_node_t* cur = vfs_list;
     while (cur->next != NULL) cur = cur->next;
     cur->next = new_node;
+    return 0;
 }
 
 void VFS_switch_device(int index) {

@@ -31,7 +31,7 @@ void __rtl_receive_packet() {
 
     t = t + 2;
     void* packet = ALC_malloc(packet_length, KERNEL);
-    if (!packet) return NULL;
+    if (!packet) return;
 
     memcpy(packet, t, packet_length);
 
