@@ -4,6 +4,7 @@
 page_directory* current_page_directory = NULL;
 page_directory* kernel_page_directory  = NULL;
 
+
 int VMM_init(uint32_t memory_start) {
     page_directory* dir = VMM_mkpdir();
     if (!_map_table(dir, VMM_mkptable(0x0, KERNEL), KERNEL, 0) || 
