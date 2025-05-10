@@ -15,7 +15,9 @@ static uint8_t TSD_array[4]  = { 0x10, 0x14, 0x18, 0x1C };
 
 
 struct ethernet_packet* pop_packet() {
-    struct ethernet_packet* packet = ALC_malloc(sizeof(ethernet_frame_t) + sizeof(int), KERNEL);
+    struct ethernet_packet* packet = (struct ethernet_packet*)ALC_malloc(sizeof(ethernet_frame_t) + sizeof(int), KERNEL);
+    if (!packet) return NULL;
+
     packet->packet = ethernet_packets[current_ethernet_packet];
     packet->len = packet_meta[current_ethernet_packet--];
 
@@ -29,6 +31,8 @@ void __rtl_receive_packet() {
 
     t = t + 2;
     void* packet = ALC_malloc(packet_length, KERNEL);
+    if (!packet) return NULL;
+
     memcpy(packet, t, packet_length);
 
     ETH_handle_packet((ethernet_frame_t*)packet, packet_length);
@@ -56,7 +60,9 @@ void get_mac_addr(uint8_t* src_mac_addr) {
 
 void rtl8139_send_packet(void* data, uint32_t len) {
     void* transfer_data = ALC_malloc(len, KERNEL);
-    void* phys_addr     = (void*)VMM_virtual2physical(transfer_data);
+    if (!transfer_data) return;
+
+    void* phys_addr = (void*)VMM_virtual2physical(transfer_data);
     memcpy(transfer_data, data, len);
 
     i386_outl(rtl8139_device.io_base + TSAD_array[rtl8139_device.tx_cur], (uint32_t)phys_addr);
