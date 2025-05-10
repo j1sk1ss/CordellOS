@@ -2,14 +2,15 @@
 
 
 page_directory* current_page_directory = NULL;
-page_directory* kernel_page_directory = NULL;
-
+page_directory* kernel_page_directory  = NULL;
 
 int VMM_init(uint32_t memory_start) {
     page_directory* dir = VMM_mkpdir();
-    _map_table(dir, VMM_mkptable(0x0, KERNEL), KERNEL, 0);    
-    _map_table(dir, VMM_mkptable(memory_start, KERNEL), KERNEL, PD_INDEX(0xC0000000));
-
+    if (!_map_table(dir, VMM_mkptable(0x0, KERNEL), KERNEL, 0) || 
+        !_map_table(dir, VMM_mkptable(memory_start, KERNEL), KERNEL, PD_INDEX(0xC0000000))) {
+            return 0;
+        }
+    
     if (!VMM_set_directory(dir)) return 0;
     kernel_page_directory = dir;
 
@@ -145,13 +146,14 @@ int VMM_init(uint32_t memory_start) {
         return table;
     }
 
-    void _map_table(page_directory* pd, page_table* table, uint8_t type, size_t index) {
-        if (!pd || !table) return;
+    int _map_table(page_directory* pd, page_table* table, uint8_t type, size_t index) {
+        if (!pd || !table) return 0;
         pd_entry* entry = &pd->entries[index];
         SET_ATTRIBUTE(entry, PDE_PRESENT);
         SET_ATTRIBUTE(entry, PDE_READ_WRITE);
         if (type == USER) { SET_ATTRIBUTE(entry, PDE_USER); }
         SET_FRAME(entry, (uint32_t)table);
+        return 1;
     }
 
     void VMM_free_table(page_table* table) {

@@ -90,7 +90,7 @@ void VMM_free_pdir(page_directory* pd);
 void _copy_dir2dir(page_directory* src, page_directory* dest);
 
 page_table* VMM_mkptable(uint32_t p_addr, uint8_t type);
-void _map_table(page_directory* pd, page_table* table, uint8_t type, size_t index);
+int _map_table(page_directory* pd, page_table* table, uint8_t type, size_t index);
 void VMM_free_table(page_table* table);
 
 uint32_t VMM_mkpage(physical_address p_addr, uint8_t type);
