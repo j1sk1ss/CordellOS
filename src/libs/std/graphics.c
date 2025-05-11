@@ -121,13 +121,15 @@ void scroll(int lines) {
 static uint8_t* _cur_font = NULL;
 
 void load_font(char* path) {
-    int font_file = copen(path);
-    CInfo_t content_info;
-    cstat(font_file, &content_info);
-
-    _cur_font = (uint8_t*)malloc(content_info.size);
-    fread(font_file, 0, _cur_font, content_info.size);
-    cursor_set32(0, 0);
+    int ci = copen(path);
+    if (ci >= 0) {
+        CInfo_t content_info;
+        cstat(ci, &content_info);
+        _cur_font = (uint8_t*)malloc(content_info.size);
+        fread(ci, 0, _cur_font, content_info.size);
+        cursor_set32(0, 0);
+        cclose(ci);
+    }
 }
 
 uint8_t* get_font() {

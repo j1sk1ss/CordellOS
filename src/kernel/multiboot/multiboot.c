@@ -1,7 +1,7 @@
 #include "multiboot.h"
 
 
-struct Elf32_sectionHeader* MB2_get_elf_section(multiboot_info_t* info, char* section) {
+struct Elf32_sectionHeader* MB2_get_elf_section(multiboot_info_t* info, const char* section) {
     multiboot_elf_section_header_table_t section_table = info->u.elf_sec;
 
     uint32_t addr = section_table.addr;

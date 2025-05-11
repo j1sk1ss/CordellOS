@@ -63,8 +63,9 @@ void main(int argc, char* argv[]) {
 
 void shell_start_screen() {
     printf("\n");
-    printf("Cordell Shell [ver. 0.6e | 14.12.2024]\n");
-    printf("Stai entrando nella shell del kernel leggero. Usa [aiuto] per ottenere aiuto.\n\n");
+    printf("Cordell Shell [ver. 0.6f | 11.05.2025]\n");
+    printf("             NOW ON ENGLISH!          \n");
+    printf("\n\n");
 }
 
 //====================
@@ -110,64 +111,67 @@ void shell_start_screen() {
         //====================
 
             if (strcmp(command_line[0], COMMAND_HELP) == 0) {
-                printf("\n> Usa [%s] per ottenere aiuto",                                     COMMAND_HELP);
-                printf("\n> Utilizzare [%s] per la pulizia dello schermo",                    COMMAND_CLEAR);
-                printf("\n> Usa [%s] per l'eco",                                              COMMAND_ECHO);
-                printf("\n> Usa [%s] per vista questo giorno\n",                              COMMAND_TIME);
-                printf("\n> Usa [%s] per ottenere informazioni sulla configurazione di rete", COMMAND_IPCONFIG);
-                printf("\n> Usa [%s] per iniziare a inviare pacchetti UDP",                   COMMAND_SEND_UDP_PACKET);
-                printf("\n> Usa [%s] per ottenere l'ultimo pacchetto UDP ricevuto\n",         COMMAND_POP_UDP_PACKET);
-                printf("\n> Usa [%s] per ottenere informazioni sul contenuto di fs",          COMMAND_CINFO);
-                printf("\n> Utilizza la [%s] per vista versione",                             COMMAND_VERSION);
-                printf("\n> Utilizza la [%s] per vista disk-data informazione",               COMMAND_DISK_DATA);
-                printf("\n> Utilizza la [%s] per vista mem-data informazione",                COMMAND_MEM_DATA);
-                printf("\n> Utilizza la [%s] <option> per vista page-data informazione\n",    COMMAND_PAGE_DATA);
-                printf("\n> Usa [%s] <nome> per entranto dir",                                COMMAND_IN_DIR);
-                printf("\n> Usa [%s] per guardare tutto cosa in dir\n",                       COMMAND_LIST_DIR);
-                printf("\n> Usa [%s] per guardare tutto data in file",                        COMMAND_FILE_VIEW);
-                printf("\n> Usa [%s] per guardare bmp",                                       COMMAND_BMP_SHOW);
-                printf("\n> Usa [%s] per run file\n",                                         COMMAND_FILE_RUN);
-                printf("\n> Utilizzare [%s] per riavviare il sistema operativo",              COMMAND_REBOOT);
-                printf("\n> Utilizzare [%s] per uscire dal kernel\n",                         COMMAND_EXIT);
+                printf("\n +========================================================");
+                printf("\n | Common:");
+                printf("\n | [%s] - show this message.", COMMAND_HELP);
+                printf("\n | [%s] - screen cleanup.", COMMAND_CLEAR);
+                printf("\n | [%s] - print message on screen.", COMMAND_ECHO);
+                printf("\n | [%s] - current date.", COMMAND_TIME);
+                printf("\n +--------------------------------------------------------");
+                printf("\n | Network:\n");
+                printf("\n | [%s] - show ip configuration.", COMMAND_IPCONFIG);
+                printf("\n | [%s] - send UDP packet.", COMMAND_SEND_UDP_PACKET);
+                printf("\n | [%s] - get last received UDP packet.", COMMAND_POP_UDP_PACKET);
+                printf("\n +--------------------------------------------------------");
+                printf("\n | Statistics:\n");
+                printf("\n | [%s] - get summary info about content.", COMMAND_CINFO);
+                printf("\n | [%s] - show current kernel and shell version.", COMMAND_VERSION);
+                printf("\n | [%s] - show summary disk information.", COMMAND_DISK_DATA);
+                printf("\n | [%s] - show heap usage.", COMMAND_MEM_DATA);
+                printf("\n | [%s] <option> - show page usage", COMMAND_PAGE_DATA);
+                printf("\n +--------------------------------------------------------");
+                printf("\n | FileSystem:\n");
+                printf("\n | [%s] <path> - go to directory.", COMMAND_IN_DIR);
+                printf("\n | [%s] - show directory content.", COMMAND_LIST_DIR);
+                printf("\n | [%s] - print file content to console.", COMMAND_FILE_VIEW);
+                printf("\n | [%s] <path> <x> <y> - draw .bmp image", COMMAND_BMP_SHOW);
+                printf("\n | [%s] <path> - launch .elf executable.\n", COMMAND_FILE_RUN);
+                printf("\n | [%s] - reboot.", COMMAND_REBOOT);
+                printf("\n | [%s] - exit from kernel shell. (Unrecomended option).", COMMAND_EXIT);
+                printf("\n +========================================================\n");
             }
-
             else if (strcmp(command_line[0], COMMAND_EXIT)      == 0) exit = 1;
             else if (strcmp(command_line[0], COMMAND_REBOOT)    == 0) machine_restart();
             else if (strcmp(command_line[0], COMMAND_VERSION)   == 0) shell_start_screen();
             else if (strcmp(command_line[0], COMMAND_ECHO)      == 0) printf("\n%s", command_line[1]);
             else if (strcmp(command_line[0], COMMAND_CLEAR)     == 0) clrscr();
-                
             else if (strcmp(command_line[0], COMMAND_DISK_DATA) == 0) {
                 FSInfo_t info;
                 get_fs_info(&info);
 
-                printf("\nUTILITY KERNEL DISCO-DATI VER 0.3a\n");
-                printf("DEV:                             [%s]\n", info.mount);
-                printf("FS TYPE:                         [%s]\n", info.name);
-                printf("TYPE:                            [%i]\n", info.type);
-                printf("CLUSTER TOTALI x32:              [%i]\n", info.clusters);
-                printf("SETTORI PER CLUSTER:             [%i]\n", info.spc);
-                printf("DIMENSIONE DELLA TABELLA GRASSO: [%i]\n", info.size);
+                printf("\nKernel disc-stat ver 0.3b\n");
+                printf("dev:                             [%s]\n", info.mount);
+                printf("fs type:                         [%s]\n", info.name);
+                printf("type:                            [%i]\n", info.type);
+                printf("total clusters x32:              [%i]\n", info.clusters);
+                printf("sectors per cluster:             [%i]\n", info.spc);
+                printf("fat size:                        [%i]\n", info.size);
             }
-            
             else if (strcmp(command_line[0], COMMAND_TICKS) == 0) {
                 printf("\nCurrent tick: %i\n", get_tick());
             }
-
             else if (strcmp(command_line[0], COMMAND_TIME) == 0) {
                 DateInfo_t info;
                 get_datetime(&info);
                 printf(
-                    "\nGIORNO: %i/%i/%i\tTEMPO: %i:%i:%i", 
+                    "\nday: %i/%i/%i\ttime: %i:%i:%i", 
                     info.day, info.month, info.year, info.hour, info.minute, info.second 
                 );
             }
-
             else if (strcmp(command_line[0], COMMAND_SET_ENVAR) == 0) {
                 if (envar_exist(command_line[1], vars, 50) == -1) envar_add(command_line[1], command_line[2], vars, 50);
                 else envar_set(command_line[1], command_line[2], vars, 50);
             }
-            
             else if (strcmp(command_line[0], COMMAND_DEL_ENVAR) == 0) {
                 envar_delete(command_line[1], vars, 50);
             }
@@ -198,38 +202,40 @@ void shell_start_screen() {
                         memmove(path, path + 1, strlen(path));
                         dir_path = path;
                     } 
-                    else dir_path = FSLIB_change_path(current_path, path);
+                    else {
+                        dir_path = FSLIB_change_path(current_path, path);
+                    }
 
                     if (!cexists(dir_path)) {
                         free(dir_path);
-                        printf("\nLA DIRECTORY NON ESISTE");
+                        printf("\nDirectory not exists.");
                         return;
                     }
 
-                    int content = copen(dir_path);
-                    CInfo_t content_info;
-                    cstat(content, &content_info);
+                    int ci = copen(dir_path);
+                    if (ci >= 0) {
+                        CInfo_t content_info;
+                        cstat(ci, &content_info);
 
-                    if (content_info.type == STAT_FILE) {
-                        cclose(content);
-                        free(dir_path);
-                        printf("\nQUESTA NON E` UNA DIRECTORY");
-                        return;
+                        if (content_info.type == STAT_FILE) {
+                            cclose(ci);
+                            free(dir_path);
+                            printf("\nNot a directory.");
+                            return;
+                        }
+
+                        cclose(ci);
+                        free(current_path);
+                        current_path = dir_path;
                     }
-
-                    cclose(content);
-                    free(current_path);
-                    current_path = dir_path;
                 }
             }
-
-            else if (strcmp(command_line[0], COMMAND_MAKE_FILE) == 0) mkfile(current_path, command_line[1]);
+            else if (strcmp(command_line[0], COMMAND_MAKE_FILE) == 0) mkfile(current_path, command_line[1], command_line[2]);
             else if (strcmp(command_line[0], COMMAND_MAKE_DIR) == 0) mkdir(current_path, command_line[1]);
-
             else if (strcmp(command_line[0], COMMAND_DELETE_CONTENT) == 0) {
                 char* path = get_path(command_line[1]); 
                 if (cexists(path) == 0) {
-                    printf("\nLA CONTENT NON ESISTE");
+                    printf("\nContent not found.");
                     free(path);
                     return;
                 }
@@ -237,56 +243,61 @@ void shell_start_screen() {
                 rmcontent(path);
                 free(path);       
             }
-
             else if (strcmp(command_line[0], COMMAND_LIST_DIR) == 0) {
                 int step = 0;
                 int dir_ci = copen(current_path);
-                int root_ci = opendir(dir_ci);
-                
-                while (step != -1) {
-                    char name[11] = { 0 };
-                    step = lsdir(root_ci, name, step);
-                    printf("%s\t", name);
+                if (dir_ci >= 0) {
+                    int root_ci = opendir(dir_ci);
+                    if (root_ci < 0) {
+                        cclose(dir_ci);
+                    }
+                    else {    
+                        while (step != -1) {
+                            char name[11] = { 0 };
+                            step = lsdir(root_ci, name, step);
+                            printf("%s\t", name);
+                        }
+
+                        cclose(root_ci);
+                        cclose(dir_ci);
+                    }
                 }
-
-                cclose(root_ci);
-                cclose(dir_ci);
             }
-
             else if (strcmp(command_line[0], COMMAND_FILE_VIEW) == 0) {
                 char* file_path = get_path(command_line[1]);
                 if (cexists(file_path) == 0) {
-                    printf("\nLA FILE NON ESISTE");
+                    printf("\nFile not found.");
                     free(file_path);
                     return;
                 }
                 
                 printf("\n");
 
-                int content = copen(file_path);
-                int data_size = 0;
-                CInfo_t content_info;
-                cstat(content, &content_info);
+                int ci = copen(file_path);
+                if (ci >= 0) {
+                    int data_size = 0;
+                    CInfo_t content_info;
+                    cstat(ci, &content_info);
 
-                while (data_size < content_info.size) {
-                    int copy_size = min(content_info.size - data_size, 128);
-                    char* data = (char*)clralloc(copy_size);
+                    while (data_size < content_info.size) {
+                        int copy_size = min(content_info.size - data_size, 128);
+                        char* data = (char*)clralloc(copy_size);
 
-                    fread(content, data_size, (uint8_t*)data, copy_size);
-                    printf("%s", data);
+                        fread(ci, data_size, (uint8_t*)data, copy_size);
+                        printf("%s", data);
 
-                    free(data);
-                    data_size += copy_size;
+                        free(data);
+                        data_size += copy_size;
+                    }
+                    
+                    cclose(ci);
+                    free(file_path);
                 }
-                
-                cclose(content);
-                free(file_path);
             }
-
             else if (strcmp(command_line[0], COMMAND_BMP_SHOW) == 0) {
                 char* file_path = get_path(command_line[1]);
                 if (cexists(file_path) == 0) {
-                    printf("\nLA FILE NON ESISTE");
+                    printf("\nFile not found.");
                     free(file_path);
                     return;
                 }
@@ -296,7 +307,6 @@ void shell_start_screen() {
                 BMP_unload(bitmap);
                 free(file_path);
             }
-
             else if (strcmp(command_line[0], COMMAND_FILE_RUN) == 0) {
                 int pos = 2;
                 char* exe_argv[COMMAND_BUFFER];
@@ -307,55 +317,57 @@ void shell_start_screen() {
 
                 char* file_path = get_path(command_line[1]);
                 if (cexists(file_path) == 0) {
-                    printf("\nLA FILE [%s] NON ESISTE", file_path);
+                    printf("\nFile [%s] not found.", file_path);
                     return;
                 }
 
-                printf("\nCODE: [%i]\n", fexec(file_path, pos - 2, exe_argv));
+                printf("\nExit code: [%i]\n", fexec(file_path, pos - 2, exe_argv));
                 free(file_path);
             }
-
             else if (strcmp(command_line[0], COMMAND_CINFO) == 0) {
                 char* info_file = get_path(command_line[1]);
                 if (cexists(info_file) == 0) {
-                    printf("\nLA CONTENT NON ESISTE");
+                    printf("\nContent not found.");
                     free(info_file);
                     return;
                 }
 
                 printf("\n");
-                int content = copen(info_file);
-                CInfo_t content_info;
-                cstat(content, &content_info);
+                int ci = copen(info_file);
+                if (ci >= 0) {
+                    CInfo_t content_info;
+                    cstat(ci, &content_info);
 
-                if (content_info.type == STAT_DIR) {
-                    Date* creation_date  = FSLIB_get_date(content_info.creation_date, 1);
-                    Date* accesed_date   = FSLIB_get_date(content_info.last_modification_date, 1);
+                    if (content_info.type == STAT_DIR) {
+                        Date* creation_date  = FSLIB_get_date(content_info.creation_date, 1);
+                        Date* accesed_date   = FSLIB_get_date(content_info.last_modification_date, 1);
 
-                    printf("DIRECTORY\n");
-                    printf("NAME:          [%s]\n", content_info.full_name);
-                    printf("SIZE:          [NaN]\n");
-                    printf("CREATION DATE: [%i/%i/%i]\n", creation_date->day, creation_date->mounth, creation_date->year);
-                    printf("ACCESED DATE:  [%i/%i/%i]\n", accesed_date->day, accesed_date->mounth, accesed_date->year);
+                        printf("Directory\n");
+                        printf("name:          [%s]\n", content_info.full_name);
+                        printf("size:          [NaN]\n");
+                        printf("creation date: [%i/%i/%i]\n", creation_date->day, creation_date->mounth, creation_date->year);
+                        printf("accesed date:  [%i/%i/%i]\n", accesed_date->day, accesed_date->mounth, accesed_date->year);
 
-                    free(creation_date);
-                    free(accesed_date);
+                        free(creation_date);
+                        free(accesed_date);
+                    }
+                    else if (content_info.type == STAT_FILE) {
+                        Date* creation_date = FSLIB_get_date(content_info.creation_date, 1);
+                        Date* accesed_date  = FSLIB_get_date(content_info.last_modification_date, 1);
+
+                        printf("File\n");
+                        printf("name:          [%s.%s]\n", content_info.file_name, content_info.file_extension);
+                        printf("size:          [%iB]\n", content_info.size);
+                        printf("creation date: [%i/%i/%i]\n", creation_date->day, creation_date->mounth, creation_date->year);
+                        printf("accesed date:  [%i/%i/%i]\n", accesed_date->day, accesed_date->mounth, accesed_date->year);
+
+                        free(creation_date);
+                        free(accesed_date);
+                    }
+
+                    cclose(ci);
                 }
-                else if (content_info.type == STAT_FILE) {
-                    Date* creation_date = FSLIB_get_date(content_info.creation_date, 1);
-                    Date* accesed_date  = FSLIB_get_date(content_info.last_modification_date, 1);
 
-                    printf("FILE\n");
-                    printf("NAME:          [%s.%s]\n", content_info.file_name, content_info.file_extension);
-                    printf("SIZE:          [%iB]\n", content_info.size);
-                    printf("CREATION DATE: [%i/%i/%i]\n", creation_date->day, creation_date->mounth, creation_date->year);
-                    printf("ACCESED DATE:  [%i/%i/%i]\n", accesed_date->day, accesed_date->mounth, accesed_date->year);
-
-                    free(creation_date);
-                    free(accesed_date);
-                }
-
-                cclose(content);
                 free(info_file);
             }
 
@@ -374,11 +386,10 @@ void shell_start_screen() {
                 get_ip(ip);
                 get_mac(mac);
 
-                printf("\nUTILITA` KERNEL IPCONF VERSIONE 0.2b\n");
-                printf("\nIP ATTUALE:  [%i.%i.%i.%i]", ip[0], ip[1], ip[2], ip[3]);
-                printf("\nMAC ATTUALE: [%p:%p:%p:%p:%p:%p]", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+                printf("\nKernel network-stat 0.2c\n");
+                printf("\nCurrent IP:  [%i.%i.%i.%i]", ip[0], ip[1], ip[2], ip[3]);
+                printf("\nCurrent MAC: [%p:%p:%p:%p:%p:%p]", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
             }
-
             else if (strcmp(command_line[0], COMMAND_SEND_UDP_PACKET) == 0) {
                 uint8_t ip[4] = { 0x00, 0x00, 0x00, 0x00 };
                 get_ip(ip);
@@ -387,22 +398,21 @@ void shell_start_screen() {
                 uint16_t dst_port = atoi(command_line[5]);
                 uint16_t src_port = atoi(command_line[6]);
 
-                printf("\nTRASFERIMENTO [%s] DA [%i.%i.%i.%i:%i] A [%i.%i.%i.%i:%i]",
+                printf("\nTransfered packet [%s] | [%i.%i.%i.%i:%i] => [%i.%i.%i.%i:%i]",
                                                 command_line[7], ip[0], ip[1], ip[2], ip[3], src_port,
                                                 dst_ip[0], dst_ip[1], dst_ip[2], dst_ip[3], dst_port);
                 send_udp_packet(dst_ip, src_port, dst_port, command_line[7], strlen(command_line[7]));
             }
-
             else if (strcmp(command_line[0], COMMAND_POP_UDP_PACKET) == 0) {
                 uint8_t buffer[512];
                 pop_received_udp_packet(buffer);
 
                 printf("\n");
-                printf("RICEVUTO PACCHETTO UDP STR:     [%s]\n", (char*)buffer);
-                printf("RICEVUTO PACCHETTO UDP UINT:    [%u]\n", buffer);
-                printf("RICEVUTO PACCHETTO UDP INT:     [%i]\n", buffer);
-                printf("RICEVUTO PACCHETTO UDP HEX:     [%x]\n", buffer);
-                printf("RICEVUTO PACCHETTO UDP POINTER: [%p]\n", buffer);
+                printf("UDP str:     [%s]\n", (char*)buffer);
+                printf("UDP uint:    [%u]\n", buffer);
+                printf("UPD int:     [%i]\n", buffer);
+                printf("UDP hex:     [%x]\n", buffer);
+                printf("UDP ptr:     [%p]\n", buffer);
             }
 
 #endif
@@ -411,7 +421,7 @@ void shell_start_screen() {
         //  NETWORKING COMMANDS
         //====================
 
-            else printf("\nCOMANDO [%s ...] SCONOSCUITO", command_line[0]);
+            else printf("\nUnknown command [%s ...]", command_line[0]);
 
         printf("\n");
     }
@@ -433,19 +443,24 @@ int ulogin(char* login, char* password) {
     int pos = 0;
     
     char content_text[512] = { 0 };
-    int users = copen("boot\\users.txt");
-    fread(users, 0, (uint8_t*)content_text, 512);
+    int ci = copen("boot\\users.txt");
+    if (ci >= 0) {
+        fread(ci, 0, (uint8_t*)content_text, 512);
+        cclose(ci);
+    }
+
     char* token = strtok(content_text, "\n");
     while (token) {
         lines[pos++] = token;
         token = strtok(NULL, "\n");
     }
 
-    for (int i = 0; i < pos - 1; i++) 
+    for (int i = 0; i < pos - 1; i++) {
         if (compare_hash(hashed_login, lines[i]) == 0 && compare_hash(hashed_passw, lines[i + 1]) == 0) {
             free(content_text);
             return 1;
         }
+    }
 
     free(content_text);
     return 0;

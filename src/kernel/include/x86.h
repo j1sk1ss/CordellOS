@@ -24,8 +24,6 @@ void mem_outw(uint32_t addr, uint16_t value);
 uint8_t mem_inb(uint32_t addr);
 void mem_outb(uint32_t addr, uint8_t value);
 
-void __attribute__((cdecl)) fmemcpy(char* dst, char* src, uint32_t n);
-
 uint8_t __attribute__((cdecl)) i386_enableInterrupts();
 uint8_t __attribute__((cdecl)) i386_disableInterrupts();
 

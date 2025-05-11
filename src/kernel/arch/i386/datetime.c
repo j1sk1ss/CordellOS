@@ -2,12 +2,12 @@
 
 
 datetime_t DTM_datetime = {
-    .day = 0,
-    .hour = 0,
+    .day    = 0,
+    .hour   = 0,
     .minute = 0,
-    .month = 0,
+    .month  = 0,
     .second = 0,
-    .year = CURRENT_YEAR
+    .year   = CURRENT_YEAR
 };
 
 
@@ -21,16 +21,16 @@ uint8_t _get_RTC_register(int reg) {
       return i386_inb(cmos_data);
 }
  
-void _datetime_read_rtc() {
-    unsigned char century = 0;
-    unsigned char last_second;
-    unsigned char last_minute;
-    unsigned char last_hour;
-    unsigned char last_day;
-    unsigned char last_month;
-    unsigned char last_year;
-    unsigned char last_century;
-    unsigned char registerB;
+int _datetime_read_rtc() {
+    unsigned char century       = 0;
+    unsigned char last_second   = 0;
+    unsigned char last_minute   = 0;
+    unsigned char last_hour     = 0;
+    unsigned char last_day      = 0;
+    unsigned char last_month    = 0;
+    unsigned char last_year     = 0;
+    unsigned char last_century  = 0;
+    unsigned char registerB     = 0;
 
     while (_get_update_in_progress_flag());
     DTM_datetime.second = _get_RTC_register(0x00);
@@ -56,7 +56,8 @@ void _datetime_read_rtc() {
         DTM_datetime.day    = _get_RTC_register(0x07);
         DTM_datetime.month  = _get_RTC_register(0x08);
         DTM_datetime.year   = _get_RTC_register(0x09);
-    } while (
+    } 
+    while (
         (last_second != DTM_datetime.second) || 
         (last_minute != DTM_datetime.minute) || 
         (last_hour != DTM_datetime.hour) ||
@@ -85,7 +86,7 @@ void _datetime_read_rtc() {
 }
 
 static int ticks = 0;
-void _tick() {
+int _tick() {
     int temp_ticks = 0;
     while (1) {
         if (++temp_ticks > TICK_DELAY) {
@@ -93,7 +94,9 @@ void _tick() {
             ticks++;
         }
 
-        if (ticks > MAX_TICK) ticks = 0;
+        if (ticks > MAX_TICK) {
+            ticks = 0;
+        }
     }
 }
 

@@ -1,9 +1,7 @@
 #ifndef _KEYBOARD_H_
 #define _KEYBOARD_H_
 
-
 #include <stdint.h>
-
 #include "graphics.h"
 
 
@@ -31,11 +29,7 @@
 #define RSHIFT                  0x36
 
 
-void keyboard_read(char* stop_list, char* buffer);
-void _flush_keyboard();
 char get_char();
-
-char keyboard_wait();
 char wait_char();
 
 #endif

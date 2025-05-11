@@ -180,14 +180,15 @@ int cexists(const char* path) {
     return result;
 }
 
-void mkfile(const char* path, const char* name) {
+void mkfile(const char* path, const char* name, const char* ext) {
     __asm__ volatile(
         "movl $16, %%eax\n"
         "movl %0, %%ebx\n"
         "movl %1, %%ecx\n"
+        "movl %2, %%edx\n"
         "int $0x80\n"
         :
-        : "r"((uint32_t)path), "r"((uint32_t)name)
+        : "r"((uint32_t)path), "r"((uint32_t)name), "r"((uint32_t)ext)
         : "eax", "ebx", "ecx"
     );
 }

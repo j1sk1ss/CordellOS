@@ -57,7 +57,7 @@ void fread_stop(int ci, int offset, uint8_t* buffer, int len, char* stop);
 void fwrite(int ci, int offset, uint8_t* buffer, int len);
 int fexec(char* path, int args, char** argv);
 
-void mkfile(const char* path, const char* name);
+void mkfile(const char* path, const char* name, const char* ext);
 void mkdir(const char* path, const char* name);
 
 int opendir(int ci);

@@ -1,4 +1,4 @@
-; Some code taked from https://forum.osdev.org/viewtopic.php?f=1&t=28429
+; Some code was taken from https://forum.osdev.org/viewtopic.php?f=1&t=28429
 ;					   https://github.com/stevej/osdev/blob/9b745b5de0ba198d3ba245de62453012f346d5af/kernel/start.s
 
 ; Declare constants for the multiboot header.

@@ -4,7 +4,7 @@
 bitmap_t* BMP_create(char* file_path, int screen_x, int screen_y) {
     bitmap_t* ret = (bitmap_t*)clralloc(sizeof(bitmap_t));
     int ci = copen(file_path);
-    if (ci == -1) {
+    if (ci < 0) {
         printf("File not found\n");
         BMP_unload(ret);
         return NULL;
@@ -35,7 +35,7 @@ bitmap_t* BMP_create(char* file_path, int screen_x, int screen_y) {
 }
 
 void BMP_display(bitmap_t* bmp) {
-    if (bmp == NULL) {
+    if (!bmp) {
         printf("\nInvalid bitmap\n");
         return;
     }
@@ -66,13 +66,13 @@ void BMP_display(bitmap_t* bmp) {
                 uint32_t red   = bytes[color_index + 2] & 0xff;
                 uint32_t alpha = bytes[color_index + 3] & 0xff;
 
-                if (x + line_part < bmp->width) 
+                if (x + line_part < bmp->width) {
                     vput_pixel(
                         x + bmp->x + line_part, 
                         (bmp->height - 1 - y) + bmp->y, 
                         ((alpha << 24) | (red << 16) | (green << 8) | (blue))
                     );
-
+                }
                 else break;
             }
 
@@ -87,6 +87,6 @@ void BMP_display(bitmap_t* bmp) {
 }
 
 void BMP_unload(bitmap_t* bitmap) {
-    if (bitmap->file != -1) cclose(bitmap->file);
+    if (bitmap->file >= 0) cclose(bitmap->file);
     if (bitmap != NULL) free(bitmap);
 }

@@ -1,4 +1,4 @@
-#include "../../include/vfs.h"
+#include "../include/vfs.h"
 
 
 static vfs_node_t* vfs_list = NULL;
