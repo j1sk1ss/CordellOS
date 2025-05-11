@@ -29,7 +29,7 @@ void __attribute__((cdecl)) fmemcpy(char* dst, char* src, uint32_t n);
 uint8_t __attribute__((cdecl)) i386_enableInterrupts();
 uint8_t __attribute__((cdecl)) i386_disableInterrupts();
 
-void __attribute__((cdecl)) i386_switch2user();
+void __attribute__((cdecl)) i386_switch2user(void* entry);
 void __attribute__((cdecl)) i386_panic();
 char __attribute__((cdecl)) i386_inputWait();
 

@@ -2,14 +2,16 @@
 
 
 page_directory* current_page_directory = NULL;
-page_directory* kernel_page_directory = NULL;
+page_directory* kernel_page_directory  = NULL;
 
 
 int VMM_init(uint32_t memory_start) {
     page_directory* dir = VMM_mkpdir();
-    _map_table(dir, VMM_mkptable(0x0, KERNEL), KERNEL, 0);    
-    _map_table(dir, VMM_mkptable(memory_start, KERNEL), KERNEL, PD_INDEX(0xC0000000));
-
+    if (!_map_table(dir, VMM_mkptable(0x0, KERNEL), KERNEL, 0) || 
+        !_map_table(dir, VMM_mkptable(memory_start, KERNEL), KERNEL, PD_INDEX(0xC0000000))) {
+            return 0;
+        }
+    
     if (!VMM_set_directory(dir)) return 0;
     kernel_page_directory = dir;
 
@@ -114,13 +116,15 @@ int VMM_init(uint32_t memory_start) {
         pd_entry* entry = &pd->entries[PD_INDEX((virtual_address)v_addr)];
 
         // Create table, if table not present
-        if ((*entry & PTE_PRESENT) != PTE_PRESENT) 
+        if ((*entry & PTE_PRESENT) != PTE_PRESENT) {
             _map_table(pd, VMM_mkptable((virtual_address)v_addr, type), type, PD_INDEX((virtual_address)v_addr));
+        }
 
         page_table* table = (page_table*)PAGE_PHYS_ADDRESS(entry);
         pt_entry* page = &table->entries[PT_INDEX((virtual_address)v_addr)];
 
         SET_ATTRIBUTE(page, PTE_PRESENT);
+        SET_ATTRIBUTE(page, PTE_READ_WRITE);
         if (type == USER) { SET_ATTRIBUTE(page, PTE_USER); }
         SET_FRAME(page, (physical_address)p_addr);
         return 1;    
@@ -143,13 +147,14 @@ int VMM_init(uint32_t memory_start) {
         return table;
     }
 
-    void _map_table(page_directory* pd, page_table* table, uint8_t type, size_t index) {
-        if (!pd || !table) return;
+    int _map_table(page_directory* pd, page_table* table, uint8_t type, size_t index) {
+        if (!pd || !table) return 0;
         pd_entry* entry = &pd->entries[index];
         SET_ATTRIBUTE(entry, PDE_PRESENT);
         SET_ATTRIBUTE(entry, PDE_READ_WRITE);
         if (type == USER) { SET_ATTRIBUTE(entry, PDE_USER); }
         SET_FRAME(entry, (uint32_t)table);
+        return 1;
     }
 
     void VMM_free_table(page_table* table) {
@@ -202,11 +207,11 @@ int VMM_init(uint32_t memory_start) {
         //=======
         // PARAMS
 
-            if (present) kprintf("NOT PRESENT\t"); else kprintf("PAGE PROTECTION\t");
-            if (rw) kprintf("READONLY\t"); else kprintf("WRITEONLY\t");
-            if (us) kprintf("USERMODE\t");
+            if (present)  kprintf("NOT PRESENT\t"); else kprintf("PAGE PROTECTION\t");
+            if (rw)       kprintf("READONLY\t");    else kprintf("WRITEONLY\t");
+            if (us)       kprintf("USERMODE\t");
             if (reserved) kprintf("RESERVED\t");
-            if (id) kprintf("INST FETCH\t");
+            if (id)       kprintf("INST FETCH\t");
 
         //
         //=======

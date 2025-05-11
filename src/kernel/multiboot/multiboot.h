@@ -184,5 +184,4 @@
 
 struct Elf32_sectionHeader* MB2_get_elf_section(multiboot_info_t* info, char* section);
 
-
 #endif /* ! MULTIBOOT_HEADER */

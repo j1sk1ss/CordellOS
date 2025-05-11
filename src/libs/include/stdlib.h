@@ -37,6 +37,4 @@ void freep(void* ptr);
 void machine_restart();
 void switch_disk(int index);
 
-void switch2user();
-
 #endif

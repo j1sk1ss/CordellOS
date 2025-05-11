@@ -80,8 +80,8 @@ static ata_dev_t secondary_slave  = {.slave = 1};
         i386_outb(dev->command, COMMAND_IDENTIFY);
         if (!i386_inb(dev->status)) {
             kprintf("ATA_device_detect: device does not exist\n");
-            _kfree(dev->prdt);
-            _kfree(dev->mem_buffer);
+            ALC_free(dev->prdt, KERNEL);
+            ALC_free(dev->mem_buffer, KERNEL);
             return;
         }
 
@@ -89,8 +89,8 @@ static ata_dev_t secondary_slave  = {.slave = 1};
         uint8_t lba_hi = i386_inb(dev->lba_high);
         if (lba_lo != 0 || lba_hi != 0) {
             kprintf("ATA_device_detect: not ata device\n");
-            _kfree(dev->prdt);
-            _kfree(dev->mem_buffer);
+            ALC_free(dev->prdt, KERNEL);
+            ALC_free(dev->mem_buffer, KERNEL);
             return;
         }
 
@@ -101,16 +101,16 @@ static ata_dev_t secondary_slave  = {.slave = 1};
             err = i386_inb(dev->status) & ATA_STATUS_ERR;
             if (--delay < 0) {
                 kprintf("DRIVE [%i] NOT FOUND / ATTACHED\n");
-                _kfree(dev->prdt);
-                _kfree(dev->mem_buffer);
+                ALC_free(dev->prdt, KERNEL);
+                ALC_free(dev->mem_buffer, KERNEL);
                 return;
             }
         }
 
         if (err) {
             kprintf("ATA_device_detect: err when polling\n");
-            _kfree(dev->prdt);
-            _kfree(dev->mem_buffer);
+            ALC_free(dev->prdt, KERNEL);
+            ALC_free(dev->mem_buffer, KERNEL);
             return;
         }
 
@@ -126,7 +126,7 @@ static ata_dev_t secondary_slave  = {.slave = 1};
     }
 
     void ATA_device_init(ata_dev_t* dev, int primary) {
-        dev->prdt      = (prdt_t*)_kmalloc(sizeof(prdt_t));
+        dev->prdt      = (prdt_t*)ALC_malloc(sizeof(prdt_t), KERNEL);
         dev->prdt_phys = (uint8_t*)VMM_virtual2physical(dev->prdt);
 
         uint8_t* mem_buffer = dev->mem_buffer;
@@ -170,10 +170,12 @@ static ata_dev_t secondary_slave  = {.slave = 1};
 //====================
 
     void ATA_device_switch(int device) {
-        if (device == 1) current_ata_device = &primary_master;
-        else if (device == 2) current_ata_device = &primary_slave;
-        else if (device == 3) current_ata_device = &secondary_master;
-        else if (device == 4) current_ata_device = &secondary_slave;
+        switch (device) {
+            case 1: current_ata_device = &primary_master; break;
+            case 2: current_ata_device = &primary_slave; break;
+            case 3: current_ata_device = &secondary_master; break;
+            case 4: current_ata_device = &secondary_slave; break;
+        }
     }
 
 //====================
@@ -196,12 +198,12 @@ static ata_dev_t secondary_slave  = {.slave = 1};
 
     uint8_t* ATA_read_sector(uint32_t lba) {
         _ata_wait();
-        uint8_t* buffer = (uint8_t*)_kmalloc(SECTOR_SIZE);
-        if (buffer == NULL) return NULL;
+        uint8_t* buffer = (uint8_t*)ALC_malloc(SECTOR_SIZE, KERNEL);
+        if (!buffer) return NULL;
 
         _prepare_for_reading(lba);
         if (!_is_ata_ready()) {
-            _kfree(buffer);
+            ALC_free(buffer, KERNEL);
             return NULL;
         }
 
@@ -218,15 +220,16 @@ static ata_dev_t secondary_slave  = {.slave = 1};
     // stop == ERROR_SYMBOL (error), stop == STOP_SYMBOL (found)
     uint8_t* ATA_read_sector_stop(uint32_t lba, uint8_t* stop) {
         _ata_wait();
+        uint8_t* buffer = (uint8_t*)ALC_malloc(SECTOR_SIZE, KERNEL);
+        if (!buffer) return NULL;
 
-        uint8_t* buffer = (uint8_t*)_kmalloc(SECTOR_SIZE);
         uint8_t dummy_buffer[SECTOR_SIZE] = { 0 };
         uint8_t* buffer_pointer = buffer;
         memset(buffer, 0, SECTOR_SIZE);
         
         _prepare_for_reading(lba);
         if (!_is_ata_ready()) {
-            _kfree(buffer);
+            ALC_free(buffer, KERNEL);
             return NULL;
         }
 
@@ -253,14 +256,16 @@ static ata_dev_t secondary_slave  = {.slave = 1};
     // TODO: issue with pointer moving 
     uint8_t* ATA_read_sector_stopoff(uint32_t lba, uint32_t offset, uint8_t* stop) {
         _ata_wait();
-        uint8_t* buffer = (uint8_t*)_kmalloc(SECTOR_SIZE);
+        uint8_t* buffer = (uint8_t*)ALC_malloc(SECTOR_SIZE, KERNEL);
+        if (!buffer) return NULL;
+
         uint8_t dummy_buffer[SECTOR_SIZE] = { 0 };
         uint8_t* buffer_pointer = buffer;
         memset(buffer, 0, SECTOR_SIZE);
         
         _prepare_for_reading(lba);
         if (!_is_ata_ready()) {
-            _kfree(buffer);
+            ALC_free(buffer, KERNEL);
             return NULL;
         }
         
@@ -268,15 +273,15 @@ static ata_dev_t secondary_slave  = {.slave = 1};
             uint16_t value = i386_inw(DATA_REGISTER);
             uint8_t first = (uint8_t)(value & 0xFF);
             buffer_pointer[n * 2] = first;
-            if (first == stop[0] && n * 2 >= offset) {
-                stop[0] = STOP_SYMBOL;
+            if (first == *stop && n * 2 >= offset) {
+                *stop = STOP_SYMBOL;
                 buffer_pointer = dummy_buffer;
             }
 
             uint8_t second = (uint8_t)(value >> 8);
             buffer_pointer[n * 2 + 1] = second;
-            if (second == stop[0] && n * 2 + 1 >= offset) {
-                stop[0] = STOP_SYMBOL;
+            if (second == *stop && n * 2 + 1 >= offset) {
+                *stop = STOP_SYMBOL;
                 buffer_pointer = dummy_buffer;
             }
         }
@@ -287,8 +292,8 @@ static ata_dev_t secondary_slave  = {.slave = 1};
     // Function to read a sectors from the disk.
     uint8_t* ATA_read_sectors(uint32_t lba, uint32_t sector_count) {
         _ata_wait();
-        uint8_t* buffer = (uint8_t*)_kmalloc(SECTOR_SIZE * sector_count);
-        if (buffer == NULL) return NULL;
+        uint8_t* buffer = (uint8_t*)ALC_malloc(SECTOR_SIZE * sector_count, KERNEL);
+        if (!buffer) return NULL;
 
         memset(buffer, 0, SECTOR_SIZE * sector_count);
         for (uint32_t i = 0; i < sector_count; i++) {
@@ -296,28 +301,26 @@ static ata_dev_t secondary_slave  = {.slave = 1};
             if (sector_data == NULL) return NULL;
             
             memcpy(buffer + i * SECTOR_SIZE, sector_data, SECTOR_SIZE);
-            _kfree(sector_data);
+            ALC_free(sector_data, KERNEL);
         }
 
         return buffer;
     }
 
     uint8_t* ATA_readoff_sectors(uint32_t lba, uint32_t offset, uint32_t sector_count) {
-        _ata_wait();
-
         uint32_t sectors_seek = offset / SECTOR_SIZE;
-        uint32_t data_seek    = offset % SECTOR_SIZE;
-        uint32_t size         = (SECTOR_SIZE * (sector_count - 1)) + (SECTOR_SIZE - data_seek);
-        uint8_t* buffer = (uint8_t*)_kmalloc(size);
-        if (buffer == NULL) return NULL;
+        uint32_t data_seek = offset % SECTOR_SIZE;
+        uint32_t size = (SECTOR_SIZE * (sector_count - 1)) + (SECTOR_SIZE - data_seek);
+        uint8_t* buffer = (uint8_t*)ALC_malloc(size, KERNEL);
+        if (!buffer) return NULL;
 
         memset(buffer, 0, size);
         for (uint32_t i = sectors_seek; i < sector_count; i++) {
             uint8_t* sector_data = ATA_read_sector(lba + i);
-            if (sector_data == NULL) return NULL;
+            if (!sector_data) return NULL;
             
             memcpy(buffer + i * (SECTOR_SIZE - data_seek), sector_data + data_seek, SECTOR_SIZE - data_seek);
-            _kfree(sector_data);
+            ALC_free(sector_data, KERNEL);
 
             data_seek = 0;
         }
@@ -330,8 +333,7 @@ static ata_dev_t secondary_slave  = {.slave = 1};
     // data[1] - Loaded data from disk
     uint8_t* ATA_read_sectors_stop(uint32_t lba, uint32_t sector_count, uint8_t* stop) {
         _ata_wait();
-
-        uint8_t* buffer = (uint8_t*)_kmalloc(SECTOR_SIZE * sector_count);
+        uint8_t* buffer = (uint8_t*)ALC_malloc(SECTOR_SIZE * sector_count, KERNEL);
         if (buffer == NULL) return NULL;
 
         memset(buffer, 0, SECTOR_SIZE * sector_count);
@@ -340,9 +342,9 @@ static ata_dev_t secondary_slave  = {.slave = 1};
             if (sector_data == NULL) return NULL;
             
             memcpy(buffer + i * SECTOR_SIZE, sector_data, SECTOR_SIZE);
-            _kfree(sector_data);
+            ALC_free(sector_data, KERNEL);
 
-            if (stop[0] == STOP_SYMBOL) break;
+            if (*stop == STOP_SYMBOL) break;
         }
 
         return buffer;
@@ -356,7 +358,7 @@ static ata_dev_t secondary_slave  = {.slave = 1};
         uint32_t sectors_seek = offset / SECTOR_SIZE;
         uint32_t data_seek    = offset % SECTOR_SIZE;
         uint32_t size         = (SECTOR_SIZE * (sector_count - 1)) + (SECTOR_SIZE - data_seek);
-        uint8_t* buffer = (uint8_t*)_kmalloc(size);
+        uint8_t* buffer = (uint8_t*)ALC_malloc(size, KERNEL);
         if (buffer == NULL) return NULL;
 
         memset(buffer, 0, size);
@@ -365,11 +367,11 @@ static ata_dev_t secondary_slave  = {.slave = 1};
             if (sector_data == NULL) return NULL;
             
             memcpy(buffer + i * (SECTOR_SIZE - data_seek), sector_data + data_seek, SECTOR_SIZE - data_seek);
-            _kfree(sector_data);
+            ALC_free(sector_data, KERNEL);
 
             data_seek = 0;
 
-            if (stop[0] == STOP_SYMBOL) break;
+            if (*stop == STOP_SYMBOL) break;
         }
 
         return buffer;
@@ -470,7 +472,7 @@ static ata_dev_t secondary_slave  = {.slave = 1};
         _ata_wait();
         uint8_t* source = ATA_read_sectors(source_lba, sector_count);
         int result = ATA_write_sectors(distenation_lba, source, sector_count);
-        _kfree(source);
+        ALC_free(source, KERNEL);
         return result;
     }
 

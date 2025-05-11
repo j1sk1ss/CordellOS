@@ -26,7 +26,7 @@
 
 
 // #define USERMODE
-#define DEBUG_MODE
+// #define DEBUG_MODE
 
 #define CONFIG_KSHELL   0
 #define CONFIG_MOUSE    1
@@ -120,19 +120,23 @@
 
 #pragma region [Default tasks]
 
-void _shell() {
-
+int _shell() {
     int shell_ci = current_vfs->openobj(SHELL_PATH);
+    if (shell_ci < 0) {
+        LOG("SHELL NOT FOUND!");
+        return 0;
+    }
 
 #ifdef USERMODE
-    uint32_t esp = 0;
-    asm("mov %%esp, %0" : "=r"(esp));
-    TSS_set_stack(0x10, esp);
-    current_vfs->objexec(shell_ci, 0, NULL, USER);
+    ELF32_program* program = ELF_read(shell_ci, USER);
+    i386_switch2user(program->entry_point);
+    ELF_free_program(program, USER);
 #else
     current_vfs->objexec(shell_ci, 0, NULL, KERNEL);
 #endif
 
+    current_vfs->closeobj(shell_ci);
+    return 1;
 }
 
 void _idle() {
@@ -156,7 +160,7 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
 #pragma region [Basic kernel info]
 
         if (mb_magic != MULTIBOOT2_BOOTLOADER_MAGIC) {
-            kprintf("[%s %i] MB HEADER ERROR (MAGIC IS WRONG [%u]).\n", __FILE__, __LINE__, mb_magic);
+            LOG("MB HEADER ERROR (MAGIC IS WRONG [%u]).\n", mb_magic);
             goto end;
         }
 
@@ -168,16 +172,17 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
             VGA_init((uint8_t*)(uintptr_t)mb_info->framebuffer_addr);
         }
 
-        ELF_build_symbols_from_multiboot(mb_info->u.elf_sec);
+        ELF_build_symbols_from_multiboot(mb_info->u.elf_sec.addr, mb_info->u.elf_sec.shndx, mb_info->u.elf_sec.num);
 
         kprintf("\n\t\t =    CORDELL  KERNEL    =");
-        kprintf("\n\t\t =     [ ver.   22 ]     =");
-        kprintf("\n\t\t =     [ 21.02  25 ]     = \n\n");
+        kprintf("\n\t\t =     [ ver.   23 ]     =");
+        kprintf("\n\t\t =     [ 08.05  25 ]     = \n\n");
         kprintf("\n\t\t = INFORMAZIONI GENERALI = \n\n");
         kprintf("\tMB FLAGS:        [0x%p]\n", mb_info->flags);
-        kprintf("\tMEM LOW:         [%uKB] => MEM UP: [%uKB]\n", mb_info->mem_lower, mb_info->mem_upper);
+        uint32_t total_memory = mb_info->mem_upper + (mb_info->mem_lower << 10);
+        kprintf("\tMMAP:            [0x%p]\t=> MEM SIZE: [%uKB]\n", mb_info->mmap_addr, total_memory);
+        kprintf("\tMEM LOW:         [%uKB]\t=> MEM UP: [%uKB]\n", mb_info->mem_lower, mb_info->mem_upper);
         kprintf("\tBOOT DEVICE:     [0x%p]\n", mb_info->boot_device);
-        kprintf("\tCMD LINE:        [%s]\n", mb_info->cmdline);
         kprintf("\tVBE MODE:        [%u]\n", mb_info->vbe_mode);
 
         kprintf("\n\n\t\t =       VBE  INFO       = \n\n");
@@ -196,7 +201,6 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
     
 #pragma region [Memory info & memory testing]
 
-        uint32_t total_memory = mb_info->mem_upper + (mb_info->mem_lower << 10);
         PMM_init(MMAP_LOCATION, total_memory);
 
         //===================
@@ -265,10 +269,9 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
         PMM_deinitialize_memory_region(0x1000, 0x11000);
         PMM_deinitialize_memory_region(MMAP_LOCATION, PMM_map.max_blocks / BLOCKS_PER_BYTE);
         if (VMM_init(0x100000) == 0) {
-            kprintf("[%s %i] VMM INIT ERROR!\n",__FILE__ ,__LINE__);
+            LOG("VMM INIT ERROR!");
             goto end;
         }
-
         
 #pragma endregion
 
@@ -280,16 +283,18 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
 
             uint32_t framebuffer_pages = GFX_data.buffer_size / PAGE_SIZE;
             if (framebuffer_pages % PAGE_SIZE > 0) framebuffer_pages++;
-    
-            // multiplication 2 for hardware
+
             framebuffer_pages *= 2;
             PMM_deinitialize_memory_region(GFX_data.physical_base_pointer, framebuffer_pages * BLOCK_SIZE);
-            for (uint32_t i = 0, fb_start = GFX_data.physical_base_pointer; i < framebuffer_pages; i++, fb_start += PAGE_SIZE)
+            for (uint32_t i = 0, fb_start = GFX_data.physical_base_pointer; i < framebuffer_pages; i++, fb_start += PAGE_SIZE) {
                 VMM_kmap_page((void*)fb_start, (void*)fb_start);
+            }
 
+            GFX_data.virtual_second_buffer = (GFX_data.physical_base_pointer + framebuffer_pages * BLOCK_SIZE) + BLOCK_SIZE;
             PMM_deinitialize_memory_region(GFX_data.virtual_second_buffer, framebuffer_pages * BLOCK_SIZE);
-            for (uint32_t i = 0, fb_start = GFX_data.virtual_second_buffer; i < framebuffer_pages; i++, fb_start += PAGE_SIZE)
+            for (uint32_t i = 0, fb_start = GFX_data.virtual_second_buffer; i < framebuffer_pages; i++, fb_start += PAGE_SIZE) {
                 VMM_kmap_page((void*)fb_start, (void*)fb_start);
+            }
 
 #pragma endregion
 
@@ -346,16 +351,40 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
     // Kernel2user part
     //===================
 
-#pragma region [Preparations for user land]
+#pragma region [Preparations for userland]
+        
+        uint32_t current_esp;
+        asm ("mov %%esp, %0" : "=r"(current_esp));
+        TSS_set_stack(0x10, current_esp);
 
         START_PROCESS("idle", (uint32_t)_idle, KERNEL, 1);
 
-        if (!current_vfs->objexist(CONFIG_PATH)) START_PROCESS("shell", (uint32_t)_shell, KERNEL, 10); // TODO! If config exist, it cause page fault.
+        ADDRESS_SPACE shell_addr_space = KERNEL;
+        #ifdef USERMODE
+            shell_addr_space = USER;
+        #endif
+
+        if (!current_vfs->objexist(CONFIG_PATH)) START_PROCESS("shell", (uint32_t)_shell, shell_addr_space, 10); 
         else {
-            int boot_ci = current_vfs->openobj(CONFIG_PATH);
             static uint8_t config[128] = { 0 };
-            current_vfs->read(boot_ci, config, 0, 5);
-            current_vfs->closeobj(boot_ci);
+            int boot_ci = current_vfs->openobj(CONFIG_PATH);
+            if (boot_ci >= 0) {
+                current_vfs->read(boot_ci, config, 0, 5);
+                current_vfs->closeobj(boot_ci);
+            }
+
+#ifndef DEBUG_MODE
+            kclrscr();
+            kprintf(" =============== CONFIG STARTUP =============== \n");
+            kprintf(" | CONFIG READ BY PATH: [%s]\n", CONFIG_PATH);
+            kprintf(" | CONFIG BODY: [%s]\n", config);
+
+            for (int i = 1000000000; i >= 0; i--) {
+                if (i % 100000000 == 0) kprintf(" | STARTING AFTER [%is]...\n", i / 100000000);
+            }
+
+            kprintf(" ============================================= \n");
+#endif
 
             //===================
             // Speaker test
@@ -393,12 +422,7 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
             //===================
 
             if (config[CONFIG_MOUSE] == CONFIG_ENABLED) i386_init_mouse(1);
-
-#ifdef USERMODE
-            if (config[CONFIG_KSHELL] == CONFIG_ENABLED) START_PROCESS("shell", (uint32_t)_shell, USER, 10);
-#else
-            if (config[CONFIG_KSHELL] == CONFIG_ENABLED) START_PROCESS("shell", (uint32_t)_shell, KERNEL, 10);
-#endif
+            if (config[CONFIG_KSHELL] == CONFIG_ENABLED) START_PROCESS("shell", (uint32_t)_shell, shell_addr_space, 10);
         }
 
         TASK_start_tasking();

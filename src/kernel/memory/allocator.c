@@ -1,24 +1,32 @@
 #include "../include/allocator.h"
 
 
+static void* __kmalloc(size_t, malloc_head_t*, uint8_t);
+static int __kmallocp(uint32_t, malloc_head_t*);
+static void* __krealloc(void*, size_t, malloc_head_t*, uint8_t);
+static int __kfree(void*, malloc_head_t*);
+static int __block_split(malloc_block_t*, size_t);
+static int __merge_free_blocks(malloc_block_t*);
+
+
 //===========================
 //	GLOBAL VARS
 //===========================
 
 	malloc_head_t kernel_malloc = {
-		.list_head = NULL,
+		.list_head    = NULL,
 		.phys_address = 0,
-		.total_pages = 0,
+		.total_pages  = 0,
 		.virt_address = 0x300000,
-		.map_page = VMM_kmap_page
+		.map_page     = VMM_kmap_page
 	};
 
 	malloc_head_t user_malloc = {
-		.list_head = NULL,
+		.list_head    = NULL,
 		.phys_address = 0,
-		.total_pages = 0,
+		.total_pages  = 0,
 		.virt_address = 0xC00000,
-		.map_page = VMM_umap_page
+		.map_page     = VMM_umap_page
 	};
 
 //===========================
@@ -64,17 +72,34 @@
 //	- Merge free blocks for merging blocks in page
 //===========================
 
+/*
+mallocp - Malloc whole page.
+*/
+
+	static int _kmallocp(uint32_t v_addr) {
+		return __kmallocp(v_addr, &kernel_malloc);
+	}
+	
+	static int _umallocp(uint32_t v_addr) {
+		return __kmallocp(v_addr, &user_malloc);
+	}
+
 	int ALC_mallocp(uint32_t v_addr, uint8_t type) {
 		if (type == KERNEL) return _kmallocp(v_addr);
 		else return _umallocp(v_addr);
 	}
 
-	int _kmallocp(uint32_t v_addr) {
-		return __kmallocp(v_addr, &kernel_malloc, KERNEL);
+/*
+malloc - Alloc specified memory region.
+*/
+
+	// Memory allocation in kernel address space. Usermode will cause error
+	static void* _kmalloc(size_t size) {
+		return __kmalloc(size, &kernel_malloc, KERNEL);
 	}
 
-	int _umallocp(uint32_t v_addr) {
-		return __kmallocp(v_addr, &user_malloc, USER);
+	static void* _umalloc(size_t size) {
+		return __kmalloc(size, &user_malloc, USER);
 	}
 
 	void* ALC_malloc(size_t size, uint8_t type) {
@@ -82,13 +107,16 @@
 		else return _umalloc(size);
 	}
 
-	// Memory allocation in kernel address space. Usermode will cause error
-	void* _kmalloc(size_t size) {
-		return __kmalloc(size, &kernel_malloc, KERNEL);
+/*
+realloc - Copy ptr data to new allocated data. Then free ptr region.
+*/
+
+	static void* _krealloc(void* ptr, size_t size) {
+		return __krealloc(ptr, size, &kernel_malloc, KERNEL);
 	}
 
-	void* _umalloc(size_t size) {
-		return __kmalloc(size, &user_malloc, USER);
+	static void* _urealloc(void* ptr, size_t size) {
+		return __krealloc(ptr, size, &user_malloc, USER);
 	}
 
 	void* ALC_realloc(void* ptr, size_t size, uint8_t type) {
@@ -96,12 +124,16 @@
 		else return _urealloc(ptr, size);
 	}
 
-	void* _krealloc(void* ptr, size_t size) {
-		return __krealloc(ptr, size, &kernel_malloc, KERNEL);
+/*
+free - Free allocated region.
+*/
+
+	static int _kfree(void* ptr) {
+		return __kfree(ptr, &kernel_malloc);
 	}
 
-	void* _urealloc(void* ptr, size_t size) {
-		return __krealloc(ptr, size, &user_malloc, USER);
+	static int _ufree(void* ptr) {
+		return __kfree(ptr, &user_malloc);
 	}
 
 	int ALC_free(void* ptr, uint8_t type) {
@@ -109,33 +141,33 @@
 		else return _ufree(ptr);
 	}
 
-	int _kfree(void* ptr) {
-		return __kfree(ptr, &kernel_malloc);
-	}
+/*
+freep - Free allocated page.
+*/
 
-	int _ufree(void* ptr) {
-		return __kfree(ptr, &user_malloc);
-	}
-
-	void _kfreep(void* v_addr) {
+	static int _kfreep(void* v_addr) {
 		pt_entry* page = VMM_get_page((virtual_address)v_addr);
 		if (PAGE_PHYS_ADDRESS(page) && TEST_ATTRIBUTE(page, PTE_PRESENT)) {
 			VMM_free_page(page);
 			VMM_unmap_page((uint32_t*)v_addr);
 			_flush_tlb_entry((virtual_address)v_addr);
 		}
-	}
 
-	int __kmallocp(uint32_t virt, malloc_head_t* head, uint8_t type) {
-		void* block = PMM_allocate_blocks(1);
-		memset(block, 0, PAGE_SIZE);
-
-		VMM_mkpage((physical_address)PMM_allocate_blocks(1), type);
-		head->map_page(block, (void*)virt);
 		return 1;
 	}
 
-	void* __krealloc(void* ptr, size_t size, malloc_head_t* head, uint8_t type) {
+	int ALC_freep(void* v_addr, uint8_t type) {
+		return _kfreep(v_addr);
+	}
+
+	static int __kmallocp(uint32_t virt, malloc_head_t* head) {
+		uint32_t* phys = PMM_allocate_blocks(1);
+		if (!phys) return -1;
+		head->map_page((void*)phys, (void*)virt);
+		return 1;
+	}
+
+	static void* __krealloc(void* ptr, size_t size, malloc_head_t* head, uint8_t type) {
 		void* new_data = NULL;
 		if (size) {
 			if(!ptr) return __kmalloc(size, head, type);
@@ -149,7 +181,7 @@
 		return new_data;
 	}
 
-	void* __kmalloc(size_t size, malloc_head_t* head, uint8_t type) {
+	static void* __kmalloc(size_t size, malloc_head_t* head, uint8_t type) {
 		if (size <= 0) return NULL;
 		if (head->list_head == NULL) __mm_init(size, head);
 
@@ -187,7 +219,7 @@
 
 					uint32_t virt = head->virt_address + head->total_pages * PAGE_SIZE; // TODO: new pages to new blocks. Don`t mix them to avoid pagedir errors in contswitch
 					for (uint8_t i = 0; i < num_pages; i++) {
-						__kmallocp(virt, head, type);
+						__kmallocp(virt, head);
 
 						virt += PAGE_SIZE;
 						cur->size += PAGE_SIZE;
@@ -208,7 +240,7 @@
 		return (void*)cur + sizeof(malloc_block_t);
 	}
 
-	int __kfree(void* ptr, malloc_head_t* head) {
+	static int __kfree(void* ptr, malloc_head_t* head) {
 		if (!ptr) return -1;
 		for (malloc_block_t* cur = head->list_head; cur->next; cur = cur->next) 
 			if ((void*)cur + sizeof(malloc_block_t) == ptr && cur->free == false) {
@@ -240,7 +272,7 @@
 		return 1;
 	}
 
-	int __block_split(malloc_block_t* node, size_t size) {
+	static int __block_split(malloc_block_t* node, size_t size) {
 		malloc_block_t* new_node = (malloc_block_t*)((void*)node + size + sizeof(malloc_block_t));
 
 		new_node->size   = node->size - size - sizeof(malloc_block_t);
@@ -256,7 +288,7 @@
 		return 1;
 	}
 
-	int __merge_free_blocks(malloc_block_t* block) {
+	static int __merge_free_blocks(malloc_block_t* block) {
 		malloc_block_t* cur = block;
 		while (cur != NULL && cur->next != NULL) {
 			if (cur->free == true && cur->next->free == true) {
@@ -280,17 +312,7 @@
 //	INFO
 //===========================
 
-	int kprint_kmalloc() {
-		_print_malloc(&kernel_malloc);
-		return 1;
-	}
-
-	int kprint_umalloc() {
-		_print_malloc(&user_malloc);
-		return 1;
-	}
-
-	int _print_malloc(malloc_head_t* head) {
+	static int _print_malloc(malloc_head_t* head) {
 		kprintf(
 			"\n|%i(%c)|", head->list_head->size + sizeof(malloc_block_t),
 			head->list_head->free == true ? 'F' : 'O'
@@ -309,6 +331,16 @@
 
 		kprintf(" TOTAL: [%iB]\n", total_free);
 		return 1;	
+	}
+
+	int kprint_kmalloc() {
+		_print_malloc(&kernel_malloc);
+		return 1;
+	}
+
+	int kprint_umalloc() {
+		_print_malloc(&user_malloc);
+		return 1;
 	}
 
 //===========================

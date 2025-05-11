@@ -32,7 +32,7 @@ typedef struct vfs_node {
 
         // Write data to content with offset (Change FAT table for allocate \ deallocate clusters)
         // Content, buffer, seek, size
-        int (*write)(int, uint8_t*, uint32_t, uint32_t);
+        int (*write)(int, const uint8_t*, uint32_t, uint32_t);
 
         // Return Directory of current cluster
         int (*lsdir)(int, uint8_t, int);
@@ -77,8 +77,8 @@ typedef struct vfs_node {
 extern vfs_node_t* current_vfs;
 
 
-void VFS_initialize(struct ata_dev* dev, uint32_t fs_type);
-void VFS_add_node(struct ata_dev* dev, uint32_t fs_type);
+int VFS_initialize(struct ata_dev* dev, uint32_t fs_type);
+int VFS_add_node(struct ata_dev* dev, uint32_t fs_type);
 void VFS_switch_device(int index);
 
 #endif

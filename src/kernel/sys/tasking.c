@@ -71,8 +71,8 @@ TaskManager taskManager = { // Task manager placed in kernel space
 		//=============================
 
 			// Allocate memory for new task body
-			Task* task     = (Task*)_kmalloc(sizeof(Task));
-			task->cpuState = (struct Registers*)_kmalloc(sizeof(struct Registers));
+			Task* task     = (Task*)ALC_malloc(sizeof(Task), KERNEL);
+			task->cpuState = (struct Registers*)ALC_malloc(sizeof(struct Registers), KERNEL);
 			task->space    = type;
 
 			//=============================
@@ -100,8 +100,8 @@ TaskManager taskManager = { // Task manager placed in kernel space
 				}
 
 				if (task->pid == -1) {
-					_kfree(task->cpuState);
-					_kfree(task);
+					ALC_free(task->cpuState, KERNEL);
+					ALC_free(task, KERNEL);
 				}
 
 			//=============================
@@ -186,14 +186,12 @@ TaskManager taskManager = { // Task manager placed in kernel space
 		page_directory* task_pagedir = (page_directory*)VMM_virtual2physical(task->page_directory);
 		VMM_set_directory(kernel_page_directory);
 		VMM_free_pdir(task_pagedir);
-		_kfree(task->cpuState);
-		_kfree(task);
+		ALC_free(task->cpuState, KERNEL);
+		ALC_free(task, KERNEL);
 	}
 
 	Task* _get_task(int pid) {
-		for (int i = 0; i < TASKS_MAX; i++) 
-			if (taskManager.tasks[i]->pid == pid) return taskManager.tasks[i];
-
+		for (int i = 0; i < TASKS_MAX; i++) if (taskManager.tasks[i]->pid == pid) return taskManager.tasks[i];
 		return NULL;
 	}
 
@@ -204,12 +202,14 @@ TaskManager taskManager = { // Task manager placed in kernel space
 	}
 
 	void _kill(int pid) {
-		if (pid >= 0 && pid < taskManager.tasksCount) 
-			for (int task = 0; task < taskManager.tasksCount; task++) 
+		if (pid >= 0 && pid < taskManager.tasksCount) {
+			for (int task = 0; task < taskManager.tasksCount; task++) {
 				if (taskManager.tasks[task]->pid == pid) {
 					taskManager.tasks[task]->state = PROCESS_STATE_DEAD;
 					break;
 				}
+			}
+		}
 	}
 
 	int _add_task(Task* task) {
