@@ -16,7 +16,7 @@ Before compile be sure that your script has right link to tool_chain. In this co
 
     /home/os-dev/tool_chain
 
-Used GSS 11.2.0</br>
+Used GCC 11.2.0</br>
 And used binutils 2.37</br>
 
 Also this container contains fedora 38, gcc, gcc-c++, make, bison, flex, gmp-devel, libmpc-devel, mpfr-devel, texinfo, nasm, mtools, qemu-system-x86, and grub tools.</br>
@@ -58,7 +58,7 @@ This container tested in MacOS 10.15, Windows 10 (On win10 can be problems with 
 |        8.2.1) VBE text editor          |[?]      |                                                               |
 | **9) Malloc optimization**             |[ ]      |                                                               |
 | **10) Bugs**                           |[?]      |                                                               |
-|    10.0) Tasking page fault...         |[?]      |                                                               |
+|    10.0) Tasking page fault...         |[]      |                                                               |
 |    10.1) Mouse page fault              |[&check;]|                                                               |
 |    10.2) Tasking with page allocator   |[&check;]|                                                               |
 | **11) Ethernet**                       |[?]      |                                                               |
