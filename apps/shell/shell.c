@@ -1,9 +1,9 @@
 #include "shell.h"
 
 
-static vars_entry_t vars[50];
-static char* current_path = "HOME";
-static int exit = 1;
+static vars_entry_t _kshell_envars[50];
+static char* _current_path = "HOME";
+static int  _exit = 1;
 
 
 void main(int argc, char* argv[]) {
@@ -16,8 +16,10 @@ void main(int argc, char* argv[]) {
     //====================
     //  SET INIT ENVARS
 
-        envar_init_stack(vars, 50);
-        if (envar_exist("clc", vars, 50) == -1) envar_add("clc", "\\HOME\\APPS\\STD\\CALC\\CALC.ELF", vars, 50);
+        envar_init_stack(_kshell_envars, 50);
+        if (envar_exist("clc", _kshell_envars, 50) == -1) {
+            envar_add("clc", "\\HOME\\APPS\\STD\\CALC\\CALC.ELF", _kshell_envars, 50);
+        }
 
     //  SET INIT ENVARS
      //====================
@@ -27,8 +29,8 @@ void main(int argc, char* argv[]) {
     //====================
     //  PREPARE SCREEN & INPUT
 
-        while (exit) {
-            printf("\n$%s> ", current_path);
+        while (_exit) {
+            printf("\n$%s> ", _current_path);
 
             char input[COMMAND_LENGHT] = { '\0' };
             char input_data = ' ';
@@ -57,7 +59,7 @@ void main(int argc, char* argv[]) {
     //  PREPARE SCREEN & INPUT
     //====================
 
-    free(current_path);
+    free(_current_path);
     tkill();
 }
 
@@ -72,9 +74,9 @@ void shell_start_screen() {
 //  KSHELL COMMANDS
 //====================
 
-    void execute_command(char* command) {
-        if (command == NULL) return;
-        if (strlen(command) <= 0) return;
+    int execute_command(char* command) {
+        if (command == NULL) return -1;
+        if (strlen(command) <= 0) return -2;
   
         //====================
         //  SPLIT COMMAND LINE TO ARGS
@@ -92,8 +94,8 @@ void shell_start_screen() {
                 else {
                     splitted++;
                     char envar_buffer[128] = { 0 };
-                    if (envar_exist(splitted, vars, 50) != -1) {
-                        command_line[tokenCount++] = envar_get(splitted, envar_buffer, vars, 50);
+                    if (envar_exist(splitted, _kshell_envars, 50) != -1) {
+                        command_line[tokenCount++] = envar_get(splitted, envar_buffer, _kshell_envars, 50);
                     }
                     else {
                         command_line[tokenCount++] = splitted;
@@ -117,6 +119,8 @@ void shell_start_screen() {
                 printf("\n | [%s] - screen cleanup.", COMMAND_CLEAR);
                 printf("\n | [%s] - print message on screen.", COMMAND_ECHO);
                 printf("\n | [%s] - current date.", COMMAND_TIME);
+                printf("\n | [%s] - reboot.", COMMAND_REBOOT);
+                printf("\n | [%s] - _exit from kernel shell. (Unrecomended option).", COMMAND_EXIT);
                 printf("\n +--------------------------------------------------------");
                 printf("\n | Network:\n");
                 printf("\n | [%s] - show ip configuration.", COMMAND_IPCONFIG);
@@ -136,11 +140,9 @@ void shell_start_screen() {
                 printf("\n | [%s] - print file content to console.", COMMAND_FILE_VIEW);
                 printf("\n | [%s] <path> <x> <y> - draw .bmp image", COMMAND_BMP_SHOW);
                 printf("\n | [%s] <path> - launch .elf executable.\n", COMMAND_FILE_RUN);
-                printf("\n | [%s] - reboot.", COMMAND_REBOOT);
-                printf("\n | [%s] - exit from kernel shell. (Unrecomended option).", COMMAND_EXIT);
                 printf("\n +========================================================\n");
             }
-            else if (strcmp(command_line[0], COMMAND_EXIT)      == 0) exit = 1;
+            else if (strcmp(command_line[0], COMMAND_EXIT)      == 0) _exit = 1;
             else if (strcmp(command_line[0], COMMAND_REBOOT)    == 0) machine_restart();
             else if (strcmp(command_line[0], COMMAND_VERSION)   == 0) shell_start_screen();
             else if (strcmp(command_line[0], COMMAND_ECHO)      == 0) printf("\n%s", command_line[1]);
@@ -148,7 +150,6 @@ void shell_start_screen() {
             else if (strcmp(command_line[0], COMMAND_DISK_DATA) == 0) {
                 FSInfo_t info;
                 get_fs_info(&info);
-
                 printf("\nKernel disc-stat ver 0.3b\n");
                 printf("dev:                             [%s]\n", info.mount);
                 printf("fs type:                         [%s]\n", info.name);
@@ -169,11 +170,11 @@ void shell_start_screen() {
                 );
             }
             else if (strcmp(command_line[0], COMMAND_SET_ENVAR) == 0) {
-                if (envar_exist(command_line[1], vars, 50) == -1) envar_add(command_line[1], command_line[2], vars, 50);
-                else envar_set(command_line[1], command_line[2], vars, 50);
+                if (envar_exist(command_line[1], _kshell_envars, 50) == -1) envar_add(command_line[1], command_line[2], _kshell_envars, 50);
+                else envar_set(command_line[1], command_line[2], _kshell_envars, 50);
             }
             else if (strcmp(command_line[0], COMMAND_DEL_ENVAR) == 0) {
-                envar_delete(command_line[1], vars, 50);
+                envar_delete(command_line[1], _kshell_envars, 50);
             }
 
         //====================
@@ -185,14 +186,14 @@ void shell_start_screen() {
             else if (strcmp(command_line[0], COMMAND_IN_DIR) == 0) {
                 str2uppercase(command_line[1]);
                 if (strcmp(command_line[1], COMMAND_OUT_DIR) == 0) {
-                    char* up_path = FSLIB_change_path(current_path, NULL);
-                    if (up_path == NULL) {
+                    char* up_path = FSLIB_change_path(_current_path, NULL);
+                    if (!up_path) {
                         up_path = malloc(5);
                         strcpy(up_path, "HOME");
                     }
 
-                    free(current_path);
-                    current_path = up_path;         
+                    free(_current_path);
+                    _current_path = up_path;         
                 }
                 else {
                     char* path = command_line[1];
@@ -203,13 +204,13 @@ void shell_start_screen() {
                         dir_path = path;
                     } 
                     else {
-                        dir_path = FSLIB_change_path(current_path, path);
+                        dir_path = FSLIB_change_path(_current_path, path);
                     }
 
                     if (!cexists(dir_path)) {
                         free(dir_path);
                         printf("\nDirectory not exists.");
-                        return;
+                        return -3;
                     }
 
                     int ci = copen(dir_path);
@@ -221,23 +222,23 @@ void shell_start_screen() {
                             cclose(ci);
                             free(dir_path);
                             printf("\nNot a directory.");
-                            return;
+                            return -4;
                         }
 
                         cclose(ci);
-                        free(current_path);
-                        current_path = dir_path;
+                        free(_current_path);
+                        _current_path = dir_path;
                     }
                 }
             }
-            else if (strcmp(command_line[0], COMMAND_MAKE_FILE) == 0) mkfile(current_path, command_line[1], command_line[2]);
-            else if (strcmp(command_line[0], COMMAND_MAKE_DIR) == 0) mkdir(current_path, command_line[1]);
+            else if (strcmp(command_line[0], COMMAND_MAKE_FILE) == 0) mkfile(_current_path, command_line[1], command_line[2]);
+            else if (strcmp(command_line[0], COMMAND_MAKE_DIR) == 0) mkdir(_current_path, command_line[1]);
             else if (strcmp(command_line[0], COMMAND_DELETE_CONTENT) == 0) {
                 char* path = get_path(command_line[1]); 
-                if (cexists(path) == 0) {
+                if (!cexists(path)) {
                     printf("\nContent not found.");
                     free(path);
-                    return;
+                    return -5;
                 }
 
                 rmcontent(path);
@@ -245,7 +246,7 @@ void shell_start_screen() {
             }
             else if (strcmp(command_line[0], COMMAND_LIST_DIR) == 0) {
                 int step = 0;
-                int dir_ci = copen(current_path);
+                int dir_ci = copen(_current_path);
                 if (dir_ci >= 0) {
                     int root_ci = opendir(dir_ci);
                     if (root_ci < 0) {
@@ -265,10 +266,10 @@ void shell_start_screen() {
             }
             else if (strcmp(command_line[0], COMMAND_FILE_VIEW) == 0) {
                 char* file_path = get_path(command_line[1]);
-                if (cexists(file_path) == 0) {
+                if (!cexists(file_path)) {
                     printf("\nFile not found.");
                     free(file_path);
-                    return;
+                    return -6;
                 }
                 
                 printf("\n");
@@ -296,10 +297,10 @@ void shell_start_screen() {
             }
             else if (strcmp(command_line[0], COMMAND_BMP_SHOW) == 0) {
                 char* file_path = get_path(command_line[1]);
-                if (cexists(file_path) == 0) {
+                if (!cexists(file_path)) {
                     printf("\nFile not found.");
                     free(file_path);
-                    return;
+                    return -7;
                 }
                 
                 bitmap_t* bitmap = BMP_create(file_path, atoi(command_line[2]), atoi(command_line[3]));
@@ -316,9 +317,9 @@ void shell_start_screen() {
                 }
 
                 char* file_path = get_path(command_line[1]);
-                if (cexists(file_path) == 0) {
+                if (!cexists(file_path)) {
                     printf("\nFile [%s] not found.", file_path);
-                    return;
+                    return -8;
                 }
 
                 printf("\nExit code: [%i]\n", fexec(file_path, pos - 2, exe_argv));
@@ -326,10 +327,10 @@ void shell_start_screen() {
             }
             else if (strcmp(command_line[0], COMMAND_CINFO) == 0) {
                 char* info_file = get_path(command_line[1]);
-                if (cexists(info_file) == 0) {
+                if (!cexists(info_file)) {
                     printf("\nContent not found.");
                     free(info_file);
-                    return;
+                    return -9;
                 }
 
                 printf("\n");
@@ -378,7 +379,6 @@ void shell_start_screen() {
         //====================
 
 #ifdef NETWORK
-
             else if (strcmp(command_line[0], COMMAND_IPCONFIG) == 0) {
                 uint8_t ip[4]  = { 0x00 };
                 uint8_t mac[6] = { 0xFF };
@@ -404,7 +404,7 @@ void shell_start_screen() {
                 send_udp_packet(dst_ip, src_port, dst_port, command_line[7], strlen(command_line[7]));
             }
             else if (strcmp(command_line[0], COMMAND_POP_UDP_PACKET) == 0) {
-                uint8_t buffer[512];
+                uint8_t buffer[512] = { 0 };
                 pop_received_udp_packet(buffer);
 
                 printf("\n");
@@ -414,7 +414,6 @@ void shell_start_screen() {
                 printf("UDP hex:     [%x]\n", buffer);
                 printf("UDP ptr:     [%p]\n", buffer);
             }
-
 #endif
 
         //====================
@@ -424,6 +423,7 @@ void shell_start_screen() {
             else printf("\nUnknown command [%s ...]", command_line[0]);
 
         printf("\n");
+        return 1;
     }
 
 //====================
@@ -433,8 +433,8 @@ void shell_start_screen() {
 // 0 - nlogin
 // 1 - login success
 int ulogin(char* login, char* password) {
-    char hashed_login[100] = { '\0' };
-    char hashed_passw[100] = { '\0' };
+    char hashed_login[100] = { 0 };
+    char hashed_passw[100] = { 0 };
 
     sprintf(hashed_login, 100, "%lu", str2hash(login));
     sprintf(hashed_passw, 100, "%lu", str2hash(password));
@@ -473,5 +473,5 @@ char* get_path(char* path) {
         return new_path;
     } 
 
-    return FSLIB_change_path(current_path, path);
+    return FSLIB_change_path(_current_path, path);
 }
