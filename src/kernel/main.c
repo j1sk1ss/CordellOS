@@ -175,8 +175,8 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
         ELF_build_symbols_from_multiboot(mb_info->u.elf_sec.addr, mb_info->u.elf_sec.shndx, mb_info->u.elf_sec.num);
 
         kprintf("\n\t\t =    CORDELL  KERNEL    =");
-        kprintf("\n\t\t =     [ ver.   23 ]     =");
-        kprintf("\n\t\t =     [ 08.05  25 ]     = \n\n");
+        kprintf("\n\t\t =     [ ver.   24 ]     =");
+        kprintf("\n\t\t =     [ 09.08  25 ]     = \n\n");
         kprintf("\n\t\t = INFORMAZIONI GENERALI = \n\n");
         kprintf("\tMB FLAGS:        [0x%p]\n", mb_info->flags);
         uint32_t total_memory = mb_info->mem_upper + (mb_info->mem_lower << 10);
@@ -359,7 +359,7 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
 
         START_PROCESS("idle", (uint32_t)_idle, KERNEL, 1);
 
-        ADDRESS_SPACE shell_addr_space = KERNEL;
+        int shell_addr_space = KERNEL;
         #ifdef USERMODE
             shell_addr_space = USER;
         #endif

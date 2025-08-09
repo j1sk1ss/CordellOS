@@ -38,7 +38,7 @@ typedef struct {
     uint8_t space;
 
     uint32_t virtual_address;
-    page_directory* page_directory;
+    pdir_t* page_directory;
 } Task;
 
 typedef struct {

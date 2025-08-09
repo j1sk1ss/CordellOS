@@ -14,12 +14,11 @@
 
 #include "../util/arrays.h"
 
-
 struct Registers {
-    uint32_t ds;                                            // data segment pushed by us
-    uint32_t edi, esi, ebp, kern_esp, ebx, edx, ecx, eax;   // pusha
-    uint32_t interrupt, error;                              // we push interrupt and error code
-    uint32_t eip, cs, eflag, esp, ss;                       // pushed auto by cpu
+    uint32_t ds;                                          // data segment pushed by us
+    uint32_t edi, esi, ebp, kern_esp, ebx, edx, ecx, eax; // pusha
+    uint32_t interrupt, error;                            // we push interrupt and error code
+    uint32_t eip, cs, eflag, esp, ss;                     // pushed auto by cpu
 } __attribute__((packed));
 
 struct stackframe { 
@@ -27,10 +26,8 @@ struct stackframe {
   uint32_t eip; 
 }; 
 
-typedef void (*ISRHandler)(struct Registers* regs);
-
-
 void i386_isr_initialize();
+typedef void (*ISRHandler)(struct Registers* regs);
 void i386_isr_registerHandler(int interrupt, ISRHandler handler);
 
 void i386_isr_interrupt_details(uint32_t eip, uint32_t ebp, uint32_t esp);
