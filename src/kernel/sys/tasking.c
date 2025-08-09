@@ -112,7 +112,7 @@ TaskManager taskManager = { // Task manager placed in kernel space
 
 				// Create empty pd and fill it by tables from kernel pd
 				task->page_directory = VMM_mkpdir();
-				_copy_dir2dir(kernel_page_directory, task->page_directory);
+				VMM_copy_dir2dir(VMM_get_dirs()->kern, task->page_directory);
                 VMM_set_directory(task->page_directory);
 				
 				// Allocate page in pd, link it to v_addr
@@ -176,15 +176,15 @@ TaskManager taskManager = { // Task manager placed in kernel space
 		// Fill registers
 		//=============================
 
-		VMM_set_directory(kernel_page_directory);
+		VMM_set_directory(VMM_get_dirs()->kern);
 
         // v_addr += PAGE_SIZE * 2;
 		return task;
 	}
 
 	void _destroy_task(Task* task) {
-		page_directory* task_pagedir = (page_directory*)VMM_virtual2physical(task->page_directory);
-		VMM_set_directory(kernel_page_directory);
+		pdir_t* task_pagedir = (pdir_t*)VMM_virtual2physical(task->page_directory);
+		VMM_set_directory(VMM_get_dirs()->kern);
 		VMM_free_pdir(task_pagedir);
 		ALC_free(task->cpuState, KERNEL);
 		ALC_free(task, KERNEL);
@@ -244,14 +244,14 @@ TaskManager taskManager = { // Task manager placed in kernel space
 			return;
 		}
 
-        // Save current state and current page directory
         memcpy(task->cpuState, regs, sizeof(struct Registers));
-        if (task->page_directory != current_page_directory)
-            task->page_directory = current_page_directory;
+        if (task->page_directory != VMM_get_dirs()->curr) {
+            task->page_directory = VMM_get_dirs()->curr;
+		}
 
-        // Select next task
-		if (++taskManager.currentTask >= taskManager.tasksCount)
-				taskManager.currentTask = 0;
+		if (++taskManager.currentTask >= taskManager.tasksCount) {
+			taskManager.currentTask = 0;
+		}
 
         // If next task finished / broken and something like that, find next
 		Task* new_task = taskManager.tasks[taskManager.currentTask];

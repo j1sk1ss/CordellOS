@@ -7,7 +7,6 @@
 #include "isr.h"
 #include "pmm.h"
 
-
 #define PAGES_PER_TABLE      1024
 #define TABLES_PER_DIRECTORY 1024
 #define PAGE_SIZE            4096
@@ -15,9 +14,6 @@
 #define USER_MEMORY_START   0xC0000000
 #define USER_PAGES          64
 #define USER_TABLE_INDEX    1024
-
-#define SET_PGBIT(cr0)      (cr0 = cr0 | 0x80000000)
-#define CLEAR_PSEBIT(cr4)   (cr4 = cr4 & 0xffffffef)
 
 #define PD_INDEX(address)            ((address) >> 22)
 #define PT_INDEX(address)            (((address) >> 12) & 0x3FF) // Max index 1023 = 0x3FF
@@ -28,17 +24,15 @@
 #define SET_FRAME(entry, address)    (*entry = (*entry & ~0x7FFFF000) | address)   // Only set address/frame, not flags
 #define OFFSET_IN_PAGE(address)      ((uint32_t)(address) & 0xFFF)
 
-
-typedef uint32_t pt_entry;  // Page table entry
-typedef uint32_t pd_entry;  // Page directory entry
-typedef uint32_t physical_address; 
-typedef uint32_t virtual_address; 
-
+typedef uint32_t pt_entry_t; // Page table entry
+typedef uint32_t pd_entry_t; // Page directory entry
+typedef uint32_t p_addr_t; 
+typedef uint32_t v_addr_t; 
 
 typedef enum {
     KERNEL = 0,
     USER   = 1
-} ADDRESS_SPACE;
+} user_t;
 
 typedef enum {
     PTE_PRESENT       = 0x01,
@@ -51,7 +45,7 @@ typedef enum {
     PTE_PAT           = 0x80,
     PTE_GLOBAL        = 0x100,
     PTE_FRAME         = 0x7FFFF000,   // bits 12+
-} PAGE_TABLE_FLAGS;
+} ptaccess_t;
 
 typedef enum {
     PDE_PRESENT       = 0x01,
@@ -65,46 +59,39 @@ typedef enum {
     PDE_GLOBAL        = 0x100,         // 4MB entry only
     PDE_PAT           = 0x2000,        // 4MB entry only
     PDE_FRAME         = 0x7FFFF000,    // bits 12+
-} PAGE_DIR_FLAGS;
+} pdaccess_t;
 
-// Page table: handle 4MB each, 1024 entries * 4096
 typedef struct {
-    pt_entry entries[PAGES_PER_TABLE];
-} page_table;
+    pt_entry_t entries[PAGES_PER_TABLE];
+} ptable_t;
 
-// Page directory: handle 4GB each, 1024 page tables * 4MB
 typedef struct {
-    pd_entry entries[TABLES_PER_DIRECTORY];
-} page_directory;
+    pd_entry_t entries[TABLES_PER_DIRECTORY];
+} pdir_t;
 
+typedef struct {
+    pdir_t* curr;
+    pdir_t* kern;
+} directories_t;
 
-extern page_directory* current_page_directory;
-extern page_directory* kernel_page_directory;
-
-
+directories_t* VMM_get_dirs();
 int VMM_init(uint32_t kernell_address);
 
-page_directory* VMM_mkpdir();
-int VMM_set_directory(page_directory* pd);
-void VMM_free_pdir(page_directory* pd);
-void _copy_dir2dir(page_directory* src, page_directory* dest);
+pdir_t* VMM_mkpdir();
+int VMM_set_directory(pdir_t* pd);
+void VMM_free_pdir(pdir_t* pd);
+void VMM_copy_dir2dir(pdir_t* src, pdir_t* dest);
 
-page_table* VMM_mkptable(uint32_t p_addr, uint8_t type);
-int _map_table(page_directory* pd, page_table* table, uint8_t type, size_t index);
-void VMM_free_table(page_table* table);
+ptable_t* VMM_mkptable(uint32_t p_addr, uint8_t type);
+void VMM_free_table(ptable_t* table);
 
-uint32_t VMM_mkpage(physical_address p_addr, uint8_t type);
-pt_entry* VMM_get_page(const virtual_address address);
-void VMM_free_page(pt_entry* page);
+uint32_t VMM_mkpage(p_addr_t p_addr, uint8_t type);
+pt_entry_t* VMM_get_page(const v_addr_t address);
+void VMM_free_page(pt_entry_t* page);
 int VMM_kmap_page(void* phys_address, void* virt_address);
 int VMM_umap_page(void* phys_address, void* virt_address);
-int _map_page(void* p_addr, void* v_addr, uint8_t type);
 void VMM_unmap_page(void* virt_address);
 
-physical_address VMM_virtual2physical(void* virt_address);
-void _flush_tlb_entry(virtual_address address);
-
-struct Registers;
-void _page_fault(struct Registers* regs);
+p_addr_t VMM_virtual2physical(void* virt_address);
 
 #endif

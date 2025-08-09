@@ -1,7 +1,6 @@
 #ifndef STRING_H_
 #define STRING_H_
 
-
 #include "stdio.h"
 #include "stdlib.h"
 #include "math.h"
@@ -11,9 +10,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-
 #define DOUBLE_STR_BUFFER_SIZE 64
-
 
 const char* strchr(const char* str, char chr);
 char* strrchr(const char *s, int c);

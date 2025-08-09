@@ -47,7 +47,7 @@ static int __merge_free_blocks(malloc_block_t*);
 
 		for (uint32_t i = 0, virt = head->virt_address; i < head->total_pages; i++, virt += PAGE_SIZE) {
 			head->map_page((void*)(head->phys_address + i * PAGE_SIZE), (void*)virt);
-			pt_entry* page = VMM_get_page(virt);
+			pt_entry_t* page = VMM_get_page(virt);
 			SET_ATTRIBUTE(page, PTE_READ_WRITE);
 		}
 
@@ -146,11 +146,10 @@ freep - Free allocated page.
 */
 
 	static int _kfreep(void* v_addr) {
-		pt_entry* page = VMM_get_page((virtual_address)v_addr);
+		pt_entry_t* page = VMM_get_page((v_addr_t)v_addr);
 		if (PAGE_PHYS_ADDRESS(page) && TEST_ATTRIBUTE(page, PTE_PRESENT)) {
 			VMM_free_page(page);
 			VMM_unmap_page((uint32_t*)v_addr);
-			_flush_tlb_entry((virtual_address)v_addr);
 		}
 
 		return 1;

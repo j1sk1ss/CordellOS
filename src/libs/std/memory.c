@@ -26,7 +26,6 @@ void* memcpy(void* destination, const void* source, size_t num) {
 
     for (i = 0; i < num_dwords; i++) dest32[i] = src32[i];
     for (i = 0; i < num_bytes; i++) dest8[i] = src8[i];
-
     return destination;
 }
 
