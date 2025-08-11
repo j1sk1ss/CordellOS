@@ -2,7 +2,6 @@
 
 #include "../include/pmm.h"
 
-
 pmma_map_t PMM_map = {
     .max_blocks  = 0,
     .memory_map  = NULL,
@@ -42,7 +41,6 @@ static int _find_first_free_blocks(size_t num_blocks) {
     
     return -1;
 }
-
 
 int PMM_init(const uint32_t start_address, size_t size) {
     PMM_map.memory_map  = (uint32_t*)start_address;
