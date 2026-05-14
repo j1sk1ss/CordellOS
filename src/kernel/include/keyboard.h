@@ -11,6 +11,18 @@
 
 
 #define KBD_DATA_PORT           0x60
+#define KBD_STATUS_PORT         0x64
+#define KBD_COMMAND_PORT        0x64
+
+#define KBD_STATUS_OUTPUT_FULL  0x01
+#define KBD_STATUS_INPUT_FULL   0x02
+
+#define KBD_CMD_READ_CONFIG     0x20
+#define KBD_CMD_WRITE_CONFIG    0x60
+#define KBD_CMD_ENABLE_PORT1    0xAE
+
+#define KBD_CONFIG_IRQ1         0x01
+#define KBD_CONFIG_PORT1_CLOCK  0x10
 
 #define HIDDEN_KEYBOARD         0
 #define VISIBLE_KEYBOARD        1

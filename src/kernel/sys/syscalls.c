@@ -4,6 +4,16 @@
 void i386_syscalls_init() {
     i386_isr_registerHandler(0x80, syscall);
 }
+
+static uint8_t _syscall_address_space(struct Registers* regs) {
+    if ((regs->cs & 0x3) == 0x3) return USER;
+    if (taskManager.currentTask >= 0 && taskManager.currentTask < taskManager.tasksCount) {
+        Task* task = taskManager.tasks[taskManager.currentTask];
+        if (task != NULL) return task->space;
+    }
+
+    return KERNEL;
+}
  
 void syscall(struct Registers* regs) {
 
@@ -57,43 +67,22 @@ void syscall(struct Registers* regs) {
         //=======================
         //  SYSTEM MEMMANAGER SYSCALLS
         //=======================
-#ifndef USERMODE
-            case SYS_PAGE_FREE:
-                void* page_ptr = (void*)regs->ebx;
-                if (!page_ptr) ALC_freep(page_ptr, KERNEL);
-            break;
-            case SYS_MALLOC:
-                void* allocated_memory = ALC_malloc(regs->ebx, KERNEL);
-                regs->eax = (uint32_t)allocated_memory;
-            break;
-            case SYS_PAGE_MALLOC:
-                uint32_t address = regs->ebx;
-                ALC_mallocp(address, KERNEL);
-                regs->eax = address;
-            break;
-            case SYS_FREE:
-                void* mem_ptr = (void*)regs->ebx;
-                if (!mem_ptr) ALC_free(mem_ptr, KERNEL);
-            break;
-#elif defined(USERMODE)
-            case SYS_PAGE_FREE:
-                void* page_ptr = (void*)regs->ebx;
-                if (!page_ptr) ALC_freep(page_ptr, USER);
-            break;
-            case SYS_MALLOC:
-                void* allocated_memory = ALC_malloc(regs->ebx, USER);
-                regs->eax = (uint32_t)allocated_memory;
-            break;
-            case SYS_PAGE_MALLOC:
-                uint32_t address = regs->ebx;
-                ALC_mallocp(address, USER);
-                regs->eax = address;
-            break;
-            case SYS_FREE:
-                void* mem_ptr = (void*)regs->ebx;
-                if (!mem_ptr) ALC_free(mem_ptr, USER);
-            break;
-#endif
+        case SYS_PAGE_FREE: {
+            void* page_ptr = (void*)regs->ebx;
+            if (page_ptr) ALC_freep(page_ptr, _syscall_address_space(regs));
+        } break;
+        case SYS_MALLOC: {
+            regs->eax = (uint32_t)ALC_malloc(regs->ebx, _syscall_address_space(regs));
+        } break;
+        case SYS_PAGE_MALLOC: {
+            uint32_t address = regs->ebx;
+            ALC_mallocp(address, _syscall_address_space(regs));
+            regs->eax = address;
+        } break;
+        case SYS_FREE: {
+            void* mem_ptr = (void*)regs->ebx;
+            if (mem_ptr) ALC_free(mem_ptr, _syscall_address_space(regs));
+        } break;
 
         case SYS_KERN_PANIC: kernel_panic((char*)regs->ecx); break;
             
@@ -175,13 +164,9 @@ ls_end:
         case SYS_READ_ELF:
             int ci = current_vfs->openobj((char*)regs->ebx);
             
-#ifdef USERMODE
-		    regs->eax = (uint32_t)ELF_read(ci, USER);
-#else
-		    regs->eax = (uint32_t)ELF_read(ci, KERNEL);
-#endif
+		    regs->eax = (uint32_t)ELF_read(ci, _syscall_address_space(regs));
 
-        break;
+	        break;
 
     //=======================
     //  FILE SYSTEMS SYSCALLS

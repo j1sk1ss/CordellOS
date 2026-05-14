@@ -93,11 +93,54 @@ static keyboard_data_t _keyboard_data = {
     .key_pressed = { false }
 };
 
+static int _keyboard_wait_input_clear() {
+    int timeout = 100000;
+    while (i386_inb(KBD_STATUS_PORT) & KBD_STATUS_INPUT_FULL) {
+        if (--timeout <= 0) return 0;
+    }
+
+    return 1;
+}
+
+static int _keyboard_wait_output_full() {
+    int timeout = 100000;
+    while (!(i386_inb(KBD_STATUS_PORT) & KBD_STATUS_OUTPUT_FULL)) {
+        if (--timeout <= 0) return 0;
+    }
+
+    return 1;
+}
+
+static int _keyboard_write_command(uint8_t command) {
+    if (!_keyboard_wait_input_clear()) return 0;
+    i386_outb(KBD_COMMAND_PORT, command);
+    return 1;
+}
+
+static int _keyboard_write_data(uint8_t data) {
+    if (!_keyboard_wait_input_clear()) return 0;
+    i386_outb(KBD_DATA_PORT, data);
+    return 1;
+}
+
+static int _keyboard_read_data(uint8_t* data) {
+    if (!_keyboard_wait_output_full()) return 0;
+    *data = i386_inb(KBD_DATA_PORT);
+    return 1;
+}
+
+static void _keyboard_flush_output() {
+    int timeout = 32;
+    while ((i386_inb(KBD_STATUS_PORT) & KBD_STATUS_OUTPUT_FULL) && --timeout > 0) {
+        i386_inb(KBD_DATA_PORT);
+    }
+}
+
 
 void i386_init_keyboard() {
-    i386_outb(0x64, 0xFF);
-    uint8_t status = i386_inb(0x64);
-    status = i386_inb(0x64);
+    _keyboard_flush_output();
+
+    uint8_t status = i386_inb(KBD_STATUS_PORT);
 
     kprintf("[KEYBOARD INFO]: ( ");
     if (status & (1 << 0)) kprintf("Output buffer full.\t");
@@ -113,19 +156,23 @@ void i386_init_keyboard() {
     if (status & (1 << 7)) kprintf("Parity error. ");
     else kprintf("No parity error.");
     kprintf(")\n");
-    
-    i386_outb(0x64, 0xAA);
-    uint8_t result = i386_inb(0x60);
-    if (result == 0x55) kprintf("PS/2 controller test passed.\n");
-    else if (result == 0xFC) kprintf("PS/2 controller test failed.\n");
+
+    uint8_t config = 0;
+    if (_keyboard_write_command(KBD_CMD_READ_CONFIG) && _keyboard_read_data(&config)) {
+        kprintf("PS/2 config byte: %x\n", config);
+
+        config |= KBD_CONFIG_IRQ1;
+        config &= ~KBD_CONFIG_PORT1_CLOCK;
+        if (_keyboard_write_command(KBD_CMD_WRITE_CONFIG)) {
+            _keyboard_write_data(config);
+        }
+    }
     else {
-        kprintf("PS/2 controller responded to test with unknown code %x\n", result);
-        kprintf("Trying to continue.\n");
+        kprintf("PS/2 config byte unavailable, trying to continue.\n");
     }
 
-    i386_outb(0x64, 0x20);
-    result = i386_inb(0x60);
-    kprintf("PS/2 config byte: %x\n", result);
+    _keyboard_write_command(KBD_CMD_ENABLE_PORT1);
+    _keyboard_flush_output();
 
     i386_irq_registerHandler(1, i386_keyboard_handler);
 }

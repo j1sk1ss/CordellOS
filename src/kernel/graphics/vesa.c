@@ -14,7 +14,7 @@ void VESA_init() {
     KSTDIO_data.get_cursor_y = VESA_get_cursor_y;
     KSTDIO_data.set_cursor   = VESA_set_cursor;
     KSTDIO_data.put_chr      = VESA_putchr;
-    KSTDIO_data.get_char     = __pmem_getc;
+    KSTDIO_data.get_char     = (char (*)(uint8_t, uint8_t))__pmem_getc;
 }
 
 void VESA_scrollback(int lines) {
@@ -23,11 +23,14 @@ void VESA_scrollback(int lines) {
 }
 
 void VESA_newline() {
+    int font_height = _psf_get_height(&_binary_src_kernel_font_psf_start);
+    int next_y = _cursor_y + font_height;
+
     _cursor_x = 0;
-    if (_cursor_y < VESA_get_max32_y()) _cursor_y += _psf_get_height(&_binary_src_kernel_font_psf_start);
+    if (next_y + font_height <= VESA_get_max32_y()) _cursor_y = next_y;
     else {
-        VESA_scrollback(_psf_get_height(&_binary_src_kernel_font_psf_start));
-        _cursor_y = VESA_get_max32_y() - _psf_get_height(&_binary_src_kernel_font_psf_start);
+        VESA_scrollback(font_height);
+        _cursor_y = VESA_get_max32_y() - font_height;
     }
 }
 

@@ -13,36 +13,35 @@ TaskManager taskManager = { // Task manager placed in kernel space
 //==================
 
 	void TASK_start_tasking() {
-		if (taskManager.tasksCount <= 0) return;
+		if (taskManager.tasksCount <= 0 || taskManager.tasks[0] == NULL || taskManager.tasks[0]->cpuState == NULL) return;
 		i386_disableInterrupts();
+
+		taskManager.currentTask = 0;
+		taskManager.tasking = true;
 
 		// Set task page directory
 		VMM_set_directory(taskManager.tasks[0]->page_directory);
 
-		// Load stack to esp
-		asm ("mov %%eax, %%esp": :"a"(taskManager.tasks[0]->cpuState->esp));
-
-		// Set values from stack
-		asm ("pop %gs");
-		asm ("pop %fs");
-		asm ("pop %es");
-		asm ("pop %ds");
-		asm ("pop %ebp");
-		asm ("pop %edi");
-		asm ("pop %esi");
-		asm ("pop %edx");
-		asm ("pop %ecx");
-		asm ("pop %ebx");
-		asm ("pop %eax");
-		
-		// Set multitasking on
-		taskManager.currentTask = 0;
-		taskManager.tasking = true;
-
-		i386_enableInterrupts();
-
-		// Return from interrupt and execute process
-		asm ("iret");		
+		uint32_t task_esp = taskManager.tasks[0]->cpuState->esp;
+		asm (
+			"mov %0, %%esp\n"
+			"pop %%gs\n"
+			"pop %%fs\n"
+			"pop %%es\n"
+			"pop %%ds\n"
+			"pop %%ebp\n"
+			"pop %%edi\n"
+			"pop %%esi\n"
+			"pop %%edx\n"
+			"pop %%ecx\n"
+			"pop %%ebx\n"
+			"pop %%eax\n"
+			"sti\n"
+			"iret\n"
+			:
+			: "r"(task_esp)
+			: "memory"
+		);
 	}
 
 	void TASK_stop_tasking() {
@@ -50,7 +49,9 @@ TaskManager taskManager = { // Task manager placed in kernel space
 	}
 
 	void TASK_continue_tasking() {
-		taskManager.tasking = true;
+		if (taskManager.currentTask >= 0 && taskManager.tasksCount > 0) {
+			taskManager.tasking = true;
+		}
 	}
 
 //==================
@@ -72,7 +73,13 @@ TaskManager taskManager = { // Task manager placed in kernel space
 
 			// Allocate memory for new task body
 			Task* task     = (Task*)ALC_malloc(sizeof(Task), KERNEL);
+			if (task == NULL) return NULL;
+
 			task->cpuState = (struct Registers*)ALC_malloc(sizeof(struct Registers), KERNEL);
+			if (task->cpuState == NULL) {
+				ALC_free(task, KERNEL);
+				return NULL;
+			}
 			task->space    = type;
 
 			//=============================
@@ -102,6 +109,7 @@ TaskManager taskManager = { // Task manager placed in kernel space
 				if (task->pid == -1) {
 					ALC_free(task->cpuState, KERNEL);
 					ALC_free(task, KERNEL);
+					return NULL;
 				}
 
 			//=============================
@@ -112,11 +120,23 @@ TaskManager taskManager = { // Task manager placed in kernel space
 
 				// Create empty pd and fill it by tables from kernel pd
 				task->page_directory = VMM_mkpdir();
+				if (task->page_directory == NULL) {
+					ALC_free(task->cpuState, KERNEL);
+					ALC_free(task, KERNEL);
+					return NULL;
+				}
+
 				VMM_copy_dir2dir(VMM_get_dirs()->kern, task->page_directory);
-                VMM_set_directory(task->page_directory);
-				
+				VMM_set_directory(task->page_directory);
+
 				// Allocate page in pd, link it to v_addr
-				ALC_mallocp(TASK_VIRT_ADDRESS, type);
+				if (ALC_mallocp(TASK_VIRT_ADDRESS, type) != 1) {
+					VMM_set_directory(VMM_get_dirs()->kern);
+					VMM_free_pdir(task->page_directory);
+					ALC_free(task->cpuState, KERNEL);
+					ALC_free(task, KERNEL);
+					return NULL;
+				}
                 memset((void*)TASK_VIRT_ADDRESS, 0, PAGE_SIZE);
                 
 				// Set stack pointer to allocated region
@@ -191,11 +211,16 @@ TaskManager taskManager = { // Task manager placed in kernel space
 	}
 
 	Task* _get_task(int pid) {
-		for (int i = 0; i < TASKS_MAX; i++) if (taskManager.tasks[i]->pid == pid) return taskManager.tasks[i];
+		for (int i = 0; i < TASKS_MAX; i++) {
+			if (taskManager.tasks[i] != NULL && taskManager.tasks[i]->pid == pid) return taskManager.tasks[i];
+		}
 		return NULL;
 	}
 
 	void __kill() { // TODO: complete multitask disabling when tasks == 0
+		if (taskManager.currentTask < 0 || taskManager.currentTask >= taskManager.tasksCount) return;
+		if (taskManager.tasks[taskManager.currentTask] == NULL) return;
+
 		TASK_stop_tasking();
 		_kill(taskManager.tasks[taskManager.currentTask]->pid);
 		TASK_continue_tasking();
@@ -213,22 +238,23 @@ TaskManager taskManager = { // Task manager placed in kernel space
 	}
 
 	int _add_task(Task* task) {
-		if (taskManager.tasksCount >= 256) return -1;
+		if (task == NULL || taskManager.tasksCount >= TASKS_MAX) return -1;
 		taskManager.tasks[taskManager.tasksCount++] = task;
 		
 		return task->pid;
 	}
 
 	int TASK_add_task(Task* task) {
+		bool was_tasking = taskManager.tasking;
 		TASK_stop_tasking();
-		_add_task(task);
-		TASK_continue_tasking();
+		int pid = _add_task(task);
+		taskManager.tasking = was_tasking;
 
-		return task->pid;
+		return pid;
 	}
 
 	void TASK_task_switch(struct Registers* regs) {
-		if (!taskManager.tasking) return;
+		if (!taskManager.tasking || taskManager.currentTask < 0 || taskManager.currentTask >= taskManager.tasksCount) return;
 		
         // Get current task
 		Task* task = taskManager.tasks[taskManager.currentTask];
@@ -255,13 +281,25 @@ TaskManager taskManager = { // Task manager placed in kernel space
 
         // If next task finished / broken and something like that, find next
 		Task* new_task = taskManager.tasks[taskManager.currentTask];
-		while (new_task->state != PROCESS_STATE_ALIVE || new_task == NULL) {
+		int scanned_tasks = 0;
+		while ((new_task == NULL || new_task->state != PROCESS_STATE_ALIVE) && scanned_tasks < taskManager.tasksCount) {
 			if (++taskManager.currentTask >= taskManager.tasksCount) taskManager.currentTask = 0;
 			new_task = taskManager.tasks[taskManager.currentTask];
+			scanned_tasks++;
+		}
+
+		if (new_task == NULL || new_task->state != PROCESS_STATE_ALIVE) {
+			taskManager.tasking = false;
+			i386_enableInterrupts();
+			return;
 		}
 
         // Load task CPU state and page directory
-        if (new_task->cpuState == NULL) return;
+		if (new_task->cpuState == NULL) {
+			taskManager.tasking = false;
+			i386_enableInterrupts();
+			return;
+		}
         memcpy(regs, new_task->cpuState, sizeof(struct Registers));
         if (new_task->page_directory != NULL)
             if (new_task->page_directory != task->page_directory)

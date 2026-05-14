@@ -83,6 +83,7 @@ int _datetime_read_rtc() {
 
     DTM_datetime.year += (CURRENT_YEAR / 100) * 100;
     if (DTM_datetime.year < CURRENT_YEAR) DTM_datetime.year += 100;
+    return 1;
 }
 
 static int ticks = 0;
