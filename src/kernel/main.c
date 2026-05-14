@@ -129,7 +129,9 @@ int _shell() {
 
 #ifdef USERMODE
     ELF32_program* program = ELF_read(shell_ci, USER);
-    i386_switch2user(program->entry_point);
+    ALC_mallocp(USER_STACK_TOP - USER_STACK_SIZE, USER);
+    memset((void*)(USER_STACK_TOP - USER_STACK_SIZE), 0, USER_STACK_SIZE);
+    i386_switch2user(program->entry_point, (void*)USER_STACK_TOP);
     ELF_free_program(program, USER);
 #else
     current_vfs->objexec(shell_ci, 0, NULL, KERNEL);

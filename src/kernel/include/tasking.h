@@ -16,6 +16,8 @@
 
 
 #define TASK_VIRT_ADDRESS     0x00C00000
+#define USER_STACK_TOP        TASK_VIRT_ADDRESS
+#define USER_STACK_SIZE       PAGE_SIZE
 #define TASKS_MAX             10
 #define TASK_SWITCH_DELAY     10
 
