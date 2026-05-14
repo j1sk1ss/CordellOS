@@ -10,15 +10,12 @@ i386_switch2user:
     mov gs, ax
 
     ; setup stack: SS, ESP, EFLAGS, CS, EIP
-    mov eax, [esp]
+    mov eax, [esp + 4]
+    mov edx, [esp + 8]
     push 0x23        ; SS (user data selector)
-    push user_stack_top
-    pushfd           ; EFLAGS
+    push edx         ; ESP
+    push 0x202       ; EFLAGS, IF=1
     push 0x1B        ; CS (user code selector)
     push eax         ; EIP
 
     iretd            ; Entry to userspace
-
-user_stack:
-    resb 4096
-user_stack_top:

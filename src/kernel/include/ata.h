@@ -45,12 +45,12 @@
 #define STATUS_REGISTER             0x1F7
 
 // Status reg
-#define ATA_STATUS_ERR              0x0
+#define ATA_STATUS_ERR              0x01
 #define ATA_STATUS_DRQ              0x8
 #define ATA_STATUS_SRV              0x10
 #define ATA_STATUS_DF               0x20
 #define ATA_STATUS_RDY              0x40
-#define ATA_SR_BSY                  0x8    // Busy
+#define ATA_SR_BSY                  0x80   // Busy
 
 #define ATA_CMD_READ_PIO            0x20
 #define ATA_CMD_WRITE_PIO           0x30
@@ -124,17 +124,18 @@ typedef struct ata_dev {
 	uint8_t mem_buffer_phys[PAGE_SIZE];
 
 	char mountpoint[32];
+	int present;
 }__attribute__((packed)) ata_dev_t;
 
 
-void ATA_initialize();
+int ATA_initialize();
 
 struct Registers;
 void ATA_handler(struct Registers* reg);
 void ATA_device_switch(int device);
 
 void ATA_software_reset(ata_dev_t* dev);
-void ATA_device_detect(ata_dev_t* dev, int primary);
+int ATA_device_detect(ata_dev_t* dev, int primary);
 void ATA_device_init(ata_dev_t* dev, int primary);
 
 uint8_t* ATA_read_sector(uint32_t lba);

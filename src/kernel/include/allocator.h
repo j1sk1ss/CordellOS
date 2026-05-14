@@ -13,6 +13,7 @@
 
 #define PAGE_SIZE               4096
 #define MAX_PAGE_ALIGNED_ALLOCS 32
+#define KERNEL_HEAP_START       0xC0400000
 
 
 typedef struct malloc_block {

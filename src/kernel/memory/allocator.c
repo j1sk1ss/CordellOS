@@ -13,13 +13,13 @@ static int __merge_free_blocks(malloc_block_t*);
 //	GLOBAL VARS
 //===========================
 
-	malloc_head_t kernel_malloc = {
-		.list_head    = NULL,
-		.phys_address = 0,
-		.total_pages  = 0,
-		.virt_address = 0x300000,
-		.map_page     = VMM_kmap_page
-	};
+		malloc_head_t kernel_malloc = {
+			.list_head    = NULL,
+			.phys_address = 0,
+			.total_pages  = 0,
+			.virt_address = KERNEL_HEAP_START,
+			.map_page     = VMM_kmap_page
+		};
 
 	malloc_head_t user_malloc = {
 		.list_head    = NULL,

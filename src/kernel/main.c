@@ -39,7 +39,7 @@
 #define MMAP_LOCATION   0x30000
 
 #define CONFIG_PATH     "BOOT\\BOOT.TXT"
-#define SHELL_PATH      "HOME\\SHELL\\SHELL.ELF"
+#define SHELL_PATH      "HOME\\APPS\\SHELL\\SHELL.ELF"
 
 #ifdef DEBUG_MODE
     #define NO_MEM_CHECK
@@ -119,7 +119,7 @@
 
 
 #pragma region [Default tasks]
-
+#define USERMODE
 int _shell() {
     int shell_ci = current_vfs->openobj(SHELL_PATH);
     if (shell_ci < 0) {
@@ -129,7 +129,9 @@ int _shell() {
 
 #ifdef USERMODE
     ELF32_program* program = ELF_read(shell_ci, USER);
-    i386_switch2user(program->entry_point);
+    ALC_mallocp(USER_STACK_TOP - USER_STACK_SIZE, USER);
+    memset((void*)(USER_STACK_TOP - USER_STACK_SIZE), 0, USER_STACK_SIZE);
+    i386_switch2user(program->entry_point, (void*)USER_STACK_TOP);
     ELF_free_program(program, USER);
 #else
     current_vfs->objexec(shell_ci, 0, NULL, KERNEL);
@@ -179,8 +181,8 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
         kprintf("\n\t\t =     [ 09.08  25 ]     = \n\n");
         kprintf("\n\t\t = INFORMAZIONI GENERALI = \n\n");
         kprintf("\tMB FLAGS:        [0x%p]\n", mb_info->flags);
-        uint32_t total_memory = mb_info->mem_upper + (mb_info->mem_lower << 10);
-        kprintf("\tMMAP:            [0x%p]\t=> MEM SIZE: [%uKB]\n", mb_info->mmap_addr, total_memory);
+        uint32_t total_memory = (mb_info->mem_lower + mb_info->mem_upper) * 1024;
+        kprintf("\tMMAP:            [0x%p]\t=> MEM SIZE: [%uKB]\n", mb_info->mmap_addr, total_memory / 1024);
         kprintf("\tMEM LOW:         [%uKB]\t=> MEM UP: [%uKB]\n", mb_info->mem_lower, mb_info->mem_upper);
         kprintf("\tBOOT DEVICE:     [0x%p]\n", mb_info->boot_device);
         kprintf("\tVBE MODE:        [%u]\n", mb_info->vbe_mode);
@@ -204,12 +206,11 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
         PMM_init(MMAP_LOCATION, total_memory);
 
         //===================
-        // Memory test
-        // - Fill memory region with dummy data
-        // - Read dummy data (should be saved and not changed)
+        // Memory map
+        // - Register available regions reported by the bootloader
         //===================
 
-            if (mb_info->flags & (1 << 1)) {
+            if (mb_info->flags & MULTIBOOT_INFO_MEM_MAP) {
                 kprintf("\n\n\t\t =     MEMORY   INFO     = \n\n");
                 size_t progress = 0;
                 multiboot_memory_map_t* mmap_entry = (multiboot_memory_map_t*)mb_info->mmap_addr;
@@ -229,27 +230,8 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
 
                     if (mmap_entry->type == MULTIBOOT_MEMORY_AVAILABLE) {
                         kprintf("\n\tREGION |  LEN: [%u]  |  ADDR: [0x%p]  |  TYPE: [%u] \t", mmap_entry->len, mmap_entry->addr, mmap_entry->type);
-                        const uint32_t pattern = 0xC08DE77;
-
-                        uint32_t* ptr = (uint32_t*)(uintptr_t)mmap_entry->addr;
-                        uint32_t* end = (uint32_t*)(uintptr_t)(mmap_entry->addr + mmap_entry->len);
-                        while (ptr < end) {
-                            *ptr = pattern;
-                            ++ptr;
-                        }
-
-                        ptr = (uint32_t*)(uintptr_t)mmap_entry->addr;
-                        while (ptr < end) {
-                            if (*ptr != pattern) {
-                                kprintf("MEM TEST FAILED AT [0x%p]\n", ptr);
-                                return;
-                            }
-
-                            ++ptr;
-                        }
-
-                        kprintf("MEM TEST PASSED!\n");
                         PMM_initialize_memory_region(mmap_entry->addr, mmap_entry->len);
+                        kprintf("MEM REGION REGISTERED!\n");
 
 #ifdef FAST_MEM_CHECK
                         break;
@@ -263,11 +245,15 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
             }
 
         //===================
-        // Memory test
+        // Reserve memory used by the kernel and PMM structures
         //===================
 
-        PMM_deinitialize_memory_region(0x1000, 0x11000);
-        PMM_deinitialize_memory_region(MMAP_LOCATION, PMM_map.max_blocks / BLOCKS_PER_BYTE);
+        uint32_t pmm_bitmap_size = (PMM_map.max_blocks + BLOCKS_PER_BYTE - 1) / BLOCKS_PER_BYTE;
+        uint32_t pmm_bitmap_reserved = (pmm_bitmap_size + BLOCK_SIZE - 1) & ~(BLOCK_SIZE - 1);
+
+        PMM_deinitialize_memory_region(0x00000000, 0x00100000);
+        PMM_deinitialize_memory_region(MMAP_LOCATION, pmm_bitmap_reserved);
+        PMM_deinitialize_memory_region(0x100000, 0x200000);
         if (VMM_init(0x100000) == 0) {
             LOG("VMM INIT ERROR!");
             goto end;
@@ -336,10 +322,19 @@ void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t es
     // - Boot sector 
     // - Cluster data
     // - FS Clusters 
-    //===================
+        //===================
 
-        ATA_initialize();
-        FAT_initialize();
+        kprintf("ATA INIT...\n");
+        if (!ATA_initialize()) {
+            LOG("ATA INIT ERROR!");
+            goto end;
+        }
+
+        kprintf("FAT INIT...\n");
+        if (FAT_initialize() != 0) {
+            LOG("FAT INIT ERROR!");
+            goto end;
+        }
 
 #pragma endregion
 

@@ -13,7 +13,7 @@ vga_data_t VGA_data = {
 
 void VGA_init(uint8_t* buffer) {
     KSTDIO_data.clrscr         = VGA_clrscr;
-    KSTDIO_data.fill_color     = VGA_set_color;
+    KSTDIO_data.fill_color     = (void (*)(uint32_t))VGA_set_color;
     KSTDIO_data.putc           = VGA_putc;
     KSTDIO_data.get_cursor_x   = VGA_cursor_get_x;
     KSTDIO_data.get_cursor_y   = VGA_cursor_get_y;

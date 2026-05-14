@@ -104,9 +104,19 @@ static int _map_table(pdir_t* pd, ptable_t* table, uint8_t type, size_t index) {
 static int _map_page(void* p_addr, void* v_addr, uint8_t type) {
     pdir_t* pd = dirs.curr;
     pd_entry_t* entry = &pd->entries[PD_INDEX((v_addr_t)v_addr)];
-    if ((*entry & PTE_PRESENT) != PTE_PRESENT) {
-        _map_table(pd, VMM_mkptable((v_addr_t)v_addr, type), type, PD_INDEX((v_addr_t)v_addr));
+    if ((*entry & PDE_PRESENT) != PDE_PRESENT) {
+        ptable_t* table = (ptable_t*)PMM_allocate_blocks(1);
+        if (!table) return 0;
+
+        memset(table, 0, sizeof(ptable_t));
+        if (!_map_table(pd, table, type, PD_INDEX((v_addr_t)v_addr))) {
+            PMM_free_blocks((uint32_t*)table, 1);
+            return 0;
+        }
     }
+
+    SET_ATTRIBUTE(entry, PDE_READ_WRITE);
+    if (type == USER) { SET_ATTRIBUTE(entry, PDE_USER); }
 
     ptable_t* table = (ptable_t*)PAGE_PHYS_ADDRESS(entry);
     pt_entry_t* page = &table->entries[PT_INDEX((v_addr_t)v_addr)];
@@ -155,32 +165,41 @@ static void _page_fault(struct Registers* regs) {
     uint32_t faulting_address = 0;
     asm ("mov %%cr2, %0" : "=r" (faulting_address));
 
-    int present	 = !(regs->error & 0x1); // When set, the page fault was caused by a page-protection violation. When not set, it was caused by a non-present page.
-    int rw		 = regs->error & 0x2;	 // When set, the page fault was caused by a write access. When not set, it was caused by a read access.
+    int not_present = !(regs->error & 0x1); // When set, the page fault was caused by a page-protection violation. When not set, it was caused by a non-present page.
+    int write	     = regs->error & 0x2;	 // When set, the page fault was caused by a write access. When not set, it was caused by a read access.
     int us		 = regs->error & 0x4;	 // When set, the page fault was caused while CPL = 3. This does not necessarily mean that the page fault was a privilege violation.
     int reserved = regs->error & 0x8;	 // When set, one or more page directory entries contain reserved bits which are set to 1. This only applies when the PSE or PAE flags in CR4 are set to 1.
     int id		 = regs->error & 0x10;	 // When set, the page fault was caused by an instruction fetch. This only applies when the No-Execute bit is supported and enabled.
 
     kprintf("\nWHOOOPS..\nPAGE FAULT! (\t");
-    if (present)  kprintf("NOT PRESENT\t"); else kprintf("PAGE PROTECTION\t");
-    if (rw)       kprintf("READONLY\t");    else kprintf("WRITEONLY\t");
+    if (not_present) kprintf("NOT PRESENT\t"); else kprintf("PAGE PROTECTION\t");
+    if (write)       kprintf("WRITE\t");       else kprintf("READ\t");
     if (us)       kprintf("USERMODE\t");
     if (reserved) kprintf("RESERVED\t");
     if (id)       kprintf("INST FETCH\t");
     kprintf(") AT 0x%p\n", faulting_address);
+    kprintf("EIP=0x%p ESP=0x%p EBP=0x%p ERROR=0x%p\n", regs->eip, regs->esp, regs->ebp, regs->error);
     kprintf("CHECK YOUR CODE, BUDDY!\n");
     kprintf("\nSTACK TRACE:\n");
 
-    i386_isr_interrupt_details(faulting_address, regs->ebp, regs->esp);
+    i386_isr_interrupt_details(regs->eip, regs->ebp, regs->esp);
     kernel_panic("PAGE FAULT");
 }
 
 int VMM_init(uint32_t memory_start) {
     pdir_t* dir = VMM_mkpdir();
-    if (
-        !_map_table(dir, VMM_mkptable(0x0, KERNEL), KERNEL, 0) || 
-        !_map_table(dir, VMM_mkptable(memory_start, KERNEL), KERNEL, PD_INDEX(0xC0000000))
-    ) {
+    if (!dir) return 0;
+
+    uint64_t identity_limit64 = (uint64_t)PMM_map.max_blocks * BLOCK_SIZE;
+    if (identity_limit64 > USER_MEMORY_START) identity_limit64 = USER_MEMORY_START;
+
+    for (uint32_t addr = 0; addr < (uint32_t)identity_limit64; addr += PAGES_PER_TABLE * PAGE_SIZE) {
+        if (!_map_table(dir, VMM_mkptable(addr, KERNEL), KERNEL, PD_INDEX(addr))) {
+            return 0;
+        }
+    }
+
+    if (!_map_table(dir, VMM_mkptable(memory_start, KERNEL), KERNEL, PD_INDEX(0xC0000000))) {
         return 0;
     }
     

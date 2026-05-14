@@ -29,7 +29,57 @@
 
 #pragma region [Boot sector]
 
+	typedef struct mbr_partition {
+		uint8_t  status;
+		uint8_t  first_chs[3];
+		uint8_t  type;
+		uint8_t  last_chs[3];
+		uint32_t first_lba;
+		uint32_t sectors;
+	} __attribute__((packed)) mbr_partition_t;
+
+	typedef struct master_boot_record {
+		uint8_t boot_code[446];
+		mbr_partition_t partitions[4];
+		uint16_t signature;
+	} __attribute__((packed)) master_boot_record_t;
+
+	static int _is_fat_partition(uint8_t type) {
+		return type == 0x01 || type == 0x04 || type == 0x06 ||
+			   type == 0x0B || type == 0x0C || type == 0x0E;
+	}
+
+	static int _is_valid_bpb(fat_BS_t* bootstruct, uint8_t* sector) {
+		if (sector[510] != 0x55 || sector[511] != 0xAA) return 0;
+		if (bootstruct->bytes_per_sector != SECTOR_SIZE) return 0;
+		if (bootstruct->sectors_per_cluster == 0) return 0;
+		if ((bootstruct->sectors_per_cluster & (bootstruct->sectors_per_cluster - 1)) != 0) return 0;
+		if (bootstruct->reserved_sector_count == 0) return 0;
+		if (bootstruct->table_count == 0) return 0;
+		if (bootstruct->total_sectors_16 == 0 && bootstruct->total_sectors_32 == 0) return 0;
+		if (bootstruct->table_size_16 == 0 &&
+			((fat_extBS_32_t*)(bootstruct->extended_section))->table_size_32 == 0) return 0;
+
+		return 1;
+	}
+
+	static uint32_t _find_fat_partition_lba(uint8_t* sector) {
+		master_boot_record_t* mbr = (master_boot_record_t*)sector;
+		if (mbr->signature != 0xAA55) return 0;
+
+		for (int i = 0; i < 4; i++) {
+			if (_is_fat_partition(mbr->partitions[i].type) &&
+				mbr->partitions[i].first_lba != 0 &&
+				mbr->partitions[i].sectors != 0) {
+				return mbr->partitions[i].first_lba;
+			}
+		}
+
+		return 0;
+	}
+
 	int FAT_initialize() {
+		uint32_t volume_start_lba = 0;
 		uint8_t* cluster_data = ATA_read_sector(0);
 		if (!cluster_data) {
 			LOG("Function FAT_initialize: Error reading the first sector of FAT!\n");
@@ -37,26 +87,54 @@
 		}
 
 		fat_BS_t* bootstruct = (fat_BS_t*)cluster_data;
+		if (!_is_valid_bpb(bootstruct, cluster_data)) {
+			volume_start_lba = _find_fat_partition_lba(cluster_data);
+			ALC_free(cluster_data, KERNEL);
+
+			if (volume_start_lba == 0) {
+				LOG("Function FAT_initialize: no valid FAT boot sector or FAT partition found.\n");
+				return -1;
+			}
+
+			cluster_data = ATA_read_sector(volume_start_lba);
+			if (!cluster_data) {
+				LOG("Function FAT_initialize: Error reading FAT partition boot sector!\n");
+				return -1;
+			}
+
+			bootstruct = (fat_BS_t*)cluster_data;
+			if (!_is_valid_bpb(bootstruct, cluster_data)) {
+				LOG("Function FAT_initialize: FAT partition boot sector has invalid BPB fields.\n");
+				ALC_free(cluster_data, KERNEL);
+				return -1;
+			}
+		}
+
 		FAT_data.total_sectors = (bootstruct->total_sectors_16 == 0) ? bootstruct->total_sectors_32 : bootstruct->total_sectors_16;
 		FAT_data.fat_size = (bootstruct->table_size_16 == 0) ? ((fat_extBS_32_t*)(bootstruct->extended_section))->table_size_32 : bootstruct->table_size_16;
 
-		int root_dir_sectors = ((bootstruct->root_entry_count * 32) + (bootstruct->bytes_per_sector - 1)) / bootstruct->bytes_per_sector;
-		int data_sectors = FAT_data.total_sectors - (bootstruct->reserved_sector_count + (bootstruct->table_count * FAT_data.fat_size) + root_dir_sectors);
+		uint32_t root_dir_sectors = ((bootstruct->root_entry_count * 32) + (bootstruct->bytes_per_sector - 1)) / bootstruct->bytes_per_sector;
+		uint32_t metadata_sectors = bootstruct->reserved_sector_count + (bootstruct->table_count * FAT_data.fat_size) + root_dir_sectors;
+		if (FAT_data.total_sectors <= metadata_sectors) {
+			LOG("Function FAT_initialize: FAT metadata is larger than the volume.\n");
+			ALC_free(cluster_data, KERNEL);
+			return -1;
+		}
+
+		uint32_t data_sectors = FAT_data.total_sectors - metadata_sectors;
 
 		FAT_data.total_clusters = data_sectors / bootstruct->sectors_per_cluster;
-		if (FAT_data.total_clusters == 0) FAT_data.total_clusters = bootstruct->total_sectors_32 / bootstruct->sectors_per_cluster;
-		FAT_data.first_data_sector = bootstruct->reserved_sector_count + bootstruct->table_count * bootstruct->table_size_16 + (bootstruct->root_entry_count * 32 + bootstruct->bytes_per_sector - 1) / bootstruct->bytes_per_sector;
+		FAT_data.first_data_sector = volume_start_lba + bootstruct->reserved_sector_count + bootstruct->table_count * FAT_data.fat_size + root_dir_sectors;
 
 		if (FAT_data.total_clusters < 4085) FAT_data.fat_type = 12;
 		else if (FAT_data.total_clusters < 65525) FAT_data.fat_type = 16;
 		else {
 			FAT_data.fat_type = 32;
-			FAT_data.first_data_sector = bootstruct->reserved_sector_count + bootstruct->table_count * ((fat_extBS_32_t*)(bootstruct->extended_section))->table_size_32;
 		}
 
 		FAT_data.sectors_per_cluster = bootstruct->sectors_per_cluster;
 		FAT_data.bytes_per_sector = bootstruct->bytes_per_sector;
-		FAT_data.first_fat_sector = bootstruct->reserved_sector_count;
+		FAT_data.first_fat_sector = volume_start_lba + bootstruct->reserved_sector_count;
 		FAT_data.ext_root_cluster = ((fat_extBS_32_t*)(bootstruct->extended_section))->root_cluster;
 		FAT_data.cluster_size = FAT_data.bytes_per_sector * FAT_data.sectors_per_cluster;
 

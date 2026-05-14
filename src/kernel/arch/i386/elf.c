@@ -109,18 +109,19 @@ ELF32_program* ELF_read(int ci, int type) {
         for (uint32_t i = 0; i < header_num; i++) {
             if (program_headers[i].p_type != PT_LOAD) continue;
 
-            uint32_t program_pages   = program_headers[i].p_memsz / PAGE_SIZE;
-            uint32_t virtual_address = program_headers[i].p_vaddr;
-            program->pages[i] = program_headers[i].p_vaddr;
+            uint32_t virtual_address = program_headers[i].p_vaddr & ~(PAGE_SIZE - 1);
+            uint32_t segment_offset  = program_headers[i].p_vaddr - virtual_address;
+            uint32_t program_pages   = (segment_offset + program_headers[i].p_memsz) / PAGE_SIZE;
+            program->pages[i] = virtual_address;
 
-            if (program_headers[i].p_memsz % PAGE_SIZE > 0) program_pages++;
+            if ((segment_offset + program_headers[i].p_memsz) % PAGE_SIZE > 0) program_pages++;
             for (uint32_t i = 0; i < program_pages; i++) {
                 ALC_mallocp(virtual_address, type);
                 virtual_address += PAGE_SIZE;
             }
 
             memset((void*)program_headers[i].p_vaddr, 0, program_headers[i].p_memsz);
-            current_vfs->read(ci, (uint8_t*)program_headers[i].p_vaddr, program_headers[i].p_offset, program_headers[i].p_memsz);
+            current_vfs->read(ci, (uint8_t*)program_headers[i].p_vaddr, program_headers[i].p_offset, program_headers[i].p_filesz);
         }
 
     //==========================
