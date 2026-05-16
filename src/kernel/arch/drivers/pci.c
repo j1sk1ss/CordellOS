@@ -1,9 +1,7 @@
-#include "../../include/pci.h"
+#include <pci.h>
 
-
-static pci_dev_t dev_zero = { 0 };
-static uint32_t pci_size_map[100] = { 0 };
-
+static pci_dev_t _dev_zero = { 0 };
+static uint32_t _pci_size_map[100] = { 0 };
 
 /*
  * Given a pci device(32-bit vars containing info about bus, device number, and function number), a field(what u want to read from the config space)
@@ -14,7 +12,7 @@ uint32_t pci_read(pci_dev_t dev, uint32_t field) {
 	dev.enable = 1;
 	i386_outl(PCI_CONFIG_ADDRESS, dev.bits);
 
-	uint32_t size = pci_size_map[field];
+	uint32_t size = _pci_size_map[field];
 	if (size == 1) {
 		uint8_t t = i386_inb(PCI_CONFIG_DATA + (field & 3));
 		return t;
@@ -93,7 +91,7 @@ pci_dev_t pci_scan_function(uint16_t vendor_id, uint16_t device_id, uint32_t bus
 			return dev;
 	}
 
-	return dev_zero;
+	return _dev_zero;
 }
 
 /*
@@ -105,11 +103,11 @@ pci_dev_t pci_scan_device(uint16_t vendor_id, uint16_t device_id, uint32_t bus, 
 	dev.device_num = device;
 
 	if (pci_read(dev,PCI_VENDOR_ID) == PCI_NONE)
-		return dev_zero;
+		return _dev_zero;
 
 	pci_dev_t t = pci_scan_function(vendor_id, device_id, bus, device, 0, device_type);
 	if (t.bits) return t;
-	if (pci_reach_end(dev)) return dev_zero;
+	if (pci_reach_end(dev)) return _dev_zero;
 
 	for (int function = 1; function < FUNCTION_PER_DEVICE; function++) 
 		if (pci_read(dev,PCI_VENDOR_ID) != PCI_NONE) {
@@ -117,7 +115,7 @@ pci_dev_t pci_scan_device(uint16_t vendor_id, uint16_t device_id, uint32_t bus, 
 			if (t.bits) return t;
 		}
 
-	return dev_zero;
+	return _dev_zero;
 }
 /*
  * Scan bus
@@ -128,7 +126,7 @@ pci_dev_t pci_scan_bus(uint16_t vendor_id, uint16_t device_id, uint32_t bus, int
 		if (t.bits) return t;
 	}
 
-	return dev_zero;
+	return _dev_zero;
 }
 
 /*
@@ -138,7 +136,7 @@ pci_dev_t pci_get_device(uint16_t vendor_id, uint16_t device_id, int device_type
 	pci_dev_t t = pci_scan_bus(vendor_id, device_id, 0, device_type);
 	if (t.bits) return t;
 
-	if (pci_reach_end(dev_zero)) kprintf("[%s %i] PCI GET DEVICE FAIL!\n", __FILE__, __LINE__);
+	if (pci_reach_end(_dev_zero)) kprintf("[%s %i] PCI GET DEVICE FAIL!\n", __FILE__, __LINE__);
 	for (int function = 1; function < FUNCTION_PER_DEVICE; function++) {
 		pci_dev_t dev = {0};
 		dev.function_num = function;
@@ -148,29 +146,29 @@ pci_dev_t pci_get_device(uint16_t vendor_id, uint16_t device_id, int device_type
 		if (t.bits) return t;
 	}
 
-	return dev_zero;
+	return _dev_zero;
 }
 
 /*
  * PCI Init, filling size for each field in config space
  * */
 void i386_pci_init() {
-	pci_size_map[PCI_VENDOR_ID]         = 2;
-	pci_size_map[PCI_DEVICE_ID]         = 2;
-	pci_size_map[PCI_COMMAND]	        = 2;
-	pci_size_map[PCI_STATUS]	        = 2;
-	pci_size_map[PCI_SUBCLASS]	        = 1;
-	pci_size_map[PCI_CLASS]		        = 1;
-	pci_size_map[PCI_CACHE_LINE_SIZE]	= 1;
-	pci_size_map[PCI_LATENCY_TIMER]		= 1;
-	pci_size_map[PCI_HEADER_TYPE]       = 1;
-	pci_size_map[PCI_BIST]              = 1;
-	pci_size_map[PCI_BAR0]              = 4;
-	pci_size_map[PCI_BAR1]              = 4;
-	pci_size_map[PCI_BAR2]              = 4;
-	pci_size_map[PCI_BAR3]              = 4;
-	pci_size_map[PCI_BAR4]              = 4;
-	pci_size_map[PCI_BAR5]              = 4;
-	pci_size_map[PCI_INTERRUPT_LINE]	= 1;
-	pci_size_map[PCI_SECONDARY_BUS]		= 1;
+	_pci_size_map[PCI_VENDOR_ID]         = 2;
+	_pci_size_map[PCI_DEVICE_ID]         = 2;
+	_pci_size_map[PCI_COMMAND]	        = 2;
+	_pci_size_map[PCI_STATUS]	        = 2;
+	_pci_size_map[PCI_SUBCLASS]	        = 1;
+	_pci_size_map[PCI_CLASS]		        = 1;
+	_pci_size_map[PCI_CACHE_LINE_SIZE]	= 1;
+	_pci_size_map[PCI_LATENCY_TIMER]		= 1;
+	_pci_size_map[PCI_HEADER_TYPE]       = 1;
+	_pci_size_map[PCI_BIST]              = 1;
+	_pci_size_map[PCI_BAR0]              = 4;
+	_pci_size_map[PCI_BAR1]              = 4;
+	_pci_size_map[PCI_BAR2]              = 4;
+	_pci_size_map[PCI_BAR3]              = 4;
+	_pci_size_map[PCI_BAR4]              = 4;
+	_pci_size_map[PCI_BAR5]              = 4;
+	_pci_size_map[PCI_INTERRUPT_LINE]	= 1;
+	_pci_size_map[PCI_SECONDARY_BUS]		= 1;
 }

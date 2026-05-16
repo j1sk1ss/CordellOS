@@ -3,10 +3,8 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-
-#include "pic.h"
-#include "x86.h"
-
+#include <pic.h>
+#include <x86.h>
 
 #define PIC1_COMMAND_PORT           0x20
 #define PIC1_DATA_PORT              0x21
@@ -56,9 +54,8 @@ typedef enum pic_cmd {
     PIC_CMD_READ_ISR            = 0x0B,
 } PIC_CMD;
 
-
-const PICDriver* i8259_getDriver();
-uint16_t i8259_readIRQRequestRegisters();
-uint16_t i8259_readIRQInServiceRegisters();
+const PICDriver* i8259_get_driver();
+uint16_t i8259_read_IRQ_request_registers();
+uint16_t i8259_read_IRQ_in_service_registers();
 
 #endif

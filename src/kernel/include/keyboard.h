@@ -3,12 +3,9 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <stdbool.h>
-
-#include "kstdio.h"
-#include "x86.h"
-#include "irq.h"
-
+#include <kstdio.h>
+#include <x86.h>
+#include <irq.h>
 
 #define KBD_DATA_PORT           0x60
 #define KBD_STATUS_PORT         0x64
@@ -49,16 +46,14 @@
 #define LSHIFT                  0x2A
 #define RSHIFT                  0x36
 
-
 typedef struct keyboard_data {
-    bool key_pressed[128];
+    int key_pressed[128];
 } keyboard_data_t;
-
 
 struct Registers;
 void i386_keyboard_handler(struct Registers* regs);
 
-void _enable_keyboard();
+void enable_keyboard();
 char pop_character();
 
 void i386_init_keyboard();

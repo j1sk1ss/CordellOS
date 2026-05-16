@@ -1,5 +1,4 @@
-#include "../../include/hal.h"
-
+#include <hal.h>
 
 void HAL_initialize() {
     kprintf("HAL: (");

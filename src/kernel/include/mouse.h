@@ -1,11 +1,10 @@
 #ifndef MOUSE_H_
 #define MOUSE_H_
 
-#include "x86.h"
-#include "irq.h"
-#include "gfx.h"
-#include "kstdio.h"
-
+#include <x86.h>
+#include <irq.h>
+#include <gfx.h>
+#include <kstdio.h>
 
 #define MOUSE_IRQ   12
 #define MOUSE_XSIZE 5
@@ -23,21 +22,19 @@
 #define RIGHT_BUTTON(flag)  (flag & 0x2)
 #define MIDDLE_BUTTON(flag) (flag & 0x4)
 
-
 typedef struct mouse_state {
     int32_t x;
     int32_t y;
-    uint8_t leftButton;
-    uint8_t middleButton;
-    uint8_t rightButton;
+    uint8_t left_button   : 1;
+    uint8_t middle_button : 1;
+    uint8_t right_button  : 1;
 } mouse_state_t;
 
 typedef struct screen_state {
-    int32_t x;
-    int32_t y;
+    int32_t  x;
+    int32_t  y;
     uint32_t buffer[MOUSE_XSIZE * MOUSE_YSIZE];
 } screen_state_t;
-
 
 int i386_init_mouse(int show_mouse);
 void i386_mouse_handler(struct Registers* regs);

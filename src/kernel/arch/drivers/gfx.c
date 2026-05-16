@@ -1,27 +1,30 @@
-#include "../../include/gfx.h"
+#include <gfx.h>
 
-
-vbe_mode_info_t GFX_data;
-
+vbe_mode_info_t GFX_data = { 0 };
 
 void GFX_init(struct multiboot_info* mb_info) {
-    GFX_data.physical_base_pointer = mb_info->framebuffer_addr;
-    GFX_data.x_resolution   = mb_info->framebuffer_width;
-    GFX_data.y_resolution   = mb_info->framebuffer_height;
-    GFX_data.bits_per_pixel = mb_info->framebuffer_bpp;
-    GFX_data.pitch          = mb_info->framebuffer_pitch;
-
-    GFX_data.linear_red_mask_size      = mb_info->framebuffer_red_mask_size;
-    GFX_data.linear_red_field_position = mb_info->framebuffer_red_field_position;
-
-    GFX_data.linear_green_mask_size = mb_info->framebuffer_green_mask_size;
-    GFX_data.linear_green_mask_size = mb_info->framebuffer_green_field_position;
-
+    GFX_data.physical_base_pointer      = mb_info->framebuffer_addr;
+    GFX_data.x_resolution               = mb_info->framebuffer_width;
+    GFX_data.y_resolution               = mb_info->framebuffer_height;
+    GFX_data.bits_per_pixel             = mb_info->framebuffer_bpp;
+    GFX_data.pitch                      = mb_info->framebuffer_pitch;
+    GFX_data.linear_red_mask_size       = mb_info->framebuffer_red_mask_size;
+    GFX_data.linear_red_field_position  = mb_info->framebuffer_red_field_position;
+    GFX_data.linear_green_mask_size     = mb_info->framebuffer_green_mask_size;
+    GFX_data.linear_green_mask_size     = mb_info->framebuffer_green_field_position;
     GFX_data.linear_blue_mask_size      = mb_info->framebuffer_blue_mask_size;
     GFX_data.linear_blue_field_position = mb_info->framebuffer_blue_field_position;
+    GFX_data.buffer_size                = GFX_data.y_resolution * GFX_data.x_resolution * (GFX_data.bits_per_pixel | 7) >> 3;
+    GFX_data.virtual_second_buffer      = GFX_data.physical_base_pointer + GFX_data.buffer_size;
+}
 
-    GFX_data.buffer_size = GFX_data.y_resolution * GFX_data.x_resolution * (GFX_data.bits_per_pixel | 7) >> 3;
-    GFX_data.virtual_second_buffer = GFX_data.physical_base_pointer + GFX_data.buffer_size;
+static void __draw_pixel(uint16_t x, uint16_t y, uint32_t color, uint32_t buffer) {
+    uint8_t* framebuffer    = (uint8_t*)buffer; 
+    uint8_t bytes_per_pixel = (GFX_data.bits_per_pixel + 1) / 8;
+    framebuffer += (y * GFX_data.x_resolution + x) * bytes_per_pixel;
+    for (uint8_t temp = 0; temp < bytes_per_pixel; temp++) {
+        framebuffer[temp] = (uint8_t)(color >> temp * 8);
+    }
 }
 
 void GFX_vdraw_pixel(uint16_t X, uint16_t Y, uint32_t color) {
@@ -32,15 +35,6 @@ void GFX_vdraw_pixel(uint16_t X, uint16_t Y, uint32_t color) {
 void GFX_pdraw_pixel(uint16_t X, uint16_t Y, uint32_t color) {
     if (color == TRANSPARENT) return;
     __draw_pixel(X, Y, color, GFX_data.physical_base_pointer);
-}
-
-void __draw_pixel(uint16_t x, uint16_t y, uint32_t color, uint32_t buffer) {
-    uint8_t* framebuffer    = (uint8_t*)buffer; 
-    uint8_t bytes_per_pixel = (GFX_data.bits_per_pixel + 1) / 8;
-
-    framebuffer += (y * GFX_data.x_resolution + x) * bytes_per_pixel;
-    for (uint8_t temp = 0; temp < bytes_per_pixel; temp++)
-        framebuffer[temp] = (uint8_t)(color >> temp * 8);
 }
 
 uint32_t GFX_get_pixel(uint16_t X, uint16_t Y) {
@@ -98,14 +92,14 @@ void GFX_swap_buffers() {
     memcpy((void*)GFX_data.physical_base_pointer, (void*)GFX_data.virtual_second_buffer, GFX_data.buffer_size);
 }
 
+static void __set_buffer(uint32_t value, uint32_t addr, size_t size) {
+    memset((void*)addr, value, size);
+}
+
 void GFX_set_pbuffer(uint32_t value) {
     __set_buffer(value, GFX_data.physical_base_pointer, GFX_data.buffer_size);
 }
 
 void GFX_set_vbuffer(uint32_t value) {
     __set_buffer(value, GFX_data.virtual_second_buffer, GFX_data.buffer_size);
-}
-
-void __set_buffer(uint32_t value, uint32_t addr, size_t size) {
-    memset((void*)addr, value, size);
 }

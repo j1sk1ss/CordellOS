@@ -1,8 +1,7 @@
 #include "../../include/isr.h"
 
-
-static ISRHandler _isrHandlers[256];
-static struct ELF32_symbols_desctiptor* currentDescriptor = NULL;
+static ISRHandler _isr_handlers[256];
+static struct ELF32_symbols_desctiptor* _current_descriptor = NULL;
 
 static const char* const _exceptions[] = {
     "DIVIDE BY ZERO",                 "DEBUG",
@@ -20,19 +19,18 @@ static const char* const _exceptions[] = {
     "SECURITY EXCEPTION", ""
 };
 
-
-void i386_ISR_InitializeGates();
+void i386_ISR_initialize_gates();
 
 void i386_isr_initialize() {
-    i386_ISR_InitializeGates();
+    i386_ISR_initialize_gates();
     for (int i = 0; i < 256; i++)
         i386_idt_enableGate(i);
 }
 
 void __attribute__((cdecl)) i386_isr_handler(struct Registers* regs) {
     if (regs->interrupt < 256) {
-        if (_isrHandlers[regs->interrupt] != NULL) {
-            _isrHandlers[regs->interrupt](regs);
+        if (_isr_handlers[regs->interrupt] != NULL) {
+            _isr_handlers[regs->interrupt](regs);
             return;
         }
 
@@ -69,11 +67,11 @@ void i386_isr_stack_trace_line(uint32_t eip) {
   kprintf("[0x%x] : %s\n", eip, ELF_lookup_function((uint32_t)((uint32_t*)eip)));
 }
 
-void i386_isr_registerHandler(int interrupt, ISRHandler handler) {
-    _isrHandlers[interrupt] = handler;
+void i386_isr_register_handler(int interrupt, ISRHandler handler) {
+    _isr_handlers[interrupt] = handler;
     i386_idt_enableGate(interrupt);
 }
 
 void i386_isr_set_symdes(struct ELF32_symbols_desctiptor* desciptor) {
-    currentDescriptor = desciptor;
+    _current_descriptor = desciptor;
 }

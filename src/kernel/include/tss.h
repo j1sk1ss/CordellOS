@@ -3,9 +3,7 @@
 
 #include <stdint.h>
 #include <memory.h>
-
-#include "gdt.h"
-
+#include <gdt.h>
 
 typedef struct tss_entry {
     uint32_t prevTss;
@@ -36,7 +34,6 @@ typedef struct tss_entry {
     uint16_t trap;
     uint16_t iomap;
 } tss_entry_t;
-
 
 void TSS_init(uint32_t idx, uint32_t kss, uint32_t kesp);
 void TSS_set_stack(uint32_t kss, uint32_t kesp);

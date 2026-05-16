@@ -1,5 +1,4 @@
-#include "../../include/pit.h"
-
+#include <pit.h>
 
 void i386_pit_init() {
     // Set PIT to generate interrupts at a specific frequency

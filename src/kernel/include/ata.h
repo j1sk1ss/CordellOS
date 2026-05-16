@@ -6,14 +6,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "allocator.h"
-#include "kstdio.h"
-#include "x86.h"
-#include "irq.h"
-#include "pci.h"
-#include "vmm.h"
-#include "vfs.h"
-
+#include <allocator.h>
+#include <kstdio.h>
+#include <x86.h>
+#include <irq.h>
+#include <pci.h>
+#include <vmm.h>
+#include <vfs.h>
 
 // ATA PCI info
 #define ATA_VENDOR_ID               0x8086
@@ -59,15 +58,14 @@
 #define ATAPI_CMD_EJECT             0x1B
 
 // Bus Master Reg Command
-#define BMR_COMMAND_DMA_START 	0x1
-#define BMR_COMMAND_DMA_STOP 	0x0
-#define BMR_COMMAND_READ 		0x8
-#define BMR_STATUS_INT 			0x4
-#define BMR_STATUS_ERR 			0x2
+#define BMR_COMMAND_DMA_START 	    0x1
+#define BMR_COMMAND_DMA_STOP 	    0x0
+#define BMR_COMMAND_READ 		    0x8
+#define BMR_STATUS_INT 			    0x4
+#define BMR_STATUS_ERR 			    0x2
 
-#define STOP_SYMBOL		'\20'
-#define ERROR_SYMBOL	'\21'
-
+#define STOP_SYMBOL		            '\20'
+#define ERROR_SYMBOL	            '\21'
 
 typedef struct prdt {
 	uint32_t buffer_phys;
@@ -76,9 +74,9 @@ typedef struct prdt {
 }__attribute__((packed)) prdt_t;
 
 typedef struct ata_dev {
-	uint16_t data;
-	uint16_t error;
-	uint16_t sector_count;
+	uint16_t     data;
+	uint16_t     error;
+	uint16_t     sector_count;
 
 	union {
 		uint16_t sector_num;
@@ -110,23 +108,22 @@ typedef struct ata_dev {
 		uint16_t alt_status;
 	};
 
-	int slave;
-	uint32_t bar4;
-	uint32_t BMR_COMMAND;
-	uint32_t BMR_prdt;
-	uint32_t BMR_STATUS;
+	int          slave;
+	uint32_t     bar4;
+	uint32_t     BMR_COMMAND;
+	uint32_t     BMR_prdt;
+	uint32_t     BMR_STATUS;
 
 
-	prdt_t* prdt;
-	uint8_t* prdt_phys;
+	prdt_t*      prdt;
+	uint8_t*     prdt_phys;
 
-	uint8_t mem_buffer[PAGE_SIZE];
-	uint8_t mem_buffer_phys[PAGE_SIZE];
+	uint8_t      mem_buffer[PAGE_SIZE];
+	uint8_t      mem_buffer_phys[PAGE_SIZE];
 
-	char mountpoint[32];
-	int present;
+	char         mountpoint[32];
+	int          present;
 }__attribute__((packed)) ata_dev_t;
-
 
 int ATA_initialize();
 

@@ -211,6 +211,6 @@ int VMM_init(uint32_t memory_start) {
 	cr0 |= 0x80000000;
 	asm("mov %0, %%cr0":: "r"(cr0));
 
-    i386_isr_registerHandler(14, _page_fault);
+    i386_isr_register_handler(14, _page_fault);
     return 1;
 }

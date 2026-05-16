@@ -259,7 +259,7 @@ void __attribute((cdecl)) i386_ISR253();
 void __attribute((cdecl)) i386_ISR254();
 void __attribute((cdecl)) i386_ISR255();
 
-void i386_ISR_InitializeGates()
+void i386_ISR_initialize_gates()
 {
     i386_idt_setGate(0, i386_ISR0, i386_GDT_CODE_SEGMENT, IDT_FLAG_RING0 | IDT_FLAG_GATE_32BIT_INT);
     i386_idt_setGate(1, i386_ISR1, i386_GDT_CODE_SEGMENT, IDT_FLAG_RING0 | IDT_FLAG_GATE_32BIT_INT);

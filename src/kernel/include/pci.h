@@ -1,30 +1,27 @@
 #ifndef PCI_H
 #define PCI_H
 
-#include "x86.h"
-#include "kstdio.h"
-
+#include <x86.h>
+#include <kstdio.h>
 #include <stdint.h>
 #include <string.h>
 
-
-// I love bit fields So much better than ugly big twidling :)
 typedef union pci_dev {
     uint32_t bits;
     struct {
-        uint32_t always_zero    : 2;
-        uint32_t field_num      : 6;
-        uint32_t function_num   : 3;
-        uint32_t device_num     : 5;
-        uint32_t bus_num        : 8;
-        uint32_t reserved       : 7;
-        uint32_t enable         : 1;
+        uint32_t always_zero  : 2;
+        uint32_t field_num    : 6;
+        uint32_t function_num : 3;
+        uint32_t device_num   : 5;
+        uint32_t bus_num      : 8;
+        uint32_t reserved     : 7;
+        uint32_t enable       : 1;
     };
 } pci_dev_t;
 
 // Ports
-#define PCI_CONFIG_ADDRESS  0xCF8
-#define PCI_CONFIG_DATA     0xCFC
+#define PCI_CONFIG_ADDRESS       0xCF8
+#define PCI_CONFIG_DATA          0xCFC
 
 // Config Address Register
 
@@ -51,16 +48,15 @@ typedef union pci_dev {
 #define PCI_SECONDARY_BUS        0x09
 
 // Device type
-#define PCI_HEADER_TYPE_DEVICE  0
-#define PCI_HEADER_TYPE_BRIDGE  1
-#define PCI_HEADER_TYPE_CARDBUS 2
-#define PCI_TYPE_BRIDGE 0x0604
-#define PCI_TYPE_SATA   0x0106
-#define PCI_NONE 0xFFFF
+#define PCI_HEADER_TYPE_DEVICE   0
+#define PCI_HEADER_TYPE_BRIDGE   1
+#define PCI_HEADER_TYPE_CARDBUS  2
+#define PCI_TYPE_BRIDGE          0x0604
+#define PCI_TYPE_SATA            0x0106
+#define PCI_NONE                 0xFFFF
 
 #define DEVICE_PER_BUS           32
 #define FUNCTION_PER_DEVICE      32
-
 
 uint32_t pci_read(pci_dev_t dev, uint32_t field);
 void pci_write(pci_dev_t dev, uint32_t field, uint32_t value);

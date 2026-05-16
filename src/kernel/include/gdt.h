@@ -3,11 +3,10 @@
 
 #include <stdint.h>
 
-
-#define i386_GDT_CODE_SEGMENT 0x08
-#define i386_GDT_DATA_SEGMENT 0x10
-#define i386_GDT_USER_CODE_SEGMENT 0x18
-#define i386_GDT_USER_DATA_SEGMENT 0x20
+#define i386_GDT_CODE_SEGMENT            0x08
+#define i386_GDT_DATA_SEGMENT            0x10
+#define i386_GDT_USER_CODE_SEGMENT       0x18
+#define i386_GDT_USER_DATA_SEGMENT       0x20
 
 #define GDT_LIMIT_LOW(limit)             (limit & 0xFFFF)
 #define GDT_BASE_LOW(base)               (base & 0xFFFF)
@@ -24,20 +23,18 @@
     GDT_BASE_HIGH(base)                 \
 }
 
-
 typedef struct {
-    uint16_t LimitLow;                      // limit (bits 0 - 15) 
-    uint16_t BaseLow;                       // base  (bits 0 - 15)
-
-    uint8_t BaseMiddle;                     // base  (bits 16 - 23)
-    uint8_t Access;                         // access
-    uint8_t FlagsLimitHi;                   // limit (bits 16 - 19) | flag
-    uint8_t BaseHigh;                       // base  (bits 24 - 31)
+    uint16_t limit_low;                     // limit (bits 0 - 15) 
+    uint16_t base_low;                      // base  (bits 0 - 15)
+    uint8_t  base_middle;                   // base  (bits 16 - 23)
+    uint8_t  access;                        // access
+    uint8_t  flags_limit_high;              // limit (bits 16 - 19) | flag
+    uint8_t  base_high;                     // base  (bits 24 - 31)
 } __attribute__((packed)) GDTEntry;
 
 typedef struct {
-    uint16_t Limit;                         // sizeof(gdt) - 1
-    GDTEntry* Ptr;                          // address
+    uint16_t  limit;                        // sizeof(gdt) - 1
+    GDTEntry* limit;                        // address
 } __attribute__((packed)) GDTDescriptor;
 
 typedef enum {
@@ -62,15 +59,12 @@ typedef enum {
 } GDT_ACCESS;
 
 typedef enum {
-    GDT_FLAG_64BIT           = 0x20,
-    GDT_FLAG_32BIT           = 0x40,
-    GDT_FLAG_16BIT           = 0x00,
-
-    GDT_FLAG_GRANULARITY_1B  = 0x00,
-    GDT_FLAG_GRANULARITY_4K  = 0x80,
-
+    GDT_FLAG_64BIT          = 0x20,
+    GDT_FLAG_32BIT          = 0x40,
+    GDT_FLAG_16BIT          = 0x00,
+    GDT_FLAG_GRANULARITY_1B = 0x00,
+    GDT_FLAG_GRANULARITY_4K = 0x80
 } GDT_FLAGS;
-
 
 void __attribute__((cdecl)) i386_gdt_initialize();
 void GDT_set_entry(int index, int base, int limit, uint8_t access, uint8_t flags);

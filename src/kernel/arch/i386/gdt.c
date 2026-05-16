@@ -1,5 +1,4 @@
-#include "../../include/gdt.h"
-
+#include <gdt.h>
 
 static GDTEntry _gtd[] = {
     // Empty discriptor
@@ -31,18 +30,16 @@ static GDTEntry _gtd[] = {
 
 static GDTDescriptor _GDTDescriptor = { sizeof(_gtd) - 1, (GDTEntry*)&_gtd };
 
-
 void __attribute__((cdecl)) i386_gdt_load(GDTDescriptor* descriptor, uint16_t codeSegment, uint16_t dataSegment);
-
 void __attribute__((cdecl)) i386_gdt_initialize() {
     i386_gdt_load(&_GDTDescriptor, i386_GDT_CODE_SEGMENT, i386_GDT_DATA_SEGMENT);
 }
 
 void GDT_set_entry(int index, int base, int limit, uint8_t access, uint8_t flags) {
-    _gtd[index].LimitLow     = limit & 0xFFFF;
-    _gtd[index].BaseLow      = base & 0xFFFF;
-    _gtd[index].BaseMiddle   = (base >> 16) & 0xFF;
-    _gtd[index].Access       = access;
-    _gtd[index].FlagsLimitHi = ((limit >> 16) & 0x0F) | (flags & 0xF0);
-    _gtd[index].BaseHigh     = (base >> 24) & 0xFF;
+    _gtd[index].limit_low        = limit & 0xFFFF;
+    _gtd[index].base_low         = base & 0xFFFF;
+    _gtd[index].base_middle      = (base >> 16) & 0xFF;
+    _gtd[index].access           = access;
+    _gtd[index].flags_limit_high = ((limit >> 16) & 0x0F) | (flags & 0xF0);
+    _gtd[index].base_high        = (base >> 24) & 0xFF;
 }

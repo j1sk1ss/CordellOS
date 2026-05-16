@@ -1,15 +1,8 @@
-#include "../../include/datetime.h"
-
+#include <datetime.h>
 
 datetime_t DTM_datetime = {
-    .day    = 0,
-    .hour   = 0,
-    .minute = 0,
-    .month  = 0,
-    .second = 0,
-    .year   = CURRENT_YEAR
+    .year = CURRENT_YEAR
 };
-
 
 int _get_update_in_progress_flag() {
     i386_outb(cmos_address, 0x0A);
@@ -58,12 +51,12 @@ int _datetime_read_rtc() {
         DTM_datetime.year   = _get_RTC_register(0x09);
     } 
     while (
-        (last_second != DTM_datetime.second) || 
-        (last_minute != DTM_datetime.minute) || 
-        (last_hour != DTM_datetime.hour) ||
-        (last_day != DTM_datetime.day) || 
-        (last_month != DTM_datetime.month) || 
-        (last_year != DTM_datetime.year) ||
+        (last_second  != DTM_datetime.second) || 
+        (last_minute  != DTM_datetime.minute) || 
+        (last_hour    != DTM_datetime.hour) ||
+        (last_day     != DTM_datetime.day) || 
+        (last_month   != DTM_datetime.month) || 
+        (last_year    != DTM_datetime.year) ||
         (last_century != century)
     );
 

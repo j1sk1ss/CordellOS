@@ -1,9 +1,8 @@
 #ifndef SPEAKER_H_
 #define SPEAKER_H_
 
-#include "pic.h"
-#include "x86.h"
-
+#include <pic.h>
+#include <x86.h>
 #include <time.h>
 
 #define PC_SPEAKER_PORT 0x61
@@ -95,7 +94,6 @@ typedef enum {
     SIXTEENTH = 16,
     THIRTY2ND = 32,
 } beat_type_t;
-
 
 void enable_pc_speaker();
 void disable_pc_speaker();

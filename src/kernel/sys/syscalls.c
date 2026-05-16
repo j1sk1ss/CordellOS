@@ -2,7 +2,7 @@
 
 
 void i386_syscalls_init() {
-    i386_isr_registerHandler(0x80, syscall);
+    i386_isr_register_handler(0x80, syscall);
 }
 
 static uint8_t _syscall_address_space(struct Registers* regs) {
@@ -32,7 +32,7 @@ void syscall(struct Registers* regs) {
             char* key_buffer = (char*)regs->ecx;
             key_buffer[0] = pop_character();
         break;
-        case SYS_AREAD_KEYBOARD: _enable_keyboard(); break;
+        case SYS_AREAD_KEYBOARD: enable_keyboard(); break;
 
     //=======================
     //  PRINT SYSCALLS

@@ -1,17 +1,15 @@
 #ifndef RTL8139_H
 #define RTL8139_H
 
-#include "irq.h"
-#include "pci.h"
-#include "x86.h"
-#include "vmm.h"
-#include "kstdio.h"
-#include "ethernet.h"
-#include "allocator.h"
-
+#include <irq.h>
+#include <pci.h>
+#include <x86.h>
+#include <vmm.h>
+#include <kstdio.h>
+#include <ethernet.h>
+#include <allocator.h>
 #include <stdint.h>
 #include <memory.h>
-
 
 #define NETWORK_DEBUG         0
 
@@ -26,12 +24,11 @@
 
 #define CAPR                  0x38
 #define RX_READ_POINTER_MASK  (~3)
-#define ROK                   (1<<0)
-#define RER                   (1<<1)
-#define TOK                   (1<<2)
-#define TER                   (1<<3)
-#define TX_TOK                (1<<15)
-
+#define ROK                   (1 << 0)
+#define RER                   (1 << 1)
+#define TOK                   (1 << 2)
+#define TER                   (1 << 3)
+#define TX_TOK                (1 << 15)
 
 enum RTL8139_registers {
   MAG0             = 0x00,       // Ethernet hardware address
@@ -79,28 +76,24 @@ typedef struct tx_desc {
 } tx_desc_t;
 
 typedef struct rtl8139_dev {
-    uint8_t bar_type;
+    uint8_t  bar_type;
     uint16_t io_base;
     uint32_t mem_base;
-    int eeprom_exist;
-    uint8_t mac_addr[6];
-
-    uint8_t rx_buffer[RX_BUFFER_SIZE_EX];
-    uint8_t tx_buffer[TX_BUFFER_SIZE * NB_TX_DESCRIPTORS];
-
-    int tx_cur;
+    int      eeprom_exist;
+    uint8_t  mac_addr[6];
+    uint8_t  rx_buffer[RX_BUFFER_SIZE_EX];
+    uint8_t  tx_buffer[TX_BUFFER_SIZE * NB_TX_DESCRIPTORS];
+    int      tx_cur;
 } rtl8139_dev_t;
 
 typedef struct ethernet_packet {
   struct ethernet_frame* packet;
-  int len;
+  int                    len;
 } ethernet_packet_t;
 
 void rtl8139_send_packet(void* data, uint32_t len);
 void rtl8139_handler(struct Registers* reg);
-
 void i386_init_rtl8139();
-void __rtl_receive_packetpacket();
 void get_mac_addr(uint8_t* src_mac_addr);
 
 #endif

@@ -1,29 +1,25 @@
-#include "../../include/tss.h"
+#include <tss.h>
 
-
-static tss_entry_t kernel_tss;
-
+static tss_entry_t _kernel_tss = { 0 };
 
 void TSS_init(uint32_t idx, uint32_t kss, uint32_t kesp) {
-    uint32_t base = (uint32_t)&kernel_tss;
+    uint32_t base = (uint32_t)&_kernel_tss;
     GDT_set_entry(idx, base, sizeof(tss_entry_t) - 1, GDT_ACCESS_DISCRIPTOR_TSS, 0x00);
-    memset((void*)&kernel_tss, 0, sizeof(tss_entry_t));
-
-    kernel_tss.ss0  = kss;
-    kernel_tss.esp0 = kesp;
-    kernel_tss.cs   = 0x0b;
-    kernel_tss.ds   = 0x13;
-    kernel_tss.es   = 0x13;
-    kernel_tss.fs   = 0x13;
-    kernel_tss.gs   = 0x13;
-    kernel_tss.ss   = 0x13;
-
+    memset((void*)&_kernel_tss, 0, sizeof(tss_entry_t));
+    _kernel_tss.ss0  = kss;
+    _kernel_tss.esp0 = kesp;
+    _kernel_tss.cs   = 0x0b;
+    _kernel_tss.ds   = 0x13;
+    _kernel_tss.es   = 0x13;
+    _kernel_tss.fs   = 0x13;
+    _kernel_tss.gs   = 0x13;
+    _kernel_tss.ss   = 0x13;
     TSS_flush();
 }
 
 // kss - kernel stack segment
 // kesp - kernel stack pointer
 void TSS_set_stack(uint32_t kss, uint32_t kesp) {
-    kernel_tss.ss0  = kss;
-    kernel_tss.esp0 = kesp;
+    _kernel_tss.ss0  = kss;
+    _kernel_tss.esp0 = kesp;
 }

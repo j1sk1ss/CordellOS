@@ -1,7 +1,7 @@
-#include "../../include/keyboard.h"
+#include <keyboard.h>
 
 // Shift keyboard converter from https://github.com/cstack/osdev/blob/master/drivers/keyboard.c#L8
-
+// TODO: move to CPL
 /* 
 *  KBDUS means US keyboard Layout. This is a scancode table
 *  used to layout a standard US keyboard. I have left some
@@ -90,7 +90,7 @@ static unsigned char _shift_alphabet[128] = {
 
 static char _curr_char = EMPTY_KEYBOARD;
 static keyboard_data_t _keyboard_data = {
-    .key_pressed = { false }
+    .key_pressed = { 0 }
 };
 
 static int _keyboard_wait_input_clear() {
@@ -136,12 +136,10 @@ static void _keyboard_flush_output() {
     }
 }
 
-
 void i386_init_keyboard() {
     _keyboard_flush_output();
 
     uint8_t status = i386_inb(KBD_STATUS_PORT);
-
     kprintf("[KEYBOARD INFO]: ( ");
     if (status & (1 << 0)) kprintf("Output buffer full.\t");
     else kprintf("Output buffer empty.\t");
@@ -158,17 +156,17 @@ void i386_init_keyboard() {
     kprintf(")\n");
 
     uint8_t config = 0;
-    if (_keyboard_write_command(KBD_CMD_READ_CONFIG) && _keyboard_read_data(&config)) {
+    if (
+        !_keyboard_write_command(KBD_CMD_READ_CONFIG) || 
+        !_keyboard_read_data(&config)
+    ) kprintf("PS/2 config byte unavailable, trying to continue.\n");
+    else {
         kprintf("PS/2 config byte: %x\n", config);
-
         config |= KBD_CONFIG_IRQ1;
         config &= ~KBD_CONFIG_PORT1_CLOCK;
         if (_keyboard_write_command(KBD_CMD_WRITE_CONFIG)) {
             _keyboard_write_data(config);
         }
-    }
-    else {
-        kprintf("PS/2 config byte unavailable, trying to continue.\n");
     }
 
     _keyboard_write_command(KBD_CMD_ENABLE_PORT1);
@@ -177,7 +175,7 @@ void i386_init_keyboard() {
     i386_irq_registerHandler(1, i386_keyboard_handler);
 }
 
-void _enable_keyboard() {
+void enable_keyboard() {
     _curr_char = EMPTY_KEYBOARD;
 }
 
@@ -191,16 +189,16 @@ void i386_keyboard_handler(struct Registers* regs) {
     char character = i386_inb(0x60);
     if (character < 0 || character >= 128) return;
 
-    _keyboard_data.key_pressed[(int)character] = false;
+    _keyboard_data.key_pressed[(int)character] = 0;
     if (!(character & 0x80)) {
-        _keyboard_data.key_pressed[(int)character] = true;
+        _keyboard_data.key_pressed[(int)character] = 1;
         _curr_char = _alphabet[(int)character];
         if (_keyboard_data.key_pressed[LSHIFT] || _keyboard_data.key_pressed[RSHIFT]) _curr_char = _shift_alphabet[(int)character];
         if (_curr_char == LSHIFT_BUTTON || _curr_char == RSHIFT_BUTTON) return;
     }
 
     if (_keyboard_data.key_pressed[LSHIFT] || _keyboard_data.key_pressed[RSHIFT]) {
-        _keyboard_data.key_pressed[LSHIFT] = false;
-        _keyboard_data.key_pressed[RSHIFT] = false;
+        _keyboard_data.key_pressed[LSHIFT] = 0;
+        _keyboard_data.key_pressed[RSHIFT] = 0;
     }
 }

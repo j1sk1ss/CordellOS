@@ -2,17 +2,15 @@
  * pc_speaker.h: Definitions and functions for emulated (maybe hardware?) pc speaker
  * Code took from: https://github.com/queso-fuego/amateuros/blob/master/include/sound/pc_speaker.h
  */
-#include "../../include/speaker.h"
+#include <speaker.h>
 
-
-static uint32_t bpm_ms                  = 0;
-static uint32_t whole_note_duration     = 0;
-static uint32_t half_note_duration      = 0;
-static uint32_t quarter_note_duration   = 0;
-static uint32_t eigth_note_duration     = 0;
-static uint32_t sixteenth_note_duration = 0;
-static uint32_t thirty2nd_note_duration = 0;
-
+static uint32_t _bpm_ms                  = 0;
+static uint32_t _whole_note_duration     = 0;
+static uint32_t _half_note_duration      = 0;
+static uint32_t _quarter_note_duration   = 0;
+static uint32_t _eigth_note_duration     = 0;
+static uint32_t _sixteenth_note_duration = 0;
+static uint32_t _thirty2nd_note_duration = 0;
 
 void set_pit_channel_mode_frequency(const uint8_t channel, const uint8_t operating_mode, const uint16_t frequency) {
     // Invalid input
@@ -85,122 +83,122 @@ void rest(const uint32_t ms_duration) {
 }
 
 void set_bpm(const uint32_t bpm) {
-    bpm_ms = 60000 / bpm;
+    _bpm_ms = 60000 / bpm;
 }
 
 void set_time_signature(const uint8_t beats_per_measure, const beat_type_t beat_type) {
     (void)beats_per_measure;
     switch(beat_type) {
         case WHOLE:
-            whole_note_duration     = bpm_ms;
-            half_note_duration      = bpm_ms / 2;
-            quarter_note_duration   = bpm_ms / 4;
-            eigth_note_duration     = bpm_ms / 8;
-            sixteenth_note_duration = bpm_ms / 16;
-            thirty2nd_note_duration = bpm_ms / 32;
+            _whole_note_duration     = _bpm_ms;
+            _half_note_duration      = _bpm_ms / 2;
+            _quarter_note_duration   = _bpm_ms / 4;
+            _eigth_note_duration     = _bpm_ms / 8;
+            _sixteenth_note_duration = _bpm_ms / 16;
+            _thirty2nd_note_duration = _bpm_ms / 32;
             break;
 
         case HALF:
-            whole_note_duration     = bpm_ms * 2;
-            half_note_duration      = bpm_ms;
-            quarter_note_duration   = bpm_ms / 2;
-            eigth_note_duration     = bpm_ms / 4;
-            sixteenth_note_duration = bpm_ms / 8;
-            thirty2nd_note_duration = bpm_ms / 16;
+            _whole_note_duration     = _bpm_ms * 2;
+            _half_note_duration      = _bpm_ms;
+            _quarter_note_duration   = _bpm_ms / 2;
+            _eigth_note_duration     = _bpm_ms / 4;
+            _sixteenth_note_duration = _bpm_ms / 8;
+            _thirty2nd_note_duration = _bpm_ms / 16;
             break;
 
         case QUARTER:
-            whole_note_duration     = bpm_ms * 4;
-            half_note_duration      = bpm_ms * 2;
-            quarter_note_duration   = bpm_ms;
-            eigth_note_duration     = bpm_ms / 2;
-            sixteenth_note_duration = bpm_ms / 4;
-            thirty2nd_note_duration = bpm_ms / 8;
+            _whole_note_duration     = _bpm_ms * 4;
+            _half_note_duration      = _bpm_ms * 2;
+            _quarter_note_duration   = _bpm_ms;
+            _eigth_note_duration     = _bpm_ms / 2;
+            _sixteenth_note_duration = _bpm_ms / 4;
+            _thirty2nd_note_duration = _bpm_ms / 8;
             break;
 
         case EIGTH:
-            whole_note_duration     = bpm_ms * 8;
-            half_note_duration      = bpm_ms * 4;
-            quarter_note_duration   = bpm_ms * 2;
-            eigth_note_duration     = bpm_ms;
-            sixteenth_note_duration = bpm_ms / 2;
-            thirty2nd_note_duration = bpm_ms / 4;
+            _whole_note_duration     = _bpm_ms * 8;
+            _half_note_duration      = _bpm_ms * 4;
+            _quarter_note_duration   = _bpm_ms * 2;
+            _eigth_note_duration     = _bpm_ms;
+            _sixteenth_note_duration = _bpm_ms / 2;
+            _thirty2nd_note_duration = _bpm_ms / 4;
             break;
 
         case SIXTEENTH:
-            whole_note_duration     = bpm_ms * 16;
-            half_note_duration      = bpm_ms * 8;
-            quarter_note_duration   = bpm_ms * 4;
-            eigth_note_duration     = bpm_ms * 2;
-            sixteenth_note_duration = bpm_ms;
-            thirty2nd_note_duration = bpm_ms / 2;
+            _whole_note_duration     = _bpm_ms * 16;
+            _half_note_duration      = _bpm_ms * 8;
+            _quarter_note_duration   = _bpm_ms * 4;
+            _eigth_note_duration     = _bpm_ms * 2;
+            _sixteenth_note_duration = _bpm_ms;
+            _thirty2nd_note_duration = _bpm_ms / 2;
             break;
             
         case THIRTY2ND:
-            whole_note_duration     = bpm_ms * 32;
-            half_note_duration      = bpm_ms * 16;
-            quarter_note_duration   = bpm_ms * 8;
-            eigth_note_duration     = bpm_ms * 4;
-            sixteenth_note_duration = bpm_ms * 2;
-            thirty2nd_note_duration = bpm_ms;
+            _whole_note_duration     = _bpm_ms * 32;
+            _half_note_duration      = _bpm_ms * 16;
+            _quarter_note_duration   = _bpm_ms * 8;
+            _eigth_note_duration     = _bpm_ms * 4;
+            _sixteenth_note_duration = _bpm_ms * 2;
+            _thirty2nd_note_duration = _bpm_ms;
             break;
     }
 }
 
 void whole_note(const note_freq_t note) {
-    play_note(note, whole_note_duration);
+    play_note(note, _whole_note_duration);
 }
 
 void half_note(const note_freq_t note) {
-    play_note(note, half_note_duration);
+    play_note(note, _half_note_duration);
 }
 
 void quarter_note(const note_freq_t note) {
-    play_note(note, quarter_note_duration);
+    play_note(note, _quarter_note_duration);
 }
 
 void eigth_note(const note_freq_t note) {
-    play_note(note, eigth_note_duration);
+    play_note(note, _eigth_note_duration);
 }
 
 void sixteenth_note(const note_freq_t note) {
-    play_note(note, sixteenth_note_duration);
+    play_note(note, _sixteenth_note_duration);
 }
 
 void thirty2nd_note(const note_freq_t note) {
-    play_note(note, thirty2nd_note_duration);
+    play_note(note, _thirty2nd_note_duration);
 }
 
 void whole_rest(void) {
-    rest(whole_note_duration);
+    rest(_whole_note_duration);
 }
 
 void half_rest(void) {
-    rest(half_note_duration);
+    rest(_half_note_duration);
 }
 
 void quarter_rest(void) {
-    rest(quarter_note_duration);
+    rest(_quarter_note_duration);
 }
 
 void eigth_rest(void) {
-    rest(eigth_note_duration);
+    rest(_eigth_note_duration);
 }
 
 void sixteenth_rest(void) {
-    rest(sixteenth_note_duration);
+    rest(_sixteenth_note_duration);
 }
 
 void thirty2nd_rest(void) {
-    rest(thirty2nd_note_duration);
+    rest(_thirty2nd_note_duration);
 }
 
 void dotted_eigth_note(const note_freq_t note) {
-    play_note(note, eigth_note_duration + sixteenth_note_duration);
+    play_note(note, _eigth_note_duration + _sixteenth_note_duration);
 }
 
 void eigth_triplet(const note_freq_t note1, const note_freq_t note2, const note_freq_t note3) {
-    uint32_t temp = quarter_note_duration / 3;
+    uint32_t temp = _quarter_note_duration / 3;
 
     play_note(note1, temp);
     play_note(note2, temp);

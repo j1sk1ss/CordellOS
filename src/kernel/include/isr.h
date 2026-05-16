@@ -28,7 +28,7 @@ struct stackframe {
 
 void i386_isr_initialize();
 typedef void (*ISRHandler)(struct Registers* regs);
-void i386_isr_registerHandler(int interrupt, ISRHandler handler);
+void i386_isr_register_handler(int interrupt, ISRHandler handler);
 
 void i386_isr_interrupt_details(uint32_t eip, uint32_t ebp, uint32_t esp);
 void i386_isr_stack_trace_line(uint32_t eip);

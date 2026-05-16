@@ -7,20 +7,18 @@
 #include <math.h>
 #include <fslib.h>
 
-#include "vfs.h"
-#include "vmm.h"
-#include "pmm.h"
-#include "kstdio.h"
-#include "allocator.h"
+#include <vfs.h>
+#include <pmm.h>
+#include <vmm.h>
+#include <kstdio.h>
+#include <allocator.h>
 
-
-#define NULL_ADDRESS        -1
-#define ELF32_ST_TYPE(i)    ((i)&0xf)
-#define EI_NIDENT           (16)
-
+#define NULL_ADDRESS     -1
+#define ELF32_ST_TYPE(i) ((i)&0xf)
+#define EI_NIDENT        16
 
 typedef struct {
-    uint8_t e_ident[EI_NIDENT];
+    uint8_t  e_ident[EI_NIDENT];
     uint16_t e_type;
     uint16_t e_machine;
     uint32_t e_version;
@@ -87,8 +85,8 @@ typedef struct {
 
 typedef struct {
     uint32_t* pages;
-    uint32_t pages_count;
-    void* entry_point;
+    uint32_t  pages_count;
+    void*     entry_point;
 } ELF32_program;
 
 enum ShT_Types {
@@ -123,12 +121,11 @@ typedef struct {
 } elf_symbols_t;
 
 typedef struct ELF32_symbols_desctiptor {
-    bool present;
-    uint32_t num_symbols;
+    bool       present;
+    uint32_t   num_symbols;
     Elf32_Sym* symbols;
-    char* string_table_addr;
+    char*      string_table_addr;
 } ELF32_SymDescriptor;
-
 
 ELF32_program* ELF_read(int ci, int type);
 int ELF_free_program(ELF32_program* program, uint8_t type);

@@ -1,9 +1,8 @@
 // Thanks to: https://github.com/Jorl17/jOS/blob/master/elf.c#L61
 //            https://github.com/makerimages/SwormOS/tree/master/kernel
-#include "../../include/elf.h"
+#include <elf.h>
 
-
-static elf_symbols_t kernel_elf_symbols = { };
+static elf_symbols_t _kernel_elf_symbols = { 0 };
 
 int ELF_build_symbols_from_multiboot(uint32_t header_addr, uint32_t header_shndx, uint32_t header_num) {
 	Elf32_Shdr* sh = (Elf32_Shdr*)(header_addr);
@@ -12,12 +11,12 @@ int ELF_build_symbols_from_multiboot(uint32_t header_addr, uint32_t header_shndx
 	for (uint32_t i = 0; i < header_num; i++) {
 		const char* name = (const char*) (shstrtab + sh[i].sh_name);
 		if (!strcmp(name,".strtab")) {
-			kernel_elf_symbols.strtab = (const char*)sh[i].sh_addr;
-			kernel_elf_symbols.strtab_size = sh[i].sh_size;
+			_kernel_elf_symbols.strtab = (const char*)sh[i].sh_addr;
+			_kernel_elf_symbols.strtab_size = sh[i].sh_size;
 		} 
         else if (!strcmp(name,".symtab")) {
-			kernel_elf_symbols.symtab = (elf_symbol_t*)sh[i].sh_addr;
-			kernel_elf_symbols.symtab_size = sh[i].sh_size;
+			_kernel_elf_symbols.symtab = (elf_symbol_t*)sh[i].sh_addr;
+			_kernel_elf_symbols.symtab_size = sh[i].sh_size;
 		}
 	}
 
@@ -40,7 +39,7 @@ static const char* _lookup_symbol_function(uint32_t addr, elf_symbols_t* elf) {
 }
 
 const char* ELF_lookup_function(uint32_t addr) {
-    return _lookup_symbol_function(addr, &kernel_elf_symbols);
+    return _lookup_symbol_function(addr, &_kernel_elf_symbols);
 }
 
 ELF32_program* ELF_read(int ci, int type) {
@@ -56,77 +55,57 @@ ELF32_program* ELF_read(int ci, int type) {
         return NULL;
     }
 
-    //==========================
-    // Load ELF header
-    //==========================
+    Elf32_Ehdr* header = ALC_malloc(sizeof(Elf32_Ehdr), type);
+    if (!header) return NULL;
 
-        Elf32_Ehdr* header = ALC_malloc(sizeof(Elf32_Ehdr), type);
-        if (!header) return NULL;
-
-        current_vfs->read(ci, (uint8_t*)header, 0, sizeof(Elf32_Ehdr));
-        if (header->e_ident[0] != '\x7f' || header->e_ident[1] != 'E') {
-            LOG("Error: Not ELF executable!");
-            ALC_free(header, type);
-            return NULL;
-        }
-
-        if (header->e_type != ET_EXEC && header->e_type != ET_DYN) {
-            LOG("Error: Program is not an executable or dynamic executable.");
-            ALC_free(header, type);
-            return NULL;
-        }
-
-    //==========================
-    // Load ELF header
-    //==========================
-    // Load program header
-    //==========================
-
-        Elf32_Phdr* program_headers = ALC_malloc(sizeof(Elf32_Phdr) * header->e_phnum, type);
-        if (!program_headers) {
-            ALC_free(header, type);
-            return NULL;
-        }
-
-        current_vfs->read(ci, (uint8_t*)program_headers, header->e_phoff, sizeof(Elf32_Phdr) * header->e_phnum);
-        program->entry_point = (void*)header->e_entry;
-        uint32_t header_num  = header->e_phnum;
+    current_vfs->read(ci, (uint8_t*)header, 0, sizeof(Elf32_Ehdr));
+    if (header->e_ident[0] != '\x7f' || header->e_ident[1] != 'E') {
+        LOG("Error: Not ELF executable!");
         ALC_free(header, type);
+        return NULL;
+    }
 
-    //==========================
-    // Load program header
-    //==========================
-    // Copy data to vELF location
-    //==========================
+    if (header->e_type != ET_EXEC && header->e_type != ET_DYN) {
+        LOG("Error: Program is not an executable or dynamic executable.");
+        ALC_free(header, type);
+        return NULL;
+    }
 
-        program->pages = ALC_malloc(header_num * sizeof(uint32_t), type);
-        if (!program->pages) {
-            ALC_free(program_headers, type);
-            return NULL;
+    Elf32_Phdr* program_headers = ALC_malloc(sizeof(Elf32_Phdr) * header->e_phnum, type);
+    if (!program_headers) {
+        ALC_free(header, type);
+        return NULL;
+    }
+
+    current_vfs->read(ci, (uint8_t*)program_headers, header->e_phoff, sizeof(Elf32_Phdr) * header->e_phnum);
+    program->entry_point = (void*)header->e_entry;
+    uint32_t header_num  = header->e_phnum;
+    ALC_free(header, type);
+
+    program->pages = ALC_malloc(header_num * sizeof(uint32_t), type);
+    if (!program->pages) {
+        ALC_free(program_headers, type);
+        return NULL;
+    }
+
+    program->pages_count = header_num;
+    for (uint32_t i = 0; i < header_num; i++) {
+        if (program_headers[i].p_type != PT_LOAD) continue;
+
+        uint32_t virtual_address = program_headers[i].p_vaddr & ~(PAGE_SIZE - 1);
+        uint32_t segment_offset  = program_headers[i].p_vaddr - virtual_address;
+        uint32_t program_pages   = (segment_offset + program_headers[i].p_memsz) / PAGE_SIZE;
+        program->pages[i] = virtual_address;
+
+        if ((segment_offset + program_headers[i].p_memsz) % PAGE_SIZE > 0) program_pages++;
+        for (uint32_t i = 0; i < program_pages; i++) {
+            ALC_mallocp(virtual_address, type);
+            virtual_address += PAGE_SIZE;
         }
 
-        program->pages_count = header_num;
-        for (uint32_t i = 0; i < header_num; i++) {
-            if (program_headers[i].p_type != PT_LOAD) continue;
-
-            uint32_t virtual_address = program_headers[i].p_vaddr & ~(PAGE_SIZE - 1);
-            uint32_t segment_offset  = program_headers[i].p_vaddr - virtual_address;
-            uint32_t program_pages   = (segment_offset + program_headers[i].p_memsz) / PAGE_SIZE;
-            program->pages[i] = virtual_address;
-
-            if ((segment_offset + program_headers[i].p_memsz) % PAGE_SIZE > 0) program_pages++;
-            for (uint32_t i = 0; i < program_pages; i++) {
-                ALC_mallocp(virtual_address, type);
-                virtual_address += PAGE_SIZE;
-            }
-
-            memset((void*)program_headers[i].p_vaddr, 0, program_headers[i].p_memsz);
-            current_vfs->read(ci, (uint8_t*)program_headers[i].p_vaddr, program_headers[i].p_offset, program_headers[i].p_filesz);
-        }
-
-    //==========================
-    // Copy data to vELF location
-    //==========================
+        memset((void*)program_headers[i].p_vaddr, 0, program_headers[i].p_memsz);
+        current_vfs->read(ci, (uint8_t*)program_headers[i].p_vaddr, program_headers[i].p_offset, program_headers[i].p_filesz);
+    }
 
     ALC_free(program_headers, type);
     return program;

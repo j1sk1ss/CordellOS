@@ -5,10 +5,9 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#define ASMCALL __attribute__((cdecl))
-#define asm __asm__ volatile
+#define ASMCALL     __attribute__((cdecl))
+#define asm         __asm__ volatile
 #define UNUSED_PORT 0x80
-
 
 uint32_t i386_inl(uint16_t port);
 void i386_outl(uint16_t port, uint32_t data);
