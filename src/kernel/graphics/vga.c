@@ -1,15 +1,13 @@
 #include "../include/vga.h"
 
-
-vga_data_t VGA_data = {
-    .width = 80,
-    .height = 25,
-    .color = 0x7,
-    .buffer = NULL,
+vga_data_t _vga_data = {
+    .width    = 80,
+    .height   = 25,
+    .color    = 0x7,
+    .buffer   = NULL,
     .cursor_x = 0,
     .cursor_y = 0
 };
-
 
 void VGA_init(uint8_t* buffer) {
     KSTDIO_data.clrscr         = VGA_clrscr;
@@ -20,78 +18,81 @@ void VGA_init(uint8_t* buffer) {
     KSTDIO_data.set_cursor     = VGA_setcursor;
     KSTDIO_data.put_chr        = VGA_putchr;
     KSTDIO_data.get_char       = VGA_getchr;
-
-    VGA_data.buffer = buffer;
+    _vga_data.buffer           = buffer;
 }
 
 uint8_t VGA_cursor_get_x() {
-    return VGA_data.cursor_x;
+    return _vga_data.cursor_x;
 }
 
 uint8_t VGA_cursor_get_y() {
-    return VGA_data.cursor_y;
+    return _vga_data.cursor_y;
 }
 
 char VGA_getchr(uint8_t x, uint8_t y) {
-    return (char)VGA_data.buffer[2 * (y * VGA_data.width + x)];
+    return (char)_vga_data.buffer[2 * (y * _vga_data.width + x)];
 }
 
 void VGA_putchr(uint8_t x, uint8_t y, char c) {
-    VGA_data.buffer[2 * (y * VGA_data.width + x)] = c;
+    _vga_data.buffer[2 * (y * _vga_data.width + x)] = c;
 }
 
 uint8_t VGA_getcolor(uint8_t x, uint8_t y) {
-    return VGA_data.buffer[2 * (y * VGA_data.width + x) + 1];
+    return _vga_data.buffer[2 * (y * _vga_data.width + x) + 1];
 }
 
 void VGA_putcolor(uint8_t x, uint8_t y, uint8_t color) {
-    VGA_data.buffer[2 * (y * VGA_data.width + x) + 1] = color;
+    _vga_data.buffer[2 * (y * _vga_data.width + x) + 1] = color;
 }
 
 void VGA_setcursor(uint8_t x, uint8_t y) {
-    uint16_t pos = y * VGA_data.width + x;
+    uint16_t pos = y * _vga_data.width + x;
 
     i386_outb(0x3D4, 0x0F);                          // First value is port on VGA, second - value 
     i386_outb(0x3D5, (uint8_t)(pos & 0xFF));         // for this register
     i386_outb(0x3D4, 0x0E);                          // Check of. docs for info about this ports
     i386_outb(0x3D5, (uint8_t)((pos >> 8) & 0xFF));  //
 
-    VGA_data.cursor_x = x;
-    VGA_data.cursor_y = y;
+    _vga_data.cursor_x = x;
+    _vga_data.cursor_y = y;
 }
 
 void VGA_clrscr() {
-    for (int y = 0; y < VGA_data.height; y++)
-        for (int x = 0; x < VGA_data.width; x++) {
+    for (int y = 0; y < _vga_data.height; y++) {
+        for (int x = 0; x < _vga_data.width; x++) {
             VGA_putchr(x, y, (char)(uintptr_t)NULL);
-            VGA_putcolor(x, y, VGA_data.color);
+            VGA_putcolor(x, y, _vga_data.color);
         }
+    }
 
-    VGA_data.cursor_x = 0;
-    VGA_data.cursor_y = 0;
+    _vga_data.cursor_x = 0;
+    _vga_data.cursor_y = 0;
 
-    VGA_setcursor(VGA_data.cursor_x, VGA_data.cursor_y);
+    VGA_setcursor(_vga_data.cursor_x, _vga_data.cursor_y);
 }
 
 void VGA_set_color(uint8_t color) {
-    for (int y = 0; y < VGA_data.height; y++)
-        for (int x = 0; x < VGA_data.width; x++) 
+    for (int y = 0; y < _vga_data.height; y++) {
+        for (int x = 0; x < _vga_data.width; x++) {
             VGA_putcolor(x, y, color);
+        }
+    }
 }
 
 void VGA_scrollback(int lines) {
-    for (int y = lines; y < VGA_data.height; y++)
-        for (int x = 0; x < VGA_data.width; x++){
+    for (int y = lines; y < _vga_data.height; y++) {
+        for (int x = 0; x < _vga_data.width; x++) {
             VGA_putchr(x, y - lines, VGA_getchr(x, y));
             VGA_putcolor(x, y - lines, VGA_getcolor(x, y));
         }
-
-    for (int x = 0; x < VGA_data.width; x++){
-        VGA_putchr(x, VGA_data.height - lines, 0);
-        VGA_putcolor(x, VGA_data.height - lines, VGA_data.color);
     }
 
-    VGA_data.cursor_y -= lines;
+    for (int x = 0; x < _vga_data.width; x++){
+        VGA_putchr(x, _vga_data.height - lines, 0);
+        VGA_putcolor(x, _vga_data.height - lines, _vga_data.color);
+    }
+
+    _vga_data.cursor_y -= lines;
 }
 
 void VGA_cputc(char c, uint8_t color) {
@@ -103,33 +104,32 @@ void VGA_putc(char c) {
     const int _tabSize = 4;
 
     switch (c) {
-        case '\n':                                          // New line
-            VGA_data.cursor_x = 0;
-            VGA_data.cursor_y++;
-        break;
-    
-        case '\t':                                          // Tabulation
-            for (int i = 0; i < _tabSize - (VGA_data.cursor_x % _tabSize); i++)
+        case '\n': {
+            _vga_data.cursor_x = 0;
+            _vga_data.cursor_y++;
+            break;
+        }
+        case '\t': {
+            for (int i = 0; i < _tabSize - (_vga_data.cursor_x % _tabSize); i++)
                 VGA_putc(' ');
-        break;
-
-        case '\r':                                          // Line start
-            VGA_data.cursor_x = 0;
-        break;
-
-        default:                                            // Write character
-            VGA_putchr(VGA_data.cursor_x , VGA_data.cursor_y, c);
-            VGA_data.cursor_x += 1;
-        break;
+            break;
+        }
+        case '\r': _vga_data.cursor_x = 0; break;
+        default: {
+            VGA_putchr(_vga_data.cursor_x , _vga_data.cursor_y, c);
+            _vga_data.cursor_x += 1;
+            break;
+        }
     }
 
-    if (VGA_data.cursor_x >= VGA_data.width) {                         // Next line when we reach the end of screen
-        VGA_data.cursor_y++;
-        VGA_data.cursor_x = 0;
+    if (_vga_data.cursor_x >= _vga_data.width) {
+        _vga_data.cursor_y++;
+        _vga_data.cursor_x = 0;
     }
 
-    if (VGA_data.cursor_y >= VGA_data.height)
+    if (_vga_data.cursor_y >= _vga_data.height) {
         VGA_scrollback(1);
+    }
 
-    VGA_setcursor(VGA_data.cursor_x, VGA_data.cursor_y);
+    VGA_setcursor(_vga_data.cursor_x, _vga_data.cursor_y);
 }

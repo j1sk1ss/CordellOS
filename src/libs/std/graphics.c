@@ -154,7 +154,7 @@ void display_str(int x, int y, char* str, uint32_t foreground, uint32_t backgrou
 
 void display_char(int x, int y, char c, uint32_t foreground, uint32_t background) {
     int char_w = _psf_get_width(get_font());
-    int char_h = _psf_get_height(get_font());
+    int char_h = psf_get_height(get_font());
 
     int bytesperline = (char_w + 7) / 8;
     uint8_t* glyph = PSF_get_glyph(_cur_font, c);

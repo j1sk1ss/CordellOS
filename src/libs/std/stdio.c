@@ -12,7 +12,7 @@ void __scrollback(int lines) {
 }
 
 void __newline() {
-    int char_h = _psf_get_height(get_font());
+    int char_h = psf_get_height(get_font());
     int max_h = get_resolution_y();
 
     _curr_x = 0;

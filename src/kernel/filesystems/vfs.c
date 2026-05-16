@@ -1,11 +1,9 @@
-#include "../include/vfs.h"
+#include <vfs.h>
 
-
-static vfs_node_t* vfs_list = NULL;
+static vfs_node_t* _vfs_list = NULL;
 vfs_node_t* current_vfs = NULL;
 
-
-vfs_node_t* _fat_vfs_setup(vfs_node_t* node) {
+static vfs_node_t* _fat_vfs_setup(vfs_node_t* node) {
     node->read       = FAT_read_content2buffer;
     node->read_stop  = FAT_read_content2buffer_stop;
     node->write      = FAT_write_buffer2content;
@@ -23,28 +21,24 @@ vfs_node_t* _fat_vfs_setup(vfs_node_t* node) {
 }
 
 int VFS_initialize(ata_dev_t* dev, uint32_t fs_type) {
-    vfs_list = (vfs_node_t*)ALC_malloc(sizeof(vfs_node_t), KERNEL);
-    if (!vfs_list) {
-        return 0;
-    }
-
-    vfs_list->fs_type = fs_type;
-    vfs_list->device  = dev;
+    _vfs_list = (vfs_node_t*)ALC_malloc(sizeof(vfs_node_t), KERNEL);
+    if (!_vfs_list) return 0;
+    
+    _vfs_list->fs_type = fs_type;
+    _vfs_list->device  = dev;
 
     if (fs_type == FAT_FS) {
-        _fat_vfs_setup(vfs_list);
+        _fat_vfs_setup(_vfs_list);
     } 
 
-    current_vfs = vfs_list;
+    current_vfs = _vfs_list;
     return 1;
 }
 
 int VFS_add_node(ata_dev_t* dev, uint32_t fs_type) {
     vfs_node_t* new_node = ALC_malloc(sizeof(vfs_node_t), KERNEL);
-    if (!new_node) {
-        return 0;
-    }
-
+    if (!new_node) return 0;
+    
     new_node->fs_type = fs_type;
     new_node->device  = dev;
 
@@ -52,7 +46,7 @@ int VFS_add_node(ata_dev_t* dev, uint32_t fs_type) {
         _fat_vfs_setup(new_node);
     }
 
-    vfs_node_t* cur = vfs_list;
+    vfs_node_t* cur = _vfs_list;
     while (cur->next != NULL) cur = cur->next;
     cur->next = new_node;
     return 0;

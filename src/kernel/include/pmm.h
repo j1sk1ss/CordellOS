@@ -3,14 +3,11 @@
 
 #include <memory.h>
 #include <stdint.h>
-
-#include "kstdio.h"
-
+#include <kstdio.h>
 
 #define MEM_OFFSET      0x10000
 #define BLOCK_SIZE      4096     // Size of 1 block of memory, 4KB
 #define BLOCKS_PER_BYTE 8        // Using a bitmap, each byte will hold 8 bits/blocks
-
 
 typedef struct pmm_map {
     uint32_t* memory_map;
@@ -18,10 +15,7 @@ typedef struct pmm_map {
     uint32_t used_blocks;
 } pmma_map_t;
 
-
-// Global variables
 extern pmma_map_t PMM_map;
-
 
 int PMM_init(const uint32_t start_address, size_t size);
 int PMM_deinitialize_memory_region(const uint32_t base_address, size_t size);

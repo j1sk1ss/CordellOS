@@ -1,14 +1,14 @@
-#include "../include/vmm.h"
+#include <vmm.h>
 
-static directories_t dirs = { .curr = NULL, .kern = NULL };
+static directories_t _dirs = { .curr = NULL, .kern = NULL };
 directories_t* VMM_get_dirs() {
-    return &dirs;
+    return &_dirs;
 }
 
 int VMM_set_directory(pdir_t* pd) {
     if (!pd) return false;
-    dirs.curr = pd;
-    asm("mov %0, %%cr3":: "r"(dirs.curr));
+    _dirs.curr = pd;
+    asm("mov %0, %%cr3":: "r"(_dirs.curr));
     return true;
 }
 
@@ -60,7 +60,7 @@ uint32_t VMM_mkpage(p_addr_t p_addr, uint8_t type) {
 }
 
 pt_entry_t* VMM_get_page(const v_addr_t address) {
-    pdir_t* pd = dirs.curr; 
+    pdir_t* pd = _dirs.curr; 
     pd_entry_t* entry = &pd->entries[PD_INDEX(address)];
     ptable_t* table = (ptable_t*)PAGE_PHYS_ADDRESS(entry);
     return &table->entries[PT_INDEX(address)];
@@ -102,7 +102,7 @@ static int _map_table(pdir_t* pd, ptable_t* table, uint8_t type, size_t index) {
 }
 
 static int _map_page(void* p_addr, void* v_addr, uint8_t type) {
-    pdir_t* pd = dirs.curr;
+    pdir_t* pd = _dirs.curr;
     pd_entry_t* entry = &pd->entries[PD_INDEX((v_addr_t)v_addr)];
     if ((*entry & PDE_PRESENT) != PDE_PRESENT) {
         ptable_t* table = (ptable_t*)PMM_allocate_blocks(1);
@@ -148,7 +148,7 @@ void VMM_free_table(ptable_t* table) {
 }
 
 p_addr_t VMM_virtual2physical(void* v_addr) {
-    pdir_t* pd = dirs.curr;
+    pdir_t* pd = _dirs.curr;
     pd_entry_t* pd_entry_t = &pd->entries[PD_INDEX((v_addr_t)v_addr)];
     if ((*pd_entry_t & PTE_PRESENT) != PTE_PRESENT) return 0;
 
@@ -166,17 +166,17 @@ static void _page_fault(struct Registers* regs) {
     asm ("mov %%cr2, %0" : "=r" (faulting_address));
 
     int not_present = !(regs->error & 0x1); // When set, the page fault was caused by a page-protection violation. When not set, it was caused by a non-present page.
-    int write	     = regs->error & 0x2;	 // When set, the page fault was caused by a write access. When not set, it was caused by a read access.
-    int us		 = regs->error & 0x4;	 // When set, the page fault was caused while CPL = 3. This does not necessarily mean that the page fault was a privilege violation.
-    int reserved = regs->error & 0x8;	 // When set, one or more page directory entries contain reserved bits which are set to 1. This only applies when the PSE or PAE flags in CR4 are set to 1.
-    int id		 = regs->error & 0x10;	 // When set, the page fault was caused by an instruction fetch. This only applies when the No-Execute bit is supported and enabled.
+    int write	     = regs->error & 0x2;	// When set, the page fault was caused by a write access. When not set, it was caused by a read access.
+    int us		 = regs->error & 0x4;	    // When set, the page fault was caused while CPL = 3. This does not necessarily mean that the page fault was a privilege violation.
+    int reserved = regs->error & 0x8;	    // When set, one or more page directory entries contain reserved bits which are set to 1. This only applies when the PSE or PAE flags in CR4 are set to 1.
+    int id		 = regs->error & 0x10;	    // When set, the page fault was caused by an instruction fetch. This only applies when the No-Execute bit is supported and enabled.
 
     kprintf("\nWHOOOPS..\nPAGE FAULT! (\t");
     if (not_present) kprintf("NOT PRESENT\t"); else kprintf("PAGE PROTECTION\t");
     if (write)       kprintf("WRITE\t");       else kprintf("READ\t");
-    if (us)       kprintf("USERMODE\t");
-    if (reserved) kprintf("RESERVED\t");
-    if (id)       kprintf("INST FETCH\t");
+    if (us)          kprintf("USERMODE\t");
+    if (reserved)    kprintf("RESERVED\t");
+    if (id)          kprintf("INST FETCH\t");
     kprintf(") AT 0x%p\n", faulting_address);
     kprintf("EIP=0x%p ESP=0x%p EBP=0x%p ERROR=0x%p\n", regs->eip, regs->esp, regs->ebp, regs->error);
     kprintf("CHECK YOUR CODE, BUDDY!\n");
@@ -204,7 +204,7 @@ int VMM_init(uint32_t memory_start) {
     }
     
     if (!VMM_set_directory(dir)) return 0;
-    dirs.kern = dir;
+    _dirs.kern = dir;
 
 	uint32_t cr0 = 0;
 	asm("mov %%cr0, %0": "=r"(cr0));

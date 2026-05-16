@@ -1,19 +1,17 @@
 #ifndef VMM_H_
 #define VMM_H_
 
-#include <stdbool.h>
 #include <string.h>
+#include <isr.h>
+#include <pmm.h>
 
-#include "isr.h"
-#include "pmm.h"
+#define PAGES_PER_TABLE              1024
+#define TABLES_PER_DIRECTORY         1024
+#define PAGE_SIZE                    4096
 
-#define PAGES_PER_TABLE      1024
-#define TABLES_PER_DIRECTORY 1024
-#define PAGE_SIZE            4096
-
-#define USER_MEMORY_START   0xC0000000
-#define USER_PAGES          64
-#define USER_TABLE_INDEX    1024
+#define USER_MEMORY_START            0xC0000000
+#define USER_PAGES                   64
+#define USER_TABLE_INDEX             1024
 
 #define PD_INDEX(address)            ((address) >> 22)
 #define PT_INDEX(address)            (((address) >> 12) & 0x3FF) // Max index 1023 = 0x3FF
@@ -24,8 +22,8 @@
 #define SET_FRAME(entry, address)    (*entry = (*entry & ~0x7FFFF000) | address)   // Only set address/frame, not flags
 #define OFFSET_IN_PAGE(address)      ((uint32_t)(address) & 0xFFF)
 
-typedef uint32_t pt_entry_t; // Page table entry
-typedef uint32_t pd_entry_t; // Page directory entry
+typedef uint32_t pt_entry_t;
+typedef uint32_t pd_entry_t;
 typedef uint32_t p_addr_t; 
 typedef uint32_t v_addr_t; 
 
@@ -76,22 +74,18 @@ typedef struct {
 
 directories_t* VMM_get_dirs();
 int VMM_init(uint32_t kernell_address);
-
 pdir_t* VMM_mkpdir();
 int VMM_set_directory(pdir_t* pd);
 void VMM_free_pdir(pdir_t* pd);
 void VMM_copy_dir2dir(pdir_t* src, pdir_t* dest);
-
 ptable_t* VMM_mkptable(uint32_t p_addr, uint8_t type);
 void VMM_free_table(ptable_t* table);
-
 uint32_t VMM_mkpage(p_addr_t p_addr, uint8_t type);
 pt_entry_t* VMM_get_page(const v_addr_t address);
 void VMM_free_page(pt_entry_t* page);
 int VMM_kmap_page(void* phys_address, void* virt_address);
 int VMM_umap_page(void* phys_address, void* virt_address);
 void VMM_unmap_page(void* virt_address);
-
 p_addr_t VMM_virtual2physical(void* virt_address);
 
 #endif

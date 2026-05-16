@@ -34,6 +34,6 @@ typedef struct {
 uint8_t* PSF_get_glyph(uint8_t* _font_structure, uint8_t symbolnumber);
 uint8_t _psf_get_version(uint8_t*_font_structure);
 uint32_t _psf_get_width(uint8_t* _font_structure);
-uint32_t _psf_get_height(uint8_t* _font_structure);
+uint32_t psf_get_height(uint8_t* _font_structure);
 
 #endif

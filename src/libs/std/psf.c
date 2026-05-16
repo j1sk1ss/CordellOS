@@ -37,7 +37,7 @@ uint32_t _psf_get_width(uint8_t* _font_structure) {
     return ((PSF_font*)_font_structure)->width;
 }
 
-uint32_t _psf_get_height(uint8_t* _font_structure) {
+uint32_t psf_get_height(uint8_t* _font_structure) {
     uint8_t version = _psf_get_version(_font_structure);
     if ( version == VERSION_PSF1) {
         return ((PSF1_Header*)_font_structure)->characterSize;
