@@ -17,6 +17,18 @@
 
 	static Content* _content_table[CONTENT_TABLE_SIZE] = { NULL };
 
+	#define FAT_STATIC_BUFFER_SECTORS 128
+	#define FAT_STATIC_BUFFER_SIZE    (SECTOR_SIZE * FAT_STATIC_BUFFER_SECTORS)
+
+	static uint8_t _fat_boot_buffer[SECTOR_SIZE] = { 0 };
+	static uint8_t _fat_table_buffer[FAT_STATIC_BUFFER_SIZE] = { 0 };
+	static uint8_t _fat_cluster_buffer[FAT_STATIC_BUFFER_SIZE] = { 0 };
+	static uint8_t _fat_content_buffer[FAT_STATIC_BUFFER_SIZE] = { 0 };
+
+	static int _fat_cluster_fits_static_buffer() {
+		return FAT_data.sectors_per_cluster <= FAT_STATIC_BUFFER_SECTORS;
+	}
+
 //========================================================================================
 //   ____   ___   ___ _____   ____  _____ ____ _____ ___  ____  
 //  | __ ) / _ \ / _ \_   _| / ___|| ____/ ___|_   _/ _ \|  _ \ 
@@ -80,8 +92,8 @@
 
 	int FAT_initialize() {
 		uint32_t volume_start_lba = 0;
-		uint8_t* cluster_data = ATA_read_sector(0);
-		if (!cluster_data) {
+		uint8_t* cluster_data = _fat_boot_buffer;
+		if (ATA_read_sector(0, cluster_data) != 1) {
 			LOG("Function FAT_initialize: Error reading the first sector of FAT!\n");
 			return -1;
 		}
@@ -89,15 +101,13 @@
 		fat_BS_t* bootstruct = (fat_BS_t*)cluster_data;
 		if (!_is_valid_bpb(bootstruct, cluster_data)) {
 			volume_start_lba = _find_fat_partition_lba(cluster_data);
-			ALC_free(cluster_data, KERNEL);
 
 			if (volume_start_lba == 0) {
 				LOG("Function FAT_initialize: no valid FAT boot sector or FAT partition found.\n");
 				return -1;
 			}
 
-			cluster_data = ATA_read_sector(volume_start_lba);
-			if (!cluster_data) {
+			if (ATA_read_sector(volume_start_lba, cluster_data) != 1) {
 				LOG("Function FAT_initialize: Error reading FAT partition boot sector!\n");
 				return -1;
 			}
@@ -105,7 +115,6 @@
 			bootstruct = (fat_BS_t*)cluster_data;
 			if (!_is_valid_bpb(bootstruct, cluster_data)) {
 				LOG("Function FAT_initialize: FAT partition boot sector has invalid BPB fields.\n");
-				ALC_free(cluster_data, KERNEL);
 				return -1;
 			}
 		}
@@ -117,7 +126,6 @@
 		uint32_t metadata_sectors = bootstruct->reserved_sector_count + (bootstruct->table_count * FAT_data.fat_size) + root_dir_sectors;
 		if (FAT_data.total_sectors <= metadata_sectors) {
 			LOG("Function FAT_initialize: FAT metadata is larger than the volume.\n");
-			ALC_free(cluster_data, KERNEL);
 			return -1;
 		}
 
@@ -138,7 +146,11 @@
 		FAT_data.ext_root_cluster = ((fat_extBS_32_t*)(bootstruct->extended_section))->root_cluster;
 		FAT_data.cluster_size = FAT_data.bytes_per_sector * FAT_data.sectors_per_cluster;
 
-		ALC_free(cluster_data, KERNEL);
+		if (!_fat_cluster_fits_static_buffer()) {
+			LOG("Function FAT_initialize: FAT cluster is larger than the static FAT buffer.\n");
+			return -1;
+		}
+
 		for (int i = 0; i < CONTENT_TABLE_SIZE; i++) {
 			_content_table[i] = NULL;
 		}
@@ -169,8 +181,8 @@
 		);
 
 		uint32_t fat_offset = cluster * (FAT_data.fat_type == 16 ? 2 : 4);
-		uint8_t* cluster_data = ATA_read_sectors(FAT_data.first_fat_sector + (fat_offset / FAT_data.cluster_size), FAT_data.sectors_per_cluster);
-		if (cluster_data == NULL) {
+		uint8_t* cluster_data = _fat_table_buffer;
+		if (ATA_read_sectors(FAT_data.first_fat_sector + (fat_offset / FAT_data.cluster_size), cluster_data, FAT_data.sectors_per_cluster) != 1) {
 			kprintf("[%s %i] Function __read_fat: Could not read sector that contains FAT32 table entry needed.\n", __FILE__, __LINE__);
 			return -1;
 		}
@@ -178,7 +190,6 @@
 		uint32_t table_value = *(uint32_t*)&cluster_data[fat_offset % FAT_data.cluster_size];
 		if (FAT_data.fat_type == 32) table_value &= 0x0FFFFFFF;
 
-		ALC_free(cluster_data, KERNEL);
 		return table_value;
 	}
 
@@ -201,8 +212,8 @@
 		uint32_t fat_offset = cluster * (FAT_data.fat_type == 16 ? 2 : 4);
 		uint32_t fat_sector = FAT_data.first_fat_sector + (fat_offset / FAT_data.cluster_size);
 		
-		uint8_t* cluster_data = ATA_read_sectors(fat_sector, FAT_data.sectors_per_cluster);
-		if (cluster_data == NULL) {
+		uint8_t* cluster_data = _fat_table_buffer;
+		if (ATA_read_sectors(fat_sector, cluster_data, FAT_data.sectors_per_cluster) != 1) {
 			kprintf("Function __write_fat: Could not read sector that contains FAT32 table entry needed.\n");
 			return -1;
 		}
@@ -213,7 +224,6 @@
 			return -1;
 		}
 
-		ALC_free(cluster_data, KERNEL);
 		return 0;
 	}
 
@@ -331,26 +341,22 @@
 // This function deals in absolute data clusters
 
 	// Read cluster with seek
-	static uint8_t* _cluster_readoff(uint32_t cluster, uint32_t offset) {
+	static int _cluster_readoff(uint32_t cluster, uint32_t offset, uint8_t* buffer) {
 		assert(cluster >= 2 && cluster < FAT_data.total_clusters);
 		uint32_t start_sect = (cluster - 2) * (uint16_t)FAT_data.sectors_per_cluster + FAT_data.first_data_sector;
-		uint8_t* cluster_data = ATA_readoff_sectors(start_sect, offset, FAT_data.sectors_per_cluster);
-		assert(cluster_data);
-		return cluster_data;
+		return ATA_readoff_sectors(start_sect, offset, buffer, FAT_data.sectors_per_cluster);
 	}
 
 	// Read cluster data
-	static uint8_t* _cluster_read(uint32_t cluster) {
-		return _cluster_readoff(cluster, 0);
+	static int _cluster_read(uint32_t cluster, uint8_t* buffer) {
+		return _cluster_readoff(cluster, 0, buffer);
 	}
 
 	// Read cluster data and stop reading when script meets one of stop values with seek
-	static uint8_t* _cluster_readoff_stop(uint32_t cluster, uint32_t offset, uint8_t* stop) {
+	static int _cluster_readoff_stop(uint32_t cluster, uint32_t offset, uint8_t* buffer, uint8_t* stop) {
 		assert(cluster >= 2 && cluster < FAT_data.total_clusters);
 		uint32_t start_sect = (cluster - 2) * (uint16_t)FAT_data.sectors_per_cluster + FAT_data.first_data_sector;
-		uint8_t* cluster_data = ATA_readoff_sectors_stop(start_sect, offset, FAT_data.sectors_per_cluster, stop);
-		assert(cluster_data);
-		return cluster_data;
+		return ATA_readoff_sectors_stop(start_sect, offset, buffer, FAT_data.sectors_per_cluster, stop);
 	}
 
 //========================================================================================
@@ -395,7 +401,7 @@
 		
 		uint32_t first = (source - 2) * (uint16_t)FAT_data.sectors_per_cluster + FAT_data.first_data_sector;
 		uint32_t second = (destination - 2) * (uint16_t)FAT_data.sectors_per_cluster + FAT_data.first_data_sector;
-		return ATA_copy_sectors2sectors(first, second, FAT_data.sectors_per_cluster);
+		return ATA_copy_sectors2sectors(first, FAT_data.sectors_per_cluster, second);
 	}
 
 //========================================================================================
@@ -457,8 +463,8 @@
 		if (exclusive == 0) attributes_to_hide &= (~attrs);
 		else if (exclusive == 1) attributes_to_hide = (~attrs);
 
-		uint8_t* cluster_data = _cluster_read(cluster);
-		if (cluster_data == NULL) {
+		uint8_t* cluster_data = _fat_cluster_buffer;
+		if (_cluster_read(cluster, cluster_data) != 1) {
 			kprintf("Function FAT_directory_list: _cluster_read encountered an error. Aborting...\n");
 			FAT_unload_content_system(content);
 			return -1;
@@ -562,8 +568,8 @@
 		if (_name_check(searchName) != 0)
 			_name2fatname(searchName);
 
-		uint8_t* cluster_data = _cluster_read(cluster);
-		if (cluster_data == NULL) {
+		uint8_t* cluster_data = _fat_cluster_buffer;
+		if (_cluster_read(cluster, cluster_data) != 1) {
 			kprintf("Function _directory_search: _cluster_read encountered an error. Aborting...\n");
 			return -1;
 		}
@@ -582,11 +588,9 @@
 					if (_is_cluster_end(next_cluster, FAT_data.fat_type) == 1) break;
 					else if (next_cluster < 0) {
 						kprintf("Function _directory_search: __read_fat encountered an error. Aborting...\n");
-						ALC_free(cluster_data, KERNEL);
 						return -1;
 					} 
 					else {
-						ALC_free(cluster_data, KERNEL);
 						return _directory_search(filepart, next_cluster, file, entryOffset);
 					}
 				}
@@ -595,12 +599,10 @@
 				if (file != NULL) memcpy(file, file_metadata, sizeof(directory_entry_t));
 				if (entryOffset != NULL) *entryOffset = meta_pointer_iterator_count;
 
-				ALC_free(cluster_data, KERNEL);
 				return 0;
 			}
 		}
 
-		ALC_free(cluster_data, KERNEL);
 		return -2;
 	}
 
@@ -616,8 +618,8 @@
 // struct should only have a file name, attributes, and size. the rest will be filled in automatically
 
 	static int _directory_add(const uint32_t cluster, directory_entry_t* file_to_add) {
-		uint8_t* cluster_data = _cluster_read(cluster);
-		if (cluster_data == NULL) {
+		uint8_t* cluster_data = _fat_cluster_buffer;
+		if (_cluster_read(cluster, cluster_data) != 1) {
 			kprintf("Function _directory_add: _cluster_read encountered an error. Aborting...\n");
 			return -1;
 		}
@@ -636,18 +638,15 @@
 						next_cluster = _cluster_allocate();
 						if (_is_cluster_bad(next_cluster, FAT_data.fat_type) == 1) {
 							kprintf("Function _directory_add: allocation of new cluster failed. Aborting...\n");
-							ALC_free(cluster_data, KERNEL);
 							return -1;
 						}
 
 						if (__write_fat(cluster, next_cluster) != 0) {
 							kprintf("Function _directory_add: extension of the cluster chain with new cluster failed. Aborting...\n");
-							ALC_free(cluster_data, KERNEL);
 							return -1;
 						}
 					}
 
-					ALC_free(cluster_data, KERNEL);
 					return _directory_add(next_cluster, file_to_add);
 				}
 			}
@@ -662,7 +661,6 @@
 				uint32_t new_cluster = _cluster_allocate();
 				if (_is_cluster_bad(new_cluster, FAT_data.fat_type) == 1) {
 					kprintf("Function _directory_add: allocation of new cluster failed. Aborting...\n");
-					ALC_free(cluster_data, KERNEL);
 
 					return -1;
 				}
@@ -673,16 +671,13 @@
 				memcpy(file_metadata, file_to_add, sizeof(directory_entry_t));
 				if (_cluster_write(cluster_data, cluster) != 0) {
 					kprintf("Function _directory_add: Writing new directory entry failed. Aborting...\n");
-					ALC_free(cluster_data, KERNEL);
 					return -1;
 				}
 
-				ALC_free(cluster_data, KERNEL);
 				return 0;
 			}
 		}
 
-		ALC_free(cluster_data, KERNEL);
 		return -1; //return error.
 	}
 
@@ -702,8 +697,8 @@
 			return -1;
 		}
 
-		uint8_t* cluster_data = _cluster_read(cluster);
-		if (cluster_data == NULL) {
+		uint8_t* cluster_data = _fat_cluster_buffer;
+		if (_cluster_read(cluster, cluster_data) != 1) {
 			kprintf("Function _directory_edit: _cluster_read encountered an error. Aborting...\n");
 			return -1;
 		}
@@ -723,7 +718,6 @@
 				
 				if (_cluster_write(cluster_data, cluster) != 0) {
 					kprintf("Function _directory_edit: Writing updated directory entry failed. Aborting...\n");
-					ALC_free(cluster_data, KERNEL);
 					return -1;
 				}
 
@@ -739,16 +733,13 @@
 				uint32_t next_cluster = __read_fat(cluster);
 				if ((next_cluster >= END_CLUSTER_32 && FAT_data.fat_type == 32) || (next_cluster >= END_CLUSTER_16 && FAT_data.fat_type == 16) || (next_cluster >= END_CLUSTER_12 && FAT_data.fat_type == 12)) {
 					kprintf("Function _directory_edit: End of cluster chain reached. File not found. Aborting...\n");
-					ALC_free(cluster_data, KERNEL);
 					return -2;
 				}
 
-				ALC_free(cluster_data, KERNEL);
 				return _directory_edit(next_cluster, old_meta, new_name);
 			}
 		}
 
-		ALC_free(cluster_data, KERNEL);
 		return -1;
 	}
 
@@ -768,8 +759,8 @@
 			return -1;
 		}
 
-		uint8_t* cluster_data = _cluster_read(cluster);
-		if (cluster_data == NULL) {
+		uint8_t* cluster_data = _fat_cluster_buffer;
+		if (_cluster_read(cluster, cluster_data) != 1) {
 			kprintf("Function _directory_remove: _cluster_read encountered an error. Aborting...\n");
 			return -1;
 		}
@@ -781,7 +772,6 @@
 				file_metadata->file_name[0] = ENTRY_FREE;
 				if (_cluster_write(cluster_data, cluster) != 0) {
 					kprintf("Function _directory_remove: Writing updated directory entry failed. Aborting...\n");
-					ALC_free(cluster_data, KERNEL);
 					return -1;
 				}
 
@@ -795,16 +785,13 @@
 				uint32_t next_cluster = __read_fat(cluster);
 				if ((next_cluster >= END_CLUSTER_32 && FAT_data.fat_type == 32) || (next_cluster >= END_CLUSTER_16 && FAT_data.fat_type == 16) || (next_cluster >= END_CLUSTER_12 && FAT_data.fat_type == 12)) {
 					kprintf("Function _directory_remove: End of cluster chain reached. File not found. Aborting...\n");
-					ALC_free(cluster_data, KERNEL);
 					return -2;
 				}
 
-				ALC_free(cluster_data, KERNEL);
 				return _directory_remove(next_cluster, fileName);
 			}
 		}
 
-		ALC_free(cluster_data, KERNEL);
 		return -1; // Return error
 	}
 
@@ -1007,9 +994,10 @@
 
 		for (int i = cluster_seek; i < data->file->data_size && data_position < size; i++) {
 			uint32_t copy_size = min(SECTOR_SIZE * FAT_data.sectors_per_cluster - data_seek, size - data_position);
-			uint8_t* content_part = _cluster_readoff(data->file->data[i], data_seek);
+			uint8_t* content_part = _fat_content_buffer;
+			if (_cluster_readoff(data->file->data[i], data_seek, content_part) != 1) return -1;
+
 			memcpy(buffer + data_position, content_part, copy_size);
-			ALC_free(content_part, KERNEL);
 			data_position += copy_size;
 			data_seek = 0;
 		}
@@ -1033,10 +1021,10 @@
 		
 		for (int i = cluster_seek; i < data->file->data_size && data_position < size; i++) {
 			uint32_t copy_size = min(SECTOR_SIZE * FAT_data.sectors_per_cluster - data_seek, size - data_position);
-			uint8_t* content_part = _cluster_readoff_stop(data->file->data[i], data_seek, stop);
+			uint8_t* content_part = _fat_content_buffer;
+			if (_cluster_readoff_stop(data->file->data[i], data_seek, content_part, stop) != 1) return -1;
 
 			memcpy(buffer + data_position, content_part, copy_size);
-			ALC_free(content_part, KERNEL);
 			
 			data_position += copy_size;
 			data_seek = 0;

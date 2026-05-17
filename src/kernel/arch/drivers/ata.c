@@ -1,6 +1,6 @@
 // Thanks to https://wiki.osdev.org/ATA_PIO_Mode and https://github.com/szhou42/osdev/blob/master/src/kernel/drivers/ata.c#L267
 #include <ata.h>
-// TODO: use static memory rather than dynamic
+
 static pci_dev_t _ata_device               = { 0 };
 static struct ata_dev* _current_ata_device = NULL;
 static ata_dev_t _primary_master           = {.slave = 0};
@@ -212,16 +212,12 @@ static void _prepare_for_reading(uint32_t lba) {
     i386_outb(_current_ata_device->command, ATA_CMD_READ_PIO);
 }
 
-uint8_t* ATA_read_sector(uint32_t lba) {
+int ATA_read_sector(uint32_t lba, uint8_t* buffer) {
     _ata_wait();
-    uint8_t* buffer = (uint8_t*)ALC_malloc(SECTOR_SIZE, KERNEL);
-    if (!buffer) return NULL;
+    if (!buffer) return -1;
 
     _prepare_for_reading(lba);
-    if (!_is_ata_ready()) {
-        ALC_free(buffer, KERNEL);
-        return NULL;
-    }
+    if (!_is_ata_ready()) return -1;
 
     for (int n = 0; n < SECTOR_SIZE / 2; n++) {
         uint16_t value = i386_inw(_current_ata_device->data);
@@ -229,25 +225,21 @@ uint8_t* ATA_read_sector(uint32_t lba) {
         buffer[n * 2 + 1] = value >> 8;
     }
 
-    return buffer;
+    return 1;
 }
 
 // Return two values
 // stop == ERROR_SYMBOL (error), stop == STOP_SYMBOL (found)
-uint8_t* ATA_read_sector_stop(uint32_t lba, uint8_t* stop) {
+int ATA_read_sector_stop(uint32_t lba, uint8_t* buffer, uint8_t* stop) {
     _ata_wait();
-    uint8_t* buffer = (uint8_t*)ALC_malloc(SECTOR_SIZE, KERNEL);
-    if (!buffer) return NULL;
+    if (!buffer) return -1;
 
     uint8_t dummy_buffer[SECTOR_SIZE] = { 0 };
     uint8_t* buffer_pointer = buffer;
     memset(buffer, 0, SECTOR_SIZE);
     
     _prepare_for_reading(lba);
-    if (!_is_ata_ready()) {
-        ALC_free(buffer, KERNEL);
-        return NULL;
-    }
+    if (!_is_ata_ready()) return -1;
 
     for (int n = 0; n < SECTOR_SIZE / 2; n++) {
         uint16_t value = i386_inw(_current_ata_device->data);
@@ -266,24 +258,20 @@ uint8_t* ATA_read_sector_stop(uint32_t lba, uint8_t* stop) {
         }
     }
 
-    return buffer;
+    return 1;
 }
 
 // TODO: issue with pointer moving 
-uint8_t* ATA_read_sector_stopoff(uint32_t lba, uint32_t offset, uint8_t* stop) {
+int ATA_read_sector_stopoff(uint32_t lba, uint32_t offset, uint8_t* buffer, uint8_t* stop) {
     _ata_wait();
-    uint8_t* buffer = (uint8_t*)ALC_malloc(SECTOR_SIZE, KERNEL);
-    if (!buffer) return NULL;
+    if (!buffer) return -1;
 
     uint8_t dummy_buffer[SECTOR_SIZE] = { 0 };
     uint8_t* buffer_pointer = buffer;
     memset(buffer, 0, SECTOR_SIZE);
     
     _prepare_for_reading(lba);
-    if (!_is_ata_ready()) {
-        ALC_free(buffer, KERNEL);
-        return NULL;
-    }
+    if (!_is_ata_ready()) return -1;
     
     for (int n = 0; n < SECTOR_SIZE / 2; n++) {
         uint16_t value = i386_inw(_current_ata_device->data);
@@ -302,94 +290,88 @@ uint8_t* ATA_read_sector_stopoff(uint32_t lba, uint32_t offset, uint8_t* stop) {
         }
     }
     
-    return buffer;
+    return 1;
 }
 
 // Function to read a sectors from the disk.
-uint8_t* ATA_read_sectors(uint32_t lba, uint32_t sector_count) {
+int ATA_read_sectors(uint32_t lba, uint8_t* buffer, uint32_t sector_count) {
     _ata_wait();
-    uint8_t* buffer = (uint8_t*)ALC_malloc(SECTOR_SIZE * sector_count, KERNEL);
-    if (!buffer) return NULL;
+    if (!buffer) return -1;
 
     memset(buffer, 0, SECTOR_SIZE * sector_count);
     for (uint32_t i = 0; i < sector_count; i++) {
-        uint8_t* sector_data = ATA_read_sector(lba + i);
-        if (sector_data == NULL) return NULL;
-        
-        memcpy(buffer + i * SECTOR_SIZE, sector_data, SECTOR_SIZE);
-        ALC_free(sector_data, KERNEL);
+        if (ATA_read_sector(lba + i, buffer + i * SECTOR_SIZE) != 1) return -1;
     }
 
-    return buffer;
+    return 1;
 }
 
-uint8_t* ATA_readoff_sectors(uint32_t lba, uint32_t offset, uint32_t sector_count) {
+int ATA_readoff_sectors(uint32_t lba, uint32_t offset, uint8_t* buffer, uint32_t sector_count) {
     uint32_t sectors_seek = offset / SECTOR_SIZE;
     uint32_t data_seek = offset % SECTOR_SIZE;
+    if (!buffer || sector_count == 0 || sectors_seek >= sector_count) return -1;
+
     uint32_t size = (SECTOR_SIZE * (sector_count - 1)) + (SECTOR_SIZE - data_seek);
-    uint8_t* buffer = (uint8_t*)ALC_malloc(size, KERNEL);
-    if (!buffer) return NULL;
+    uint8_t sector_data[SECTOR_SIZE] = { 0 };
 
     memset(buffer, 0, size);
+    uint32_t data_position = 0;
     for (uint32_t i = sectors_seek; i < sector_count; i++) {
-        uint8_t* sector_data = ATA_read_sector(lba + i);
-        if (!sector_data) return NULL;
+        if (ATA_read_sector(lba + i, sector_data) != 1) return -1;
         
-        memcpy(buffer + i * (SECTOR_SIZE - data_seek), sector_data + data_seek, SECTOR_SIZE - data_seek);
-        ALC_free(sector_data, KERNEL);
+        uint32_t copy_size = SECTOR_SIZE - data_seek;
+        memcpy(buffer + data_position, sector_data + data_seek, copy_size);
+        data_position += copy_size;
 
         data_seek = 0;
     }
 
-    return buffer;
+    return 1;
 }
 
 // Return two values
 // data[0] - Find (1) or not found (0) stop data in data
 // data[1] - Loaded data from disk
-uint8_t* ATA_read_sectors_stop(uint32_t lba, uint32_t sector_count, uint8_t* stop) {
+int ATA_read_sectors_stop(uint32_t lba, uint8_t* buffer, uint32_t sector_count, uint8_t* stop) {
     _ata_wait();
-    uint8_t* buffer = (uint8_t*)ALC_malloc(SECTOR_SIZE * sector_count, KERNEL);
-    if (buffer == NULL) return NULL;
+    if (buffer == NULL) return -1;
 
     memset(buffer, 0, SECTOR_SIZE * sector_count);
     for (uint32_t i = 0; i < sector_count; i++) {
-        uint8_t* sector_data = ATA_read_sector_stop(lba + i, stop);
-        if (sector_data == NULL) return NULL;
-        
-        memcpy(buffer + i * SECTOR_SIZE, sector_data, SECTOR_SIZE);
-        ALC_free(sector_data, KERNEL);
+        if (ATA_read_sector_stop(lba + i, buffer + i * SECTOR_SIZE, stop) != 1) return -1;
 
         if (*stop == STOP_SYMBOL) break;
     }
 
-    return buffer;
+    return 1;
 }
 
 // Read sectors with start seek
 // Stop reading when meet stop value
-uint8_t* ATA_readoff_sectors_stop(uint32_t lba, uint32_t offset, uint32_t sector_count, uint8_t* stop) {
+int ATA_readoff_sectors_stop(uint32_t lba, uint32_t offset, uint8_t* buffer, uint32_t sector_count, uint8_t* stop) {
     _ata_wait();
 
     uint32_t sectors_seek = offset / SECTOR_SIZE;
     uint32_t data_seek    = offset % SECTOR_SIZE;
+    if (buffer == NULL || sector_count == 0 || sectors_seek >= sector_count) return -1;
+
     uint32_t size         = (SECTOR_SIZE * (sector_count - 1)) + (SECTOR_SIZE - data_seek);
-    uint8_t* buffer = (uint8_t*)ALC_malloc(size, KERNEL);
-    if (buffer == NULL) return NULL;
+    uint8_t sector_data[SECTOR_SIZE] = { 0 };
 
     memset(buffer, 0, size);
+    uint32_t data_position = 0;
     for (uint32_t i = sectors_seek; i < sector_count; i++) {
-        uint8_t* sector_data = ATA_read_sector_stopoff(lba + i, data_seek, stop);
-        if (sector_data == NULL) return NULL;
+        if (ATA_read_sector_stopoff(lba + i, data_seek, sector_data, stop) != 1) return -1;
         
-        memcpy(buffer + i * (SECTOR_SIZE - data_seek), sector_data + data_seek, SECTOR_SIZE - data_seek);
-        ALC_free(sector_data, KERNEL);
+        uint32_t copy_size = SECTOR_SIZE - data_seek;
+        memcpy(buffer + data_position, sector_data + data_seek, copy_size);
+        data_position += copy_size;
 
         data_seek = 0;
         if (*stop == STOP_SYMBOL) break;
     }
 
-    return buffer;
+    return 1;
 }
 
 static void _prepare_for_writing(uint32_t lba) {
@@ -479,8 +461,12 @@ int ATA_writeoff_sectors(uint32_t lba, const uint8_t* buffer, uint32_t sector_co
 
 int ATA_copy_sectors2sectors(uint32_t source_lba, uint32_t sector_count, uint32_t distenation_lba) {
     _ata_wait();
-    uint8_t* source = ATA_read_sectors(source_lba, sector_count);
-    int result = ATA_write_sectors(distenation_lba, source, sector_count);
-    ALC_free(source, KERNEL);
-    return result;
+    uint8_t source[SECTOR_SIZE] = { 0 };
+
+    for (uint32_t i = 0; i < sector_count; i++) {
+        if (ATA_read_sector(source_lba + i, source) != 1) return -1;
+        if (ATA_write_sector(distenation_lba + i, source) == -1) return -1;
+    }
+
+    return 1;
 }
