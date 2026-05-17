@@ -27,17 +27,27 @@ env.Append(
     ]
 )
 
+def _flatten(sources):
+    result = []
+    for source in sources:
+        if isinstance(source, (list, tuple)):
+            result += _flatten(source)
+        else:
+            result.append(source)
+    return result
+
 def _without_sources(sources, source_paths):
     excluded = set(env.File(path).srcnode().path for path in source_paths)
-    return [source for source in sources if source.srcnode().path not in excluded]
+    return [source for source in _flatten(sources) if source.srcnode().path not in excluded]
 
-c_sources = glob_recursive(env, '*.c')
-cpp_sources = glob_recursive(env, '*.cpp')
-asm_sources = glob_recursive(env, '*.asm')
+c_sources = _flatten(glob_recursive(env, '*.c'))
+cpp_sources = _flatten(glob_recursive(env, '*.cpp'))
+asm_sources = _flatten(glob_recursive(env, '*.asm'))
+asm_sources = [source for source in asm_sources if not source.name.endswith('_cpl.asm')]
 cpl_sources = []
 
 if env.get('enable_cpl', False):
-    cpl_sources = glob_recursive(env, '*.cpl')
+    cpl_sources = _flatten(glob_recursive(env, '*.cpl'))
     asm_sources = _without_sources(asm_sources, [
         'arch/i386/tss_asm.asm',
     ])

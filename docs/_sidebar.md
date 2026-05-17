@@ -1,4 +1,4 @@
-- [Overview](/)
+- [Overview](README.md)
 - [Getting Started](getting-started.md)
 - [Build Guide](build.md)
 - [Architecture](architecture.md)
