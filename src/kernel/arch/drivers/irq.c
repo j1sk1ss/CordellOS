@@ -31,7 +31,7 @@ int i386_irq_initialize() {
     _pic_driver->Initialize(PIC_REMAP_OFFSET, PIC_REMAP_OFFSET + 8, false);
 
     for (int i = 0; i < 16; i++) i386_isr_register_handler(PIC_REMAP_OFFSET + i, i386_irq_handler);
-    i386_enableInterrupts();
+    i386_enable_interrupts();
     _pic_driver->Unmask(2); // slave interrupt controller allowing for IRQ 8-15
     return 1;
 }

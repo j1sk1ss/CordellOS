@@ -5,6 +5,7 @@ from SCons.Variables import *
 from SCons.Environment import *
 from SCons.Node import *
 
+from build.cpl import setup_cpl_builders
 from build.utility import remove_suffix
 
 VARS = Variables('build_scripts/config.py', ARGUMENTS)
@@ -24,12 +25,52 @@ VARS.AddVariables(
     EnumVariable("image_file_system",
                  help="Type of image",
                  default="fat32",
-                 allowed_values=("fat12", "fat16", "fat32", "ext2"))    
+                 allowed_values=("fat12", "fat16", "fat32", "ext2")),
+    BoolVariable("enable_cpl",
+                 help="Build .cpl sources with the CPL compiler",
+                 default=False),
+    EnumVariable("cpl_object_mode",
+                 help="How CPL sources are turned into objects",
+                 default="asm",
+                 allowed_values=("asm", "object")),
     )
 
 VARS.Add("tool_chain", 
          help="Path to tool_chain directory.",
          default="../tool_chain")
+VARS.Add("cpl",
+         help="Path to CPL compiler binary.",
+         default="cpl")
+VARS.Add("cpl_flags",
+         help="Extra flags passed to the CPL compiler.",
+         default="")
+VARS.Add("cpl_emit_asm_flag",
+         help="CPL compiler flag for producing assembly.",
+         default="--emit-asm")
+VARS.Add("cpl_compile_flag",
+         help="CPL compiler flag for producing an object file.",
+         default="--compile")
+VARS.Add("cpl_link_flag",
+         help="CPL compiler flag for compiling and linking.",
+         default="--link")
+VARS.Add("cpl_output_flag",
+         help="CPL compiler output flag.",
+         default="-o")
+VARS.Add("cpl_include_prefix",
+         help="CPL compiler include path prefix.",
+         default="-I")
+VARS.Add("cpl_assembler_flag",
+         help="CPL compiler flag used to pass assembler executable.",
+         default="--assembler")
+VARS.Add("cpl_assembler_flags_flag",
+         help="CPL compiler flag used to pass assembler flags.",
+         default="--assembler-flags")
+VARS.Add("cpl_linker_flag",
+         help="CPL compiler flag used to pass linker executable.",
+         default="--linker")
+VARS.Add("cpl_linker_flags_flag",
+         help="CPL compiler flag used to pass linker flags.",
+         default="--linker-flags")
 
 DEPS = {
     'binutils': '2.37',
@@ -118,6 +159,23 @@ TARGET_ENVIRONMENT.Append(
     LIBS    = ['gcc'],
     LIBPATH = [ str(tool_chainGccLibs) ],
 )
+
+TARGET_ENVIRONMENT.Replace(
+    CPL                 = TARGET_ENVIRONMENT['cpl'],
+    CPLFLAGS            = TARGET_ENVIRONMENT.Split(TARGET_ENVIRONMENT['cpl_flags']),
+    CPL_OBJECT_MODE     = TARGET_ENVIRONMENT['cpl_object_mode'],
+    CPLEMITASMFLAG      = TARGET_ENVIRONMENT['cpl_emit_asm_flag'],
+    CPLCOMPILEFLAG      = TARGET_ENVIRONMENT['cpl_compile_flag'],
+    CPLLINKFLAG         = TARGET_ENVIRONMENT['cpl_link_flag'],
+    CPLOUTPUTFLAG       = TARGET_ENVIRONMENT['cpl_output_flag'],
+    CPLINCPREFIX        = TARGET_ENVIRONMENT['cpl_include_prefix'],
+    CPLASOPTION         = TARGET_ENVIRONMENT['cpl_assembler_flag'],
+    CPLASFLAGSOPTION    = TARGET_ENVIRONMENT['cpl_assembler_flags_flag'],
+    CPLLDOPTION         = TARGET_ENVIRONMENT['cpl_linker_flag'],
+    CPLLINKFLAGSOPTION  = TARGET_ENVIRONMENT['cpl_linker_flags_flag'],
+)
+
+setup_cpl_builders(TARGET_ENVIRONMENT)
 
 TARGET_ENVIRONMENT['ENV']['PATH'] += os.pathsep + str(tool_chainBin)
 

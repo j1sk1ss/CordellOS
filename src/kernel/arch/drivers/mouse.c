@@ -102,7 +102,7 @@ int i386_init_mouse(int show_mouse) {
     _screen_state.x = -1;
     _screen_state.y = -1;
 
-    i386_disableInterrupts();
+    i386_disable_interrupts();
 
 	uint8_t status = 0;
 	__mouse_wait(1);
@@ -128,7 +128,7 @@ int i386_init_mouse(int show_mouse) {
 
 	i386_irq_registerHandler(MOUSE_IRQ, i386_mouse_handler);
 
-    i386_enableInterrupts();
+    i386_enable_interrupts();
     _is_mouse_showing = show_mouse;
     return 1;
 }

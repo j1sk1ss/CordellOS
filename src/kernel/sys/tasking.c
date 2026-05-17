@@ -10,7 +10,7 @@ TaskManager taskManager = { // Task manager placed in kernel space
 
 void TASK_start_tasking() {
 	if (taskManager.tasksCount <= 0 || taskManager.tasks[0] == NULL || taskManager.tasks[0]->cpuState == NULL) return;
-	i386_disableInterrupts();
+	i386_disable_interrupts();
 
 	taskManager.currentTask = 0;
 	taskManager.tasking     = 1;
@@ -215,12 +215,12 @@ void TASK_task_switch(struct Registers* regs) {
 	if (task == NULL) return;
 	if (task->cpuState == NULL) return;
 
-	i386_disableInterrupts();
+	i386_disable_interrupts();
 
 	if (task->exec_time > task->delay) task->exec_time = 0;
 	else {
 		task->exec_time++;
-		i386_enableInterrupts();
+		i386_enable_interrupts();
 		return;
 	}
 
@@ -244,14 +244,14 @@ void TASK_task_switch(struct Registers* regs) {
 
 	if (new_task == NULL || new_task->state != PROCESS_STATE_ALIVE) {
 		taskManager.tasking = 0;
-		i386_enableInterrupts();
+		i386_enable_interrupts();
 		return;
 	}
 
 	// Load task CPU state and page directory
 	if (new_task->cpuState == NULL) {
 		taskManager.tasking = 0;
-		i386_enableInterrupts();
+		i386_enable_interrupts();
 		return;
 	}
 	memcpy(regs, new_task->cpuState, sizeof(struct Registers));
@@ -259,5 +259,5 @@ void TASK_task_switch(struct Registers* regs) {
 		if (new_task->page_directory != task->page_directory)
 			VMM_set_directory(new_task->page_directory);
 
-	i386_enableInterrupts();
+	i386_enable_interrupts();
 }

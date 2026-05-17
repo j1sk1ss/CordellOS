@@ -15,6 +15,11 @@ env.Append(
         env.Dir('include').srcnode(),
         env['PROJECTDIR'].Dir('src/libs/include')
     ],
+    CPLPATH = [
+        env.Dir('.').srcnode(),
+        env.Dir('include').srcnode(),
+        env['PROJECTDIR'].Dir('src/libs/include')
+    ],
     ASFLAGS = [
         '-I', env.Dir('.').srcnode(),
         '-I', env.Dir('include').srcnode(),
@@ -22,12 +27,24 @@ env.Append(
     ]
 )
 
-# Add boot.s to the sources
-sources = glob_recursive(env, '*.c') + \
-          glob_recursive(env, '*.cpp') + \
-          glob_recursive(env, '*.asm')
+def _without_sources(sources, source_paths):
+    excluded = set(env.File(path).srcnode().path for path in source_paths)
+    return [source for source in sources if source.srcnode().path not in excluded]
 
-objects = env.Object(sources)
+c_sources = glob_recursive(env, '*.c')
+cpp_sources = glob_recursive(env, '*.cpp')
+asm_sources = glob_recursive(env, '*.asm')
+cpl_sources = []
+
+if env.get('enable_cpl', False):
+    cpl_sources = glob_recursive(env, '*.cpl')
+    asm_sources = _without_sources(asm_sources, [
+        'arch/i386/tss_asm.asm',
+    ])
+
+objects = env.Object(c_sources + cpp_sources + asm_sources)
+if cpl_sources:
+    objects += env.CPLObject(cpl_sources)
 
 # Add font processing
 font_file = 'font.psf'

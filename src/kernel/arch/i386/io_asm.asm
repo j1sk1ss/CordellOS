@@ -12,12 +12,12 @@ i386_panic:
     cli
     hlt
 
-global i386_enableInterrupts
-i386_enableInterrupts:
+global i386_enable_interrupts
+i386_enable_interrupts:
     sti
     ret
 
-global i386_disableInterrupts
-i386_disableInterrupts:
+global i386_disable_interrupts
+i386_disable_interrupts:
     cli
     ret

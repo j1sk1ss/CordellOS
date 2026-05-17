@@ -10,8 +10,8 @@
 
 void __attribute__((cdecl)) i386_outb(uint16_t port, uint8_t data);
 uint8_t __attribute__((cdecl)) i386_inb(uint16_t port);
-uint8_t __attribute__((cdecl)) i386_enableInterrupts();
-uint8_t __attribute__((cdecl)) i386_disableInterrupts();
+uint8_t __attribute__((cdecl)) i386_enable_interrupts();
+uint8_t __attribute__((cdecl)) i386_disable_interrupts();
 
 char __attribute__((cdecl)) i386_inputWait();
 

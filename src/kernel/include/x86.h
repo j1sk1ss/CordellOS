@@ -23,8 +23,8 @@ void mem_outw(uint32_t addr, uint16_t value);
 uint8_t mem_inb(uint32_t addr);
 void mem_outb(uint32_t addr, uint8_t value);
 
-uint8_t __attribute__((cdecl)) i386_enableInterrupts();
-uint8_t __attribute__((cdecl)) i386_disableInterrupts();
+uint8_t __attribute__((cdecl)) i386_enable_interrupts();
+uint8_t __attribute__((cdecl)) i386_disable_interrupts();
 
 void __attribute__((cdecl)) i386_switch2user(void* entry, void* stack);
 void __attribute__((cdecl)) i386_panic();
