@@ -1,28 +1,31 @@
-# CordellOS.MPRJ
-Simple OS based on .asm / .c double stage boot loader, and .c / .cpp based kernel with GCC .c / .cpp compiler. 
-</br>
-For building you can download image in packages, then run container with next commands:</br>
+# CordellOS
+Simple OS based on .asm / .c double stage boot loader, and .c / .cpp based kernel with GCC .c / .cpp compiler. </br>
+For building you can download an image in packages, then run a container with the next command:
 
-    docker run -it -v [path to your project]:/home/os-dev/project --privileged=true --rm ghcr.io/j1sk1ss/os-dev-env:v02
-
-                    
+```bash
+docker run -it -v [path to your project]:/home/os-dev/project --privileged=true --rm ghcr.io/j1sk1ss/os-dev-env:v02
+```
+   
 Where:</br>
--it - means that when you run this container you will get command line (fedora 38)</br>
--v [path]:[path] - means that we connect your project with container directory</br>
---privileged=true - needs for working with dev loop (Optional for creating images of OS)</br>
---rm - delete container after use (Optional)</br>
-</br></br>
-Before compile be sure that your script has right link to tool_chain. In this container tool_chain placed in 
+- `-it` - means that when you run this container you will get command line (fedora 38) </br>
+- `-v [path]:[path]` - means that we connect your project with container directory </br>
+- `--privileged=true` - needs for working with dev loop (Optional for creating images of OS) </br>
+- `--rm` - delete container after use (Optional) 
 
-    /home/os-dev/tool_chain
+Or just use the next script:
+```bash
+./build.sh
+```
 
-Used GCC 11.2.0</br>
-And used binutils 2.37</br>
+P.S.: *Before compile be sure that your script has right link to tool_chain. In this container tool_chain is placed in the `/home/os-dev/tool_chain` directory* </br>
 
-Also this container contains fedora 38, gcc, gcc-c++, make, bison, flex, gmp-devel, libmpc-devel, mpfr-devel, texinfo, nasm, mtools, qemu-system-x86, and grub tools.</br>
-This container tested in MacOS 10.15, Windows 10 (On win10 can be problems with image building. But compiling works fine) and Fedora 38</br> 
-    
-</br>
+Dependencies:
+- GCC 11.2.0
+- CPL 3.5
+- Binutils 2.37
+
+Also this container contains fedora 38, gcc, gcc-c++, make, bison, flex, gmp-devel, libmpc-devel, mpfr-devel, texinfo, nasm, mtools, qemu-system-x86, and grub tools. </br>
+This container tested on MacOS (10.15), Windows 10 (On win10 can be problems with image building. But compiling works fine) and Fedora 38 </br> 
 
 | TODO List:                             |Status:  | Features:                                                     |
 |----------------------------------------|---------|---------------------------------------------------------------|
@@ -76,7 +79,5 @@ This container tested in MacOS 10.15, Windows 10 (On win10 can be problems with 
 | **12) KShell to ELF program**          |[&check;]|                                                               |
 |    12.1) MEM-DATA progs                |[&check;]|                                                               |
 | **13) DOOM?**                          |[ ]      |                                                               |
-
-
 
 ![Alt Text](https://github.com/j1sk1ss/CordellOS.MPRJ/blob/main/cover.png)

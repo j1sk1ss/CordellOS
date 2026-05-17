@@ -1,11 +1,11 @@
+# Thanks to nanobyte's series of OS building
 from pathlib import Path
 
 from SCons.Variables import *
 from SCons.Environment import *
 from SCons.Node import *
 
-from scons_scripts.utility import remove_suffix
-
+from build.utility import remove_suffix
 
 VARS = Variables('build_scripts/config.py', ARGUMENTS)
 VARS.AddVariables(
@@ -38,11 +38,6 @@ DEPS = {
     'binutils': '2.37',
     'gcc': '11.2.0'
 }
-
-
-#
-# ***  Host environment ***
-#
 
 HOST_ENVIRONMENT = Environment(variables=VARS,
     ENV = os.environ,
@@ -78,11 +73,6 @@ HOST_ENVIRONMENT.Replace(ASCOMSTR        = "Assembling [$SOURCE]",
                          ARCOMSTR        = "Archiving  [$TARGET]",
                          RANLIBCOMSTR    = "Ranlib     [$TARGET]")
 
-
-#
-# ***  Target environment ***
-#
-
 platform_prefix = ''
 if HOST_ENVIRONMENT['arch'] == 'i686':
     platform_prefix = 'i686-elf-'
@@ -106,7 +96,6 @@ TARGET_ENVIRONMENT = HOST_ENVIRONMENT.Clone(
     BINUTILS_URL    = f'https://ftp.gnu.org/gnu/binutils/binutils-{DEPS["binutils"]}.tar.xz',
     GCC_URL         = f'https://ftp.gnu.org/gnu/gcc/gcc-{DEPS["gcc"]}/gcc-{DEPS["gcc"]}.tar.xz',
 )
-
 
 TARGET_ENVIRONMENT.Append(
     ASFLAGS = [

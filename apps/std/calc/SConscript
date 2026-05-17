@@ -1,8 +1,5 @@
-import os
-
 from SCons.Environment import Environment
-from scons_scripts.utility import glob_recursive, find_index, is_file_name
-
+from build.utility import glob_recursive
 
 Import('TARGET_ENVIRONMENT')
 TARGET_ENVIRONMENT: Environment
