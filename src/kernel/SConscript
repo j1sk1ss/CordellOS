@@ -10,13 +10,16 @@ env.Append(
         '-Wl,-T', env.File('linker.ld').srcnode().path,
         '-Wl,-Map=' + env.File('kernel.map').path,
     ],
-
     CPPPATH = [ 
         env.Dir('.').srcnode(),
+        env.Dir('include').srcnode(),
         env['PROJECTDIR'].Dir('src/libs/include')
     ],
-
-    ASFLAGS = [ '-I', env.Dir('.').srcnode(), '-f', 'elf' ]
+    ASFLAGS = [
+        '-I', env.Dir('.').srcnode(),
+        '-I', env.Dir('include').srcnode(),
+        '-f', 'elf'
+    ]
 )
 
 # Add boot.s to the sources
@@ -27,7 +30,7 @@ sources = glob_recursive(env, '*.c') + \
 objects = env.Object(sources)
 
 # Add font processing
-font_file = 'font.psf'  # Specify the path to your PSF font file
+font_file = 'font.psf'
 font_obj = env.Command(
     'font.o',
     font_file,

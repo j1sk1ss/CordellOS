@@ -16,7 +16,7 @@
 #define SEQ_GT(x,y) ((int)((x)-(y)) > 0)
 #define SEQ_GE(x,y) ((int)((x)-(y)) >= 0)
 
-// Flags
+// flags
 #define TCP_FIN                         (1 << 0)
 #define TCP_SYN                         (1 << 1)
 #define TCP_RST                         (1 << 2)

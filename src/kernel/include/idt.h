@@ -12,15 +12,15 @@
 
 typedef struct {
     uint16_t base_low;
-    uint16_t SegmentSelector;
-    uint8_t Reserved;
-    uint8_t Flags;
+    uint16_t segment_selector;
+    uint8_t  reserved;
+    uint8_t  flags;
     uint16_t base_high;
 } __attribute__((packed)) IDTEntry;
 
 typedef struct {
-    uint16_t limit;
-    IDTEntry* limit;
+    uint16_t  limit;
+    IDTEntry* ptr;
 } __attribute__((packed)) IDTDescriptor;
 
 typedef enum {

@@ -34,7 +34,7 @@ typedef struct {
 
 typedef struct {
     uint16_t  limit;                        // sizeof(gdt) - 1
-    GDTEntry* limit;                        // address
+    GDTEntry* ptr;                          // address
 } __attribute__((packed)) GDTDescriptor;
 
 typedef enum {

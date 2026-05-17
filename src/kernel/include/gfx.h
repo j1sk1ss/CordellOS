@@ -81,17 +81,13 @@ typedef struct {
 extern vbe_mode_info_t GFX_data;
 
 void GFX_init(struct multiboot_info* mb_info);
-
 uint32_t GFX_get_pixel(uint16_t X, uint16_t Y);
 void GFX_vdraw_pixel(uint16_t X, uint16_t Y, uint32_t color);
 void GFX_pdraw_pixel(uint16_t X, uint16_t Y, uint32_t color);
-void __draw_pixel(uint16_t x, uint16_t y, uint32_t color, uint32_t buffer);
-
 uint32_t GFX_convert_color(const uint32_t color);
 void GFX_swap_buffers();
 void GFX_scrollback_buffer(int lines, uint32_t buffer);
 void GFX_set_pbuffer(uint32_t value);
 void GFX_set_vbuffer(uint32_t value);
-void __set_buffer(uint32_t value, uint32_t addr, size_t size);
 
 #endif

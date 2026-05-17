@@ -13,17 +13,14 @@ VARS.AddVariables(
                  help="Build configuration",
                  default="debug",
                  allowed_values=("debug", "release")),
-
     EnumVariable("arch", 
                  help="Target architecture", 
                  default="i686",
                  allowed_values=("i686")),
-
     EnumVariable("image_type",
                  help="Type of image",
                  default="disk",
                  allowed_values=("floppy", "disk")),
-
     EnumVariable("image_file_system",
                  help="Type of image",
                  default="fat32",
