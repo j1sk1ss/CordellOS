@@ -1,5 +1,5 @@
 // Thanks to https://wiki.osdev.org/ATA_PIO_Mode and https://github.com/szhou42/osdev/blob/master/src/kernel/drivers/ata.c#L267
-#include <ata.h>
+#include <arch/drivers/ata.h>
 
 static pci_dev_t _ata_device               = { 0 };
 static struct ata_dev* _current_ata_device = NULL;

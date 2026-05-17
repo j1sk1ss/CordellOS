@@ -1,4 +1,4 @@
-#include <vmm.h>
+#include <memory/vmm.h>
 
 static directories_t _dirs = { .curr = NULL, .kern = NULL };
 directories_t* VMM_get_dirs() {

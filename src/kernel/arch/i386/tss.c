@@ -1,4 +1,4 @@
-#include <tss.h>
+#include <arch/i386/tss.h>
 
 static tss_entry_t _kernel_tss = { 0 };
 

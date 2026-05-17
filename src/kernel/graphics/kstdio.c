@@ -1,4 +1,4 @@
-#include <kstdio.h>
+#include <graphics/kstdio.h>
 
 static const char _hex_chars[] = "0123456789ABCDEF";
 stdio_mode_t KSTDIO_data = { 0 };

@@ -2,7 +2,7 @@ build/CordellOS/
 tool_chain/
 *.err
 bx_enh_dbg.ini
-.vscode/*.log
+.vscode/
 .sconsign.dblite
 __pycache__/
 .idea/CordellOS.EXMPL.iml

@@ -1,4 +1,4 @@
-#include "../../include/isr.h"
+#include <arch/drivers/isr.h>
 
 static ISRHandler _isr_handlers[256];
 static struct ELF32_symbols_desctiptor* _current_descriptor = NULL;

@@ -2,7 +2,7 @@
  * pc_speaker.h: Definitions and functions for emulated (maybe hardware?) pc speaker
  * Code took from: https://github.com/queso-fuego/amateuros/blob/master/include/sound/pc_speaker.h
  */
-#include <speaker.h>
+#include <arch/drivers/speaker.h>
 
 static uint32_t _bpm_ms                  = 0;
 static uint32_t _whole_note_duration     = 0;

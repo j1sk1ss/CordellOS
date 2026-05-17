@@ -1,6 +1,6 @@
 // Some data from: https://en.wikipedia.org/wiki/Dynamic_Host_Configuration_Protocol
 // Also thanks to: https://github.com/szhou42/osdev/blob/master/src/kernel/network/dhcp.c#L9
-#include "../include/dhcp.h"
+#include <network/dhcp.h>
 
 
 dhcp_data_t DHCP_data = {

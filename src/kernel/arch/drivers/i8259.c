@@ -1,4 +1,4 @@
-#include <i8259.h>
+#include <arch/drivers/i8259.h>
 
 static uint16_t picMask = 0xFFFF;
 

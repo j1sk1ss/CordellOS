@@ -1,4 +1,4 @@
-#include <vesa.h>
+#include <graphics/vesa.h>
 
 static int _cursor_x = 0;
 static int _cursor_y = 0;

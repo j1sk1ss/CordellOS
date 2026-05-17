@@ -1,4 +1,4 @@
-#include <syscalls.h>
+#include <sys/syscalls.h>
 
 void i386_syscalls_init() {
     i386_isr_register_handler(0x80, syscall);

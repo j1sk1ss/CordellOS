@@ -1,5 +1,5 @@
 /* https://github.com/queso-fuego/amateuros/blob/master/include/memory/physical_memory_manager.h#L80 */
-#include <pmm.h>
+#include <memory/pmm.h>
 
 pmma_map_t PMM_map = {
     .max_blocks  = 0,

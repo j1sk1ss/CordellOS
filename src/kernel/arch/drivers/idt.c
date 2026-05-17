@@ -1,4 +1,4 @@
-#include "../../include/idt.h"
+#include <arch/drivers/idt.h>
 
 
 static IDTEntry _idt[256];

@@ -1,4 +1,4 @@
-#include <rtl8139.h>
+#include <arch/drivers/rtl8139.h>
 
 static int _packet_meta[100] = { 0 };
 static ethernet_frame_t* _ethernet_packets[100] = { NULL };

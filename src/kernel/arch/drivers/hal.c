@@ -1,4 +1,4 @@
-#include <hal.h>
+#include <arch/drivers/hal.h>
 
 void HAL_initialize() {
     kprintf("HAL: (");

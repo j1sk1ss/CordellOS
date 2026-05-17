@@ -1,4 +1,4 @@
-#include <keyboard.h>
+#include <arch/drivers/keyboard.h>
 
 // Shift keyboard converter from https://github.com/cstack/osdev/blob/master/drivers/keyboard.c#L8
 // TODO: move to CPL

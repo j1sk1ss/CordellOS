@@ -1,6 +1,6 @@
 // Thanks to: https://github.com/Jorl17/jOS/blob/master/elf.c#L61
 //            https://github.com/makerimages/SwormOS/tree/master/kernel
-#include <elf.h>
+#include <arch/i386/elf.h>
 
 static elf_symbols_t _kernel_elf_symbols = { 0 };
 static ELF32_program _elf_program = { 0 };

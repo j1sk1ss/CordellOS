@@ -1,0 +1,39 @@
+#ifndef ISR_H
+#define ISR_H
+
+#include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
+
+#include <arch/drivers/pit.h>
+#include <arch/drivers/idt.h>
+#include <arch/i386/gdt.h>
+#include <arch/i386/x86.h>
+#include <graphics/kstdio.h>
+#include <arch/i386/elf.h>
+
+#include <util/arrays.h>
+
+struct Registers {
+    uint32_t ds;                                          // data segment pushed by us
+    uint32_t edi, esi, ebp, kern_esp, ebx, edx, ecx, eax; // pusha
+    uint32_t interrupt, error;                            // we push interrupt and error code
+    uint32_t eip, cs, eflag, esp, ss;                     // pushed auto by cpu
+} __attribute__((packed));
+
+struct stackframe { 
+  struct stackframe* ebp; 
+  uint32_t eip; 
+}; 
+
+void i386_isr_initialize();
+typedef void (*ISRHandler)(struct Registers* regs);
+void i386_isr_register_handler(int interrupt, ISRHandler handler);
+
+void i386_isr_interrupt_details(uint32_t eip, uint32_t ebp, uint32_t esp);
+void i386_isr_stack_trace_line(uint32_t eip);
+
+struct ELF32_symbols_desctiptor;
+void i386_isr_set_symdes(struct ELF32_symbols_desctiptor* desciptor);
+
+#endif

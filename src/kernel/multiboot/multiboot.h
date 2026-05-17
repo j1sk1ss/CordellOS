@@ -21,7 +21,7 @@
  *  IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "../include/elf.h"
+#include <arch/i386/elf.h>
 
 #include <stdint.h>
 #include <string.h>

@@ -1,4 +1,4 @@
-#include <irq.h>
+#include <arch/drivers/irq.h>
 
 static IRQHandler _handler[16] = { NULL };
 static const PICDriver* _pic_driver = NULL; 

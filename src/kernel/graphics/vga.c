@@ -1,4 +1,4 @@
-#include "../include/vga.h"
+#include <graphics/vga.h>
 
 vga_data_t _vga_data = {
     .width    = 80,

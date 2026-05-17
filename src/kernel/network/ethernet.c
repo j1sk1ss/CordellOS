@@ -1,4 +1,4 @@
-#include "../include/ethernet.h"
+#include <network/ethernet.h>
 
 
 int ETH_send_packet(uint8_t* dst_mac_addr, uint8_t* data, int len, uint16_t protocol) {

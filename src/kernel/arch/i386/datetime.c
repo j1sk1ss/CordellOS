@@ -1,4 +1,4 @@
-#include <datetime.h>
+#include <arch/i386/datetime.h>
 
 datetime_t DTM_datetime = {
     .year = CURRENT_YEAR

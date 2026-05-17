@@ -1,4 +1,4 @@
-#include <pci.h>
+#include <arch/drivers/pci.h>
 
 static pci_dev_t _dev_zero = { 0 };
 static uint32_t _pci_size_map[100] = { 0 };

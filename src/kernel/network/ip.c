@@ -1,4 +1,4 @@
-#include "../include/ip.h"
+#include <network/ip.h>
 
 
 uint8_t my_ip[]              = { 10, 0, 2, 14 };

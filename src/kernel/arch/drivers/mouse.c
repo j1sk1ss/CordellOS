@@ -1,4 +1,4 @@
-#include <mouse.h> 
+#include <arch/drivers/mouse.h> 
 
 static int _is_mouse_showing        = 0;
 static mouse_state_t _mouse_state   = { 0 };

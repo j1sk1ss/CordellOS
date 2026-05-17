@@ -1,4 +1,4 @@
-#include <gfx.h>
+#include <arch/drivers/gfx.h>
 
 vbe_mode_info_t GFX_data = { 0 };
 
