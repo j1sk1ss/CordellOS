@@ -1,1644 +1,1415 @@
 #include "../include/fat.h"
 
-//========================================================================================
+fat_data_t FAT_data = {
+	.fat_size = 0,
+	.fat_type = 0,
+	.first_fat_sector = 0,
+	.first_data_sector = 0,
+	.total_sectors = 0,
+	.total_clusters = 0,
+	.bytes_per_sector = 0,
+	.sectors_per_cluster = 0,
+	.ext_root_cluster = 0,
+	.cluster_size = 0
+};
 
-	fat_data_t FAT_data = {
-		.fat_size 				= 0,
-		.fat_type 				= 0,
-		.first_fat_sector 		= 0,
-		.first_data_sector 		= 0,
-		.total_sectors 			= 0,
-		.total_clusters 		= 0,
-		.bytes_per_sector 		= 0,
-		.sectors_per_cluster 	= 0,
-		.ext_root_cluster 		= 0,
-		.cluster_size 			= 0
-	};
+static content_t _content_storage[CONTENT_TABLE_SIZE] = { 0 };
+static file_t _file_storage[CONTENT_TABLE_SIZE] = { 0 };
+static directory_t _directory_storage[CONTENT_TABLE_SIZE] = { 0 };
+static content_t* _content_table[CONTENT_TABLE_SIZE] = { NULL };
 
-	static Content* _content_table[CONTENT_TABLE_SIZE] = { NULL };
+static content_t _scratch_content = { 0 };
+static file_t _scratch_file = { 0 };
+static directory_t _scratch_directory = { 0 };
 
-	#define FAT_STATIC_BUFFER_SECTORS 128
-	#define FAT_STATIC_BUFFER_SIZE    (SECTOR_SIZE * FAT_STATIC_BUFFER_SECTORS)
+static int _is_static_content(content_t* content) {
+	return content >= _content_storage && content < _content_storage + CONTENT_TABLE_SIZE;
+}
 
-	static uint8_t _fat_boot_buffer[SECTOR_SIZE] = { 0 };
-	static uint8_t _fat_table_buffer[FAT_STATIC_BUFFER_SIZE] = { 0 };
-	static uint8_t _fat_cluster_buffer[FAT_STATIC_BUFFER_SIZE] = { 0 };
-	static uint8_t _fat_content_buffer[FAT_STATIC_BUFFER_SIZE] = { 0 };
+static int _content_slot(content_t* content) {
+	if (!_is_static_content(content)) return -1;
+	return content - _content_storage;
+}
 
-	static int _fat_cluster_fits_static_buffer() {
-		return FAT_data.sectors_per_cluster <= FAT_STATIC_BUFFER_SECTORS;
+static int _is_valid_fd(int fd) {
+	return fd >= 0 && fd < CONTENT_TABLE_SIZE && _content_table[fd] != NULL;
+}
+
+static void _reset_file(file_t* file) {
+	if (!file) return;
+	memset(file, 0, sizeof(file_t));
+}
+
+static void _reset_directory(directory_t* directory) {
+	if (!directory) return;
+	memset(directory, 0, sizeof(directory_t));
+}
+
+static void _reset_content(content_t* content) {
+	if (!content) return;
+	memset(content, 0, sizeof(content_t));
+	content->parent_cluster = (uint32_t)-1;
+}
+
+static int _allocate_content_slot() {
+	for (int i = 0; i < CONTENT_TABLE_SIZE; i++) {
+		if (!_content_table[i]) {
+			_reset_content(&_content_storage[i]);
+			_reset_file(&_file_storage[i]);
+			_reset_directory(&_directory_storage[i]);
+			_content_table[i] = &_content_storage[i];
+			return i;
+		}
 	}
 
-//========================================================================================
-//   ____   ___   ___ _____   ____  _____ ____ _____ ___  ____  
-//  | __ ) / _ \ / _ \_   _| / ___|| ____/ ___|_   _/ _ \|  _ \ 
-//  |  _ \| | | | | | || |   \___ \|  _|| |     | || | | | |_) |
-//  | |_) | |_| | |_| || |    ___) | |__| |___  | || |_| |  _ < 
-//  |____/ \___/ \___/ |_|   |____/|_____\____| |_| \___/|_| \_\
-//
-//========================================================================================
-// Initializes struct "bootsect" to store critical data from the boot sector of the volume
+	return -1;
+}
 
-#pragma region [Boot sector]
+static void _release_content_slot(int fd) {
+	if (fd < 0 || fd >= CONTENT_TABLE_SIZE) return;
+	_reset_content(&_content_storage[fd]);
+	_reset_file(&_file_storage[fd]);
+	_reset_directory(&_directory_storage[fd]);
+	_content_table[fd] = NULL;
+}
 
-	typedef struct mbr_partition {
-		uint8_t  status;
-		uint8_t  first_chs[3];
-		uint8_t  type;
-		uint8_t  last_chs[3];
-		uint32_t first_lba;
-		uint32_t sectors;
-	} __attribute__((packed)) mbr_partition_t;
+typedef struct mbr_partition {
+	uint8_t  status;
+	uint8_t  first_chs[3];
+	uint8_t  type;
+	uint8_t  last_chs[3];
+	uint32_t first_lba;
+	uint32_t sectors;
+} __attribute__((packed)) mbr_partition_t;
 
-	typedef struct master_boot_record {
-		uint8_t boot_code[446];
-		mbr_partition_t partitions[4];
-		uint16_t signature;
-	} __attribute__((packed)) master_boot_record_t;
+typedef struct master_boot_record {
+	uint8_t boot_code[446];
+	mbr_partition_t partitions[4];
+	uint16_t signature;
+} __attribute__((packed)) master_boot_record_t;
 
-	static int _is_fat_partition(uint8_t type) {
-		return type == 0x01 || type == 0x04 || type == 0x06 ||
-			   type == 0x0B || type == 0x0C || type == 0x0E;
+static int _is_fat_partition(uint8_t type) {
+	return type == 0x01 || type == 0x04 || type == 0x06 ||
+	type == 0x0B || type == 0x0C || type == 0x0E;
+}
+
+static int _is_valid_bpb(fat_BS_t* bootstruct, uint8_t* sector) {
+	if (sector[510] != 0x55 || sector[511] != 0xAA) return 0;
+	if (bootstruct->bytes_per_sector != SECTOR_SIZE) return 0;
+	if (bootstruct->sectors_per_cluster == 0) return 0;
+	if ((bootstruct->sectors_per_cluster & (bootstruct->sectors_per_cluster - 1)) != 0) return 0;
+	if (bootstruct->reserved_sector_count == 0) return 0;
+	if (bootstruct->table_count == 0) return 0;
+	if (bootstruct->total_sectors_16 == 0 && bootstruct->total_sectors_32 == 0) return 0;
+	if (bootstruct->table_size_16 == 0 &&
+	((fat_extBS_32_t*)(bootstruct->extended_section))->table_size_32 == 0) return 0;
+
+	return 1;
+}
+
+static uint32_t _find_fat_partition_lba(uint8_t* sector) {
+	master_boot_record_t* mbr = (master_boot_record_t*)sector;
+	if (mbr->signature != 0xAA55) return 0;
+
+	for (int i = 0; i < 4; i++) {
+		if (_is_fat_partition(mbr->partitions[i].type) &&
+		mbr->partitions[i].first_lba != 0 &&
+		mbr->partitions[i].sectors != 0) {
+			return mbr->partitions[i].first_lba;
+		}
 	}
 
-	static int _is_valid_bpb(fat_BS_t* bootstruct, uint8_t* sector) {
-		if (sector[510] != 0x55 || sector[511] != 0xAA) return 0;
-		if (bootstruct->bytes_per_sector != SECTOR_SIZE) return 0;
-		if (bootstruct->sectors_per_cluster == 0) return 0;
-		if ((bootstruct->sectors_per_cluster & (bootstruct->sectors_per_cluster - 1)) != 0) return 0;
-		if (bootstruct->reserved_sector_count == 0) return 0;
-		if (bootstruct->table_count == 0) return 0;
-		if (bootstruct->total_sectors_16 == 0 && bootstruct->total_sectors_32 == 0) return 0;
-		if (bootstruct->table_size_16 == 0 &&
-			((fat_extBS_32_t*)(bootstruct->extended_section))->table_size_32 == 0) return 0;
+	return 0;
+}
 
+int FAT_initialize() {
+	uint32_t volume_start_lba = 0;
+	uint8_t sector_data[SECTOR_SIZE] = { 0 };
+	if (ATA_read_sector(0, sector_data) != 1) {
+		LOG("Function FAT_initialize: Error reading the first sector of FAT!\n");
+		return -1;
+	}
+
+	fat_BS_t* bootstruct = (fat_BS_t*)sector_data;
+	if (!_is_valid_bpb(bootstruct, sector_data)) {
+		volume_start_lba = _find_fat_partition_lba(sector_data);
+
+		if (volume_start_lba == 0) {
+			LOG("Function FAT_initialize: no valid FAT boot sector or FAT partition found.\n");
+			return -1;
+		}
+
+		if (ATA_read_sector(volume_start_lba, sector_data) != 1) {
+			LOG("Function FAT_initialize: Error reading FAT partition boot sector!\n");
+			return -1;
+		}
+
+		bootstruct = (fat_BS_t*)sector_data;
+		if (!_is_valid_bpb(bootstruct, sector_data)) {
+			LOG("Function FAT_initialize: FAT partition boot sector has invalid BPB fields.\n");
+			return -1;
+		}
+	}
+
+	FAT_data.total_sectors = (bootstruct->total_sectors_16 == 0) ? bootstruct->total_sectors_32 : bootstruct->total_sectors_16;
+	FAT_data.fat_size = (bootstruct->table_size_16 == 0) ? ((fat_extBS_32_t*)(bootstruct->extended_section))->table_size_32 : bootstruct->table_size_16;
+
+	uint32_t root_dir_sectors = ((bootstruct->root_entry_count * 32) + (bootstruct->bytes_per_sector - 1)) / bootstruct->bytes_per_sector;
+	uint32_t metadata_sectors = bootstruct->reserved_sector_count + (bootstruct->table_count * FAT_data.fat_size) + root_dir_sectors;
+	if (FAT_data.total_sectors <= metadata_sectors) {
+		LOG("Function FAT_initialize: FAT metadata is larger than the volume.\n");
+		return -1;
+	}
+
+	uint32_t data_sectors = FAT_data.total_sectors - metadata_sectors;
+
+	FAT_data.total_clusters = data_sectors / bootstruct->sectors_per_cluster;
+	FAT_data.first_data_sector = volume_start_lba + bootstruct->reserved_sector_count + bootstruct->table_count * FAT_data.fat_size + root_dir_sectors;
+
+	if (FAT_data.total_clusters < 4085) FAT_data.fat_type = 12;
+	else if (FAT_data.total_clusters < 65525) FAT_data.fat_type = 16;
+	else {
+		FAT_data.fat_type = 32;
+	}
+
+	FAT_data.sectors_per_cluster = bootstruct->sectors_per_cluster;
+	FAT_data.bytes_per_sector = bootstruct->bytes_per_sector;
+	FAT_data.first_fat_sector = volume_start_lba + bootstruct->reserved_sector_count;
+	FAT_data.ext_root_cluster = ((fat_extBS_32_t*)(bootstruct->extended_section))->root_cluster;
+	FAT_data.cluster_size = FAT_data.bytes_per_sector * FAT_data.sectors_per_cluster;
+
+	for (int i = 0; i < CONTENT_TABLE_SIZE; i++) {
+		_release_content_slot(i);
+	}
+	_reset_content(&_scratch_content);
+	_reset_file(&_scratch_file);
+	_reset_directory(&_scratch_directory);
+
+	return 0;
+}
+
+static int __read_fat(uint32_t cluster) {
+	assert(
+	cluster >= 2 && cluster < FAT_data.total_clusters &&
+	(FAT_data.fat_type == 32 || FAT_data.fat_type == 16)
+	);
+
+	uint32_t fat_offset = cluster * (FAT_data.fat_type == 16 ? 2 : 4);
+	uint32_t fat_sector = FAT_data.first_fat_sector + fat_offset / SECTOR_SIZE;
+	uint8_t sector_data[SECTOR_SIZE] = { 0 };
+	if (ATA_read_sector(fat_sector, sector_data) != 1) {
+		kprintf("[%s %i] Function __read_fat: Could not read sector that contains FAT32 table entry needed.\n", __FILE__, __LINE__);
+		return -1;
+	}
+
+	uint32_t table_value = *(uint32_t*)&sector_data[fat_offset % SECTOR_SIZE];
+	if (FAT_data.fat_type == 32) table_value &= 0x0FFFFFFF;
+
+	return table_value;
+}
+
+static int __write_fat(uint32_t cluster, uint32_t value) {
+	assert(
+	cluster >= 2 && cluster < FAT_data.total_clusters &&
+	(FAT_data.fat_type == 32 || FAT_data.fat_type == 16)
+	);
+
+	uint32_t fat_offset = cluster * (FAT_data.fat_type == 16 ? 2 : 4);
+	uint32_t fat_sector = FAT_data.first_fat_sector + fat_offset / SECTOR_SIZE;
+
+	uint8_t sector_data[SECTOR_SIZE] = { 0 };
+	if (ATA_read_sector(fat_sector, sector_data) != 1) {
+		kprintf("Function __write_fat: Could not read sector that contains FAT32 table entry needed.\n");
+		return -1;
+	}
+
+	*(uint32_t*)&sector_data[fat_offset % SECTOR_SIZE] = value;
+	if (ATA_write_sector(fat_sector, sector_data) != 1) {
+		kprintf("Function __write_fat: Could not write new FAT32 cluster number to sector.\n");
+		return -1;
+	}
+
+	return 0;
+}
+
+static int _is_cluster_free(uint32_t cluster) {
+	if (cluster == 0) return 1;
+	return 0;
+}
+
+static int _set_cluster_free(uint32_t cluster) {
+	return __write_fat(cluster, 0);
+}
+
+static int _is_cluster_end(uint32_t cluster, int fatType) {
+	if ((cluster == END_CLUSTER_32 && FAT_data.fat_type == 32) ||
+	(cluster == END_CLUSTER_16 && FAT_data.fat_type == 16) ||
+	(cluster == END_CLUSTER_12 && FAT_data.fat_type == 12))
+	return 1;
+
+	return 0;
+}
+
+static int _set_cluster_end(uint32_t cluster, int fatType) {
+	if (FAT_data.fat_type == 32) return __write_fat(cluster, END_CLUSTER_32);
+	if (FAT_data.fat_type == 16) return __write_fat(cluster, END_CLUSTER_16);
+	if (FAT_data.fat_type == 12) return __write_fat(cluster, END_CLUSTER_12);
+	return -1;
+}
+
+static int _is_cluster_bad(uint32_t cluster, int fatType) {
+	if ((cluster == BAD_CLUSTER_32 && FAT_data.fat_type == 32) ||
+	(cluster == BAD_CLUSTER_16 && FAT_data.fat_type == 16) ||
+	(cluster == BAD_CLUSTER_12 && FAT_data.fat_type == 12))
+	return 1;
+
+	return 0;
+}
+
+static inline int _set_cluster_bad(uint32_t cluster, int fatType) {
+	if (FAT_data.fat_type == 32) return __write_fat(cluster, BAD_CLUSTER_32);
+	if (FAT_data.fat_type == 16) return __write_fat(cluster, BAD_CLUSTER_16);
+	if (FAT_data.fat_type == 12) return __write_fat(cluster, BAD_CLUSTER_12);
+	return -1;
+}
+
+static uint32_t last_allocated_cluster = SECTOR_OFFSET;
+
+static uint32_t _cluster_allocate() {
+	uint32_t cluster = last_allocated_cluster;
+	uint32_t clusterStatus = FREE_CLUSTER_32;
+
+	while (cluster < FAT_data.total_clusters) {
+		clusterStatus = __read_fat(cluster);
+		if (_is_cluster_free(clusterStatus) == 1) {
+			if (_set_cluster_end(cluster, FAT_data.fat_type) == 0) {
+				last_allocated_cluster = cluster;
+				return cluster;
+			}
+			else {
+				kprintf("Function _cluster_allocate: Error occurred with __write_fat, aborting operations...\n");
+				return -1;
+			}
+		}
+		else if (clusterStatus < 0) {
+			kprintf("Function _cluster_allocate: Error occurred with __read_fat, aborting operations...\n");
+			return -1;
+		}
+
+		cluster++;
+	}
+
+	last_allocated_cluster = 2;
+	return -1;
+}
+
+static int _cluster_deallocate(const uint32_t cluster) {
+	uint32_t cluster_status = __read_fat(cluster);
+	if (_is_cluster_free(cluster_status) == 1) return 0;
+	else if (cluster_status < 0) {
+		kprintf("Function _cluster_deallocate: Error occurred with __read_fat, aborting operations...\n");
+		return -1;
+	}
+
+	if (_set_cluster_free(cluster) == 0) return 0;
+	else {
+		kprintf("Function _cluster_deallocate: Error occurred with __write_fat, aborting operations...\n");
+		return -1;
+	}
+}
+
+static uint32_t _cluster_lba(uint32_t cluster) {
+	return (cluster - 2) * (uint16_t)FAT_data.sectors_per_cluster + FAT_data.first_data_sector;
+}
+
+static int _cluster_read_range(uint32_t cluster, uint32_t offset, uint8_t* buffer, uint32_t size) {
+	assert(cluster >= 2 && cluster < FAT_data.total_clusters);
+	if (!buffer || size == 0 || offset >= FAT_data.cluster_size) return -1;
+
+	uint32_t sector_index = offset / SECTOR_SIZE;
+	uint32_t sector_offset = offset % SECTOR_SIZE;
+	uint32_t data_position = 0;
+	uint8_t sector_data[SECTOR_SIZE] = { 0 };
+
+	while (sector_index < FAT_data.sectors_per_cluster && data_position < size) {
+		if (ATA_read_sector(_cluster_lba(cluster) + sector_index, sector_data) != 1) return -1;
+
+		uint32_t copy_size = min(size - data_position, SECTOR_SIZE - sector_offset);
+		memcpy(buffer + data_position, sector_data + sector_offset, copy_size);
+		data_position += copy_size;
+		sector_index++;
+		sector_offset = 0;
+	}
+
+	return 1;
+}
+
+static int _cluster_read_range_stop(uint32_t cluster, uint32_t offset, uint8_t* buffer, uint32_t size, uint8_t* stop) {
+	assert(cluster >= 2 && cluster < FAT_data.total_clusters);
+	if (!buffer || !stop || size == 0 || offset >= FAT_data.cluster_size) return -1;
+
+	uint32_t sector_index = offset / SECTOR_SIZE;
+	uint32_t sector_offset = offset % SECTOR_SIZE;
+	uint32_t data_position = 0;
+	uint8_t sector_data[SECTOR_SIZE] = { 0 };
+	uint8_t stop_value = *stop;
+
+	while (sector_index < FAT_data.sectors_per_cluster && data_position < size) {
+		if (ATA_read_sector(_cluster_lba(cluster) + sector_index, sector_data) != 1) return -1;
+
+		for (uint32_t i = sector_offset; i < SECTOR_SIZE && data_position < size; i++) {
+			buffer[data_position++] = sector_data[i];
+			if (sector_data[i] == stop_value) {
+				*stop = STOP_SYMBOL;
+				return 1;
+			}
+		}
+
+		sector_index++;
+		sector_offset = 0;
+	}
+
+	return 1;
+}
+
+static int _cluster_writeoff(const uint8_t* data, uint32_t cluster, uint32_t offset, uint32_t size) {
+	assert(cluster >= 2 && cluster < FAT_data.total_clusters);
+	return ATA_writeoff_sectors(_cluster_lba(cluster), data, FAT_data.sectors_per_cluster, offset, size);
+}
+
+static int _copy_cluster2cluster(uint32_t source, uint32_t destination) {
+	assert(
+	source >= 2 && source < FAT_data.total_clusters &&
+	destination >= 2 && destination < FAT_data.total_clusters
+	);
+
+	return ATA_copy_sectors2sectors(_cluster_lba(source), FAT_data.sectors_per_cluster, _cluster_lba(destination));
+}
+static int _add_cluster_to_content(int ci) {
+	content_t* content = FAT_get_content_from_table(ci);
+	if (!content || content->content_type != CONTENT_TYPE_FILE || !content->file) return -1;
+
+	directory_entry_t content_meta = content->meta;
+	uint32_t cluster = GET_CLUSTER_FROM_ENTRY(content_meta, FAT_data.fat_type);
+	while (_is_cluster_end(cluster, FAT_data.fat_type) == 0) {
+		assert(_is_cluster_bad(cluster, FAT_data.fat_type) == 0);
+		assert(cluster != -1);
+		cluster = __read_fat(cluster);
+	}
+
+	if (_is_cluster_end(cluster, FAT_data.fat_type) == 1) {
+		uint32_t newCluster = _cluster_allocate();
+		if (newCluster == (uint32_t)-1) return -3;
+		assert(_is_cluster_bad(newCluster, FAT_data.fat_type) == 0);
+		assert(__write_fat(cluster, newCluster) == 0);
+
+		content->file->data_size++;
+		return newCluster;
+	}
+
+	return -1;
+}
+
+static int _content_cluster_at(content_t* content, uint32_t cluster_index) {
+	if (!content || content->content_type != CONTENT_TYPE_FILE || !content->file) return -1;
+
+	uint32_t cluster = content->file->first_cluster;
+	for (uint32_t i = 0; i < cluster_index; i++) {
+		cluster = __read_fat(cluster);
+		if ((int)cluster < 0 || _is_cluster_end(cluster, FAT_data.fat_type) == 1) return -1;
+	}
+
+	return cluster;
+}
+
+typedef struct directory_cursor {
+	uint32_t cluster;
+	uint32_t sector;
+	uint32_t entry;
+	uint32_t index;
+	uint8_t sector_data[SECTOR_SIZE];
+	directory_entry_t* meta;
+} directory_cursor_t;
+
+static int _directory_cursor_load(directory_cursor_t* cursor) {
+	if (ATA_read_sector(_cluster_lba(cursor->cluster) + cursor->sector, cursor->sector_data) != 1) return -1;
+	cursor->meta = (directory_entry_t*)cursor->sector_data + cursor->entry;
+	return 1;
+}
+
+static int _directory_cursor_open(directory_cursor_t* cursor, uint32_t cluster) {
+	memset(cursor, 0, sizeof(directory_cursor_t));
+	cursor->cluster = cluster;
+	return _directory_cursor_load(cursor);
+}
+
+static int _directory_cursor_write(directory_cursor_t* cursor) {
+	return ATA_write_sector(_cluster_lba(cursor->cluster) + cursor->sector, cursor->sector_data);
+}
+
+static int _directory_cursor_next(directory_cursor_t* cursor) {
+	uint32_t entries_per_sector = SECTOR_SIZE / sizeof(directory_entry_t);
+	cursor->entry++;
+	cursor->index++;
+
+	if (cursor->entry < entries_per_sector) {
+		cursor->meta = (directory_entry_t*)cursor->sector_data + cursor->entry;
 		return 1;
 	}
 
-	static uint32_t _find_fat_partition_lba(uint8_t* sector) {
-		master_boot_record_t* mbr = (master_boot_record_t*)sector;
-		if (mbr->signature != 0xAA55) return 0;
+	cursor->entry = 0;
+	cursor->sector++;
+	if (cursor->sector < FAT_data.sectors_per_cluster) return _directory_cursor_load(cursor);
 
-		for (int i = 0; i < 4; i++) {
-			if (_is_fat_partition(mbr->partitions[i].type) &&
-				mbr->partitions[i].first_lba != 0 &&
-				mbr->partitions[i].sectors != 0) {
-				return mbr->partitions[i].first_lba;
+	uint32_t next_cluster = __read_fat(cursor->cluster);
+	if (_is_cluster_end(next_cluster, FAT_data.fat_type) == 1) return 0;
+	if ((int)next_cluster < 0 || _is_cluster_bad(next_cluster, FAT_data.fat_type) == 1) return -1;
+
+	cursor->cluster = next_cluster;
+	cursor->sector = 0;
+	return _directory_cursor_load(cursor);
+}
+
+int FAT_directory_list(int ci, uint8_t attrs, int exclusive) {
+	content_t* source = FAT_get_content_from_table(ci);
+	if (!source) return -1;
+	if (source->content_type != CONTENT_TYPE_DIRECTORY) return -2;
+
+	uint32_t cluster = GET_CLUSTER_FROM_ENTRY(source->meta, FAT_data.fat_type);
+	assert(cluster >= 2 && cluster < FAT_data.total_clusters);
+
+	int fd = _allocate_content_slot();
+	if (fd < 0) return -1;
+
+	content_t* content = _content_table[fd];
+	content->directory = &_directory_storage[fd];
+	content->parent_cluster = 0;
+	content->content_type = CONTENT_TYPE_DIRECTORY;
+	memcpy(&content->meta, &source->meta, sizeof(directory_entry_t));
+	strncpy(content->directory->name, source->directory->name, 11);
+
+	return fd;
+}
+
+int FAT_directory_entry_name(int ci, int step, char* name) {
+	content_t* content = FAT_get_content_from_table(ci);
+	if (!content || !name || content->content_type != CONTENT_TYPE_DIRECTORY) return -1;
+
+	uint32_t cluster = GET_CLUSTER_FROM_ENTRY(content->meta, FAT_data.fat_type);
+	directory_cursor_t cursor;
+	if (_directory_cursor_open(&cursor, cluster) != 1) return -1;
+
+	int current_step = 0;
+	const uint8_t attributes_to_hide = FILE_HIDDEN | FILE_SYSTEM;
+
+	while (1) {
+		directory_entry_t* file_metadata = cursor.meta;
+		if (file_metadata->file_name[0] == ENTRY_END) break;
+
+		int skip_entry =
+		strncmp((char*)file_metadata->file_name, "..", 2) == 0 ||
+		strncmp((char*)file_metadata->file_name, ".", 1) == 0 ||
+		file_metadata->file_name[0] == ENTRY_FREE ||
+		(file_metadata->attributes & FILE_LONG_NAME) == FILE_LONG_NAME ||
+		(file_metadata->attributes & attributes_to_hide) != 0;
+
+		if (!skip_entry) {
+			if (current_step == step) {
+				char raw_name[13] = { 0 };
+				strcpy(raw_name, (char*)file_metadata->file_name);
+
+				if ((file_metadata->attributes & FILE_DIRECTORY) == FILE_DIRECTORY) {
+					strncpy(name, strtok(raw_name, " "), 11);
+				}
+				else {
+					char* file_name = strtok(raw_name, " ");
+					char* extension = strtok(NULL, " ");
+					if (extension && strlen(extension) > 0) sprintf(name, 11, "%s.%s", file_name, extension);
+					else strncpy(name, file_name, 11);
+				}
+
+				return step + 1;
 			}
+
+			current_step++;
 		}
 
-		return 0;
+		int next = _directory_cursor_next(&cursor);
+		if (next == 0) break;
+		if (next < 0) return -1;
 	}
 
-	int FAT_initialize() {
-		uint32_t volume_start_lba = 0;
-		uint8_t* cluster_data = _fat_boot_buffer;
-		if (ATA_read_sector(0, cluster_data) != 1) {
-			LOG("Function FAT_initialize: Error reading the first sector of FAT!\n");
-			return -1;
+	return -1;
+}
+
+static char* _name2fatname(char* input) {
+	str2uppercase(input);
+
+	int haveExt = 0;
+	char searchName[13] = { 0 };
+	uint16_t dotPos = 0;
+	uint32_t counter = 0;
+
+	while (counter <= 8) {
+		if (input[counter] == '.' || !input[counter]) {
+			if (input[counter] == '.') haveExt = 1;
+			dotPos = counter;
+			counter++;
+			break;
 		}
-
-		fat_BS_t* bootstruct = (fat_BS_t*)cluster_data;
-		if (!_is_valid_bpb(bootstruct, cluster_data)) {
-			volume_start_lba = _find_fat_partition_lba(cluster_data);
-
-			if (volume_start_lba == 0) {
-				LOG("Function FAT_initialize: no valid FAT boot sector or FAT partition found.\n");
-				return -1;
-			}
-
-			if (ATA_read_sector(volume_start_lba, cluster_data) != 1) {
-				LOG("Function FAT_initialize: Error reading FAT partition boot sector!\n");
-				return -1;
-			}
-
-			bootstruct = (fat_BS_t*)cluster_data;
-			if (!_is_valid_bpb(bootstruct, cluster_data)) {
-				LOG("Function FAT_initialize: FAT partition boot sector has invalid BPB fields.\n");
-				return -1;
-			}
-		}
-
-		FAT_data.total_sectors = (bootstruct->total_sectors_16 == 0) ? bootstruct->total_sectors_32 : bootstruct->total_sectors_16;
-		FAT_data.fat_size = (bootstruct->table_size_16 == 0) ? ((fat_extBS_32_t*)(bootstruct->extended_section))->table_size_32 : bootstruct->table_size_16;
-
-		uint32_t root_dir_sectors = ((bootstruct->root_entry_count * 32) + (bootstruct->bytes_per_sector - 1)) / bootstruct->bytes_per_sector;
-		uint32_t metadata_sectors = bootstruct->reserved_sector_count + (bootstruct->table_count * FAT_data.fat_size) + root_dir_sectors;
-		if (FAT_data.total_sectors <= metadata_sectors) {
-			LOG("Function FAT_initialize: FAT metadata is larger than the volume.\n");
-			return -1;
-		}
-
-		uint32_t data_sectors = FAT_data.total_sectors - metadata_sectors;
-
-		FAT_data.total_clusters = data_sectors / bootstruct->sectors_per_cluster;
-		FAT_data.first_data_sector = volume_start_lba + bootstruct->reserved_sector_count + bootstruct->table_count * FAT_data.fat_size + root_dir_sectors;
-
-		if (FAT_data.total_clusters < 4085) FAT_data.fat_type = 12;
-		else if (FAT_data.total_clusters < 65525) FAT_data.fat_type = 16;
 		else {
-			FAT_data.fat_type = 32;
+			searchName[counter] = input[counter];
+			counter++;
+		}
+	}
+
+	if (counter > 9) {
+		counter = 8;
+		dotPos = 8;
+	}
+
+	uint16_t extCount = 8;
+	while (extCount < 11) {
+		if (input[counter] && haveExt == 1) searchName[extCount] = input[counter];
+		else searchName[extCount] = ' ';
+
+		counter++;
+		extCount++;
+	}
+
+	counter = dotPos;
+	while (counter < 8) {
+		searchName[counter] = ' ';
+		counter++;
+	}
+
+	strcpy(input, searchName);
+	return input;
+}
+
+static int _name_check(const char* input) {
+	short retVal = 0;
+	uint16_t iterator = 0;
+	for (iterator = 0; iterator < 11; iterator++) {
+		if (input[iterator] < 0x20 && input[iterator] != 0x05) {
+			retVal = retVal | BAD_CHARACTER;
 		}
 
-		FAT_data.sectors_per_cluster = bootstruct->sectors_per_cluster;
-		FAT_data.bytes_per_sector = bootstruct->bytes_per_sector;
-		FAT_data.first_fat_sector = volume_start_lba + bootstruct->reserved_sector_count;
-		FAT_data.ext_root_cluster = ((fat_extBS_32_t*)(bootstruct->extended_section))->root_cluster;
-		FAT_data.cluster_size = FAT_data.bytes_per_sector * FAT_data.sectors_per_cluster;
-
-		if (!_fat_cluster_fits_static_buffer()) {
-			LOG("Function FAT_initialize: FAT cluster is larger than the static FAT buffer.\n");
-			return -1;
-		}
-
-		for (int i = 0; i < CONTENT_TABLE_SIZE; i++) {
-			_content_table[i] = NULL;
-		}
-
-		return 0;
-	}
-
-#pragma endregion
-
-//========================================================================================
-
-#pragma region [FAT RW functions]
-
-//========================================================================================
-//   ____  _____    _    ____    _____ _  _____ 
-//  |  _ \| ____|  / \  |  _ \  |  ___/ \|_   _|
-//  | |_) |  _|   / _ \ | | | | | |_ / _ \ | |  
-//  |  _ <| |___ / ___ \| |_| | |  _/ ___ \| |  
-//  |_| \_\_____/_/   \_\____/  |_|/_/   \_\_|  
-//
-//========================================================================================
-// This function reads FAT table for getting cluster status (or cluster chain)
-
-	static int __read_fat(uint32_t cluster) {
-		assert(
-			cluster >= 2 && cluster < FAT_data.total_clusters &&
-			(FAT_data.fat_type == 32 || FAT_data.fat_type == 16)
-		);
-
-		uint32_t fat_offset = cluster * (FAT_data.fat_type == 16 ? 2 : 4);
-		uint8_t* cluster_data = _fat_table_buffer;
-		if (ATA_read_sectors(FAT_data.first_fat_sector + (fat_offset / FAT_data.cluster_size), cluster_data, FAT_data.sectors_per_cluster) != 1) {
-			kprintf("[%s %i] Function __read_fat: Could not read sector that contains FAT32 table entry needed.\n", __FILE__, __LINE__);
-			return -1;
-		}
-
-		uint32_t table_value = *(uint32_t*)&cluster_data[fat_offset % FAT_data.cluster_size];
-		if (FAT_data.fat_type == 32) table_value &= 0x0FFFFFFF;
-
-		return table_value;
-	}
-
-//========================================================================================
-//  __        ______  ___ _____ _____   _____ _  _____ 
-//  \ \      / /  _ \|_ _|_   _| ____| |  ___/ \|_   _|
-//   \ \ /\ / /| |_) || |  | | |  _|   | |_ / _ \ | |  
-//    \ V  V / |  _ < | |  | | | |___  |  _/ ___ \| |  
-//     \_/\_/  |_| \_\___| |_| |_____| |_|/_/   \_\_|  
-//
-//========================================================================================
-// This function writes cluster status to FAT table
-
-	static int __write_fat(uint32_t cluster, uint32_t value) {
-		assert(
-			cluster >= 2 && cluster < FAT_data.total_clusters &&
-			(FAT_data.fat_type == 32 || FAT_data.fat_type == 16)
-		);
-		
-		uint32_t fat_offset = cluster * (FAT_data.fat_type == 16 ? 2 : 4);
-		uint32_t fat_sector = FAT_data.first_fat_sector + (fat_offset / FAT_data.cluster_size);
-		
-		uint8_t* cluster_data = _fat_table_buffer;
-		if (ATA_read_sectors(fat_sector, cluster_data, FAT_data.sectors_per_cluster) != 1) {
-			kprintf("Function __write_fat: Could not read sector that contains FAT32 table entry needed.\n");
-			return -1;
-		}
-
-		*(uint32_t*)&cluster_data[fat_offset % FAT_data.cluster_size] = value;
-		if (ATA_write_sectors(fat_sector, cluster_data, FAT_data.sectors_per_cluster) != 1) {
-			kprintf("Function __write_fat: Could not write new FAT32 cluster number to sector.\n");
-			return -1;
-		}
-
-		return 0;
-	}
-
-//========================================================================================
-
-#pragma endregion
-
-#pragma region [Cluster functions]
-
-	static int _is_cluster_free(uint32_t cluster) {
-		if (cluster == 0) return 1;
-		return 0;
-	}
-
-	static int _set_cluster_free(uint32_t cluster) {
-		return __write_fat(cluster, 0);
-	}
-
-	static int _is_cluster_end(uint32_t cluster, int fatType) {
-		if ((cluster == END_CLUSTER_32 && FAT_data.fat_type == 32) ||
-			(cluster == END_CLUSTER_16 && FAT_data.fat_type == 16) ||
-			(cluster == END_CLUSTER_12 && FAT_data.fat_type == 12))
-			return 1;
-
-		return 0;
-	}
-
-	static int _set_cluster_end(uint32_t cluster, int fatType) {
-		if (FAT_data.fat_type == 32) return __write_fat(cluster, END_CLUSTER_32);
-		if (FAT_data.fat_type == 16) return __write_fat(cluster, END_CLUSTER_16);
-		if (FAT_data.fat_type == 12) return __write_fat(cluster, END_CLUSTER_12);
-		return -1;
-	}
-
-	static int _is_cluster_bad(uint32_t cluster, int fatType) {
-		if ((cluster == BAD_CLUSTER_32 && FAT_data.fat_type == 32) ||
-			(cluster == BAD_CLUSTER_16 && FAT_data.fat_type == 16) ||
-			(cluster == BAD_CLUSTER_12 && FAT_data.fat_type == 12))
-			return 1;
-
-		return 0;
-	}
-
-	static inline int _set_cluster_bad(uint32_t cluster, int fatType) {
-		if (FAT_data.fat_type == 32) return __write_fat(cluster, BAD_CLUSTER_32);
-		if (FAT_data.fat_type == 16) return __write_fat(cluster, BAD_CLUSTER_16);
-		if (FAT_data.fat_type == 12) return __write_fat(cluster, BAD_CLUSTER_12);
-		return -1;
-	}
-
-#pragma endregion
-
-#pragma region [FAT AD functions]
-
-	static uint32_t last_allocated_cluster = SECTOR_OFFSET;
-	
-	static uint32_t _cluster_allocate() {
-		uint32_t cluster = last_allocated_cluster;
-		uint32_t clusterStatus = FREE_CLUSTER_32;
-
-		while (cluster < FAT_data.total_clusters) {
-			clusterStatus = __read_fat(cluster);
-			if (_is_cluster_free(clusterStatus) == 1) {
-				if (_set_cluster_end(cluster, FAT_data.fat_type) == 0) {
-					last_allocated_cluster = cluster;
-					return cluster;
-				}
-				else {
-					kprintf("Function _cluster_allocate: Error occurred with __write_fat, aborting operations...\n");
-					return -1;
-				}
+		switch (input[iterator]) {
+			case 0x2E: {
+				if ((retVal & NOT_CONVERTED_YET) == NOT_CONVERTED_YET)
+				retVal |= TOO_MANY_DOTS;
+				retVal ^= NOT_CONVERTED_YET;
+				break;
 			}
-			else if (clusterStatus < 0) {
-				kprintf("Function _cluster_allocate: Error occurred with __read_fat, aborting operations...\n");
+
+			case 0x22:
+			case 0x2A: case 0x2B:
+			case 0x2C: case 0x2F:
+			case 0x3A: case 0x3B:
+			case 0x3C: case 0x3D:
+			case 0x3E: case 0x3F:
+			case 0x5B: case 0x5C:
+			case 0x5D: case 0x7C:
+				retVal = retVal | BAD_CHARACTER;
+		}
+
+		if (input[iterator] >= 'a' && input[iterator] <= 'z')
+		retVal = retVal | LOWERCASE_ISSUE;
+	}
+
+	return retVal;
+}
+
+static int _directory_search(const char* filepart, const uint32_t cluster, directory_entry_t* file, uint32_t* entryOffset) {
+	assert(cluster >= 2 && cluster < FAT_data.total_clusters);
+
+	char searchName[13] = { 0 };
+	strcpy(searchName, filepart);
+	if (_name_check(searchName) != 0)
+	_name2fatname(searchName);
+
+	directory_cursor_t cursor;
+	if (_directory_cursor_open(&cursor, cluster) != 1) {
+		kprintf("Function _directory_search: _cluster_read encountered an error. Aborting...\n");
+		return -1;
+	}
+
+	while (1) {
+		directory_entry_t* file_metadata = cursor.meta;
+		if (file_metadata->file_name[0] == ENTRY_END) break;
+
+		if (strncmp((char*)file_metadata->file_name, searchName, 11) == 0) {
+			if (file != NULL) memcpy(file, file_metadata, sizeof(directory_entry_t));
+			if (entryOffset != NULL) *entryOffset = cursor.index;
+			return 0;
+		}
+
+		int next = _directory_cursor_next(&cursor);
+		if (next == 0) break;
+		if (next < 0) {
+			kprintf("Function _directory_search: directory cursor encountered an error. Aborting...\n");
+			return -1;
+		}
+	}
+
+	return -2;
+}
+
+static uint16_t _current_time() {
+	_datetime_read_rtc();
+	return (DTM_datetime.hour << 11) | (DTM_datetime.minute << 5) | (DTM_datetime.second / 2);
+}
+
+static uint16_t _current_date() {
+	_datetime_read_rtc();
+
+	uint16_t reversed_data = 0;
+	reversed_data |= DTM_datetime.day & 0x1F;
+	reversed_data |= (DTM_datetime.month & 0xF) << 5;
+	reversed_data |= ((DTM_datetime.year - 1980) & 0x7F) << 9;
+
+	return reversed_data;
+}
+
+static int _directory_add(const uint32_t cluster, directory_entry_t* file_to_add) {
+	directory_cursor_t cursor;
+	if (_directory_cursor_open(&cursor, cluster) != 1) {
+		kprintf("Function _directory_add: _cluster_read encountered an error. Aborting...\n");
+		return -1;
+	}
+
+	while (1) {
+		directory_entry_t* file_metadata = cursor.meta;
+		if (file_metadata->file_name[0] == ENTRY_FREE || file_metadata->file_name[0] == ENTRY_END) {
+			file_to_add->creation_date = _current_date();
+			file_to_add->creation_time = _current_time();
+			file_to_add->creation_time_tenths = _current_time();
+			file_to_add->last_accessed = file_to_add->creation_date;
+			file_to_add->last_modification_date = file_to_add->creation_date;
+			file_to_add->last_modification_time = file_to_add->creation_time;
+
+			uint32_t new_cluster = _cluster_allocate();
+			if (_is_cluster_bad(new_cluster, FAT_data.fat_type) == 1) {
+				kprintf("Function _directory_add: allocation of new cluster failed. Aborting...\n");
+
 				return -1;
 			}
 
-			cluster++;
+			file_to_add->low_bits  = GET_ENTRY_LOW_BITS(new_cluster, FAT_data.fat_type);
+			file_to_add->high_bits = GET_ENTRY_HIGH_BITS(new_cluster, FAT_data.fat_type);
+
+			memcpy(file_metadata, file_to_add, sizeof(directory_entry_t));
+			if (_directory_cursor_write(&cursor) != 1) {
+				kprintf("Function _directory_add: Writing new directory entry failed. Aborting...\n");
+				return -1;
+			}
+
+			return 0;
 		}
 
-		last_allocated_cluster = 2;
+		int next = _directory_cursor_next(&cursor);
+		if (next < 0) {
+			kprintf("Function _directory_add: directory cursor encountered an error. Aborting...\n");
+			return -1;
+		}
+
+		if (next == 0) {
+			uint32_t next_cluster = _cluster_allocate();
+			if (next_cluster == (uint32_t)-1 || _is_cluster_bad(next_cluster, FAT_data.fat_type) == 1) {
+				kprintf("Function _directory_add: allocation of new cluster failed. Aborting...\n");
+				return -1;
+			}
+
+			if (__write_fat(cursor.cluster, next_cluster) != 0) {
+				kprintf("Function _directory_add: extension of the cluster chain with new cluster failed. Aborting...\n");
+				return -1;
+			}
+
+			if (_directory_cursor_open(&cursor, next_cluster) != 1) return -1;
+		}
+	}
+
+	return -1;
+}
+
+static int _directory_edit(const uint32_t cluster, directory_entry_t* old_meta, const char* new_name) {
+	if (_name_check((char*)old_meta->file_name) != 0) {
+		kprintf("Function _directory_edit: Invalid file name!");
 		return -1;
 	}
 
-	static int _cluster_deallocate(const uint32_t cluster) {
-		uint32_t cluster_status = __read_fat(cluster);
-		if (_is_cluster_free(cluster_status) == 1) return 0;
-		else if (cluster_status < 0) {
-			kprintf("Function _cluster_deallocate: Error occurred with __read_fat, aborting operations...\n");
+	directory_cursor_t cursor;
+	if (_directory_cursor_open(&cursor, cluster) != 1) {
+		kprintf("Function _directory_edit: _cluster_read encountered an error. Aborting...\n");
+		return -1;
+	}
+
+	while (1) {
+		directory_entry_t* file_metadata = cursor.meta;
+		if (strncmp((char*)file_metadata->file_name, (char*)old_meta->file_name, 11) == 0) {
+			old_meta->last_accessed = _current_date();
+			old_meta->last_modification_date = _current_date();
+			old_meta->last_modification_time = _current_time();
+
+			memset(old_meta->file_name, 0, 11);
+			strncpy((char*)old_meta->file_name, new_name, 11);
+			memcpy(file_metadata, old_meta, sizeof(directory_entry_t));
+
+			if (_directory_cursor_write(&cursor) != 1) {
+				kprintf("Function _directory_edit: Writing updated directory entry failed. Aborting...\n");
+				return -1;
+			}
+
+			return 0;
+		}
+
+		int next = _directory_cursor_next(&cursor);
+		if (next == 0) return -2;
+		if (next < 0) {
+			kprintf("Function _directory_edit: directory cursor encountered an error. Aborting...\n");
 			return -1;
 		}
+	}
 
-		if (_set_cluster_free(cluster) == 0) return 0;
-		else {
-			kprintf("Function _cluster_deallocate: Error occurred with __write_fat, aborting operations...\n");
+	return -1;
+}
+
+static int _directory_remove(const uint32_t cluster, const char* fileName) {
+	if (_name_check(fileName) != 0) {
+		kprintf("Function _directory_remove: Invalid file name!");
+		return -1;
+	}
+
+	directory_cursor_t cursor;
+	if (_directory_cursor_open(&cursor, cluster) != 1) {
+		kprintf("Function _directory_remove: _cluster_read encountered an error. Aborting...\n");
+		return -1;
+	}
+
+	while (1) {
+		directory_entry_t* file_metadata = cursor.meta;
+		if (strncmp((char*)file_metadata->file_name, fileName, 11) == 0) {
+			file_metadata->file_name[0] = ENTRY_FREE;
+			if (_directory_cursor_write(&cursor) != 1) {
+				kprintf("Function _directory_remove: Writing updated directory entry failed. Aborting...\n");
+				return -1;
+			}
+
+			return 0;
+		}
+
+		int next = _directory_cursor_next(&cursor);
+		if (next == 0) return -2;
+		if (next < 0) {
+			kprintf("Function _directory_remove: directory cursor encountered an error. Aborting...\n");
 			return -1;
 		}
 	}
 
-//========================================================================================
+	return -1;
+}
 
-#pragma endregion
+int FAT_content_exists(const char* path) {
+	char fileNamePart[256] = { 0 };
+	uint16_t start = 0;
+	uint32_t active_cluster = 0;
 
-#pragma region [Cluster RW functions]
-
-//========================================================================================
-//    ____ _    _   _ ____ _____ _____ ____    ____  _____    _    ____  
-//   / ___| |  | | | / ___|_   _| ____|  _ \  |  _ \| ____|  / \  |  _ \ 
-//  | |   | |  | | | \___ \ | | |  _| | |_) | | |_) |  _|   / _ \ | | | |
-//  | |___| |__| |_| |___) || | | |___|  _ <  |  _ <| |___ / ___ \| |_| |
-//   \____|_____\___/|____/ |_| |_____|_| \_\ |_| \_\_____/_/   \_\____/ 
-//
-//========================================================================================
-// Reads one cluster
-// This function deals in absolute data clusters
-
-	// Read cluster with seek
-	static int _cluster_readoff(uint32_t cluster, uint32_t offset, uint8_t* buffer) {
-		assert(cluster >= 2 && cluster < FAT_data.total_clusters);
-		uint32_t start_sect = (cluster - 2) * (uint16_t)FAT_data.sectors_per_cluster + FAT_data.first_data_sector;
-		return ATA_readoff_sectors(start_sect, offset, buffer, FAT_data.sectors_per_cluster);
+	if (FAT_data.fat_type == 32) active_cluster = FAT_data.ext_root_cluster;
+	else {
+		kprintf("Function FAT_content_exists: FAT16 and FAT12 are not supported!\n");
+		return -1;
 	}
 
-	// Read cluster data
-	static int _cluster_read(uint32_t cluster, uint8_t* buffer) {
-		return _cluster_readoff(cluster, 0, buffer);
-	}
+	directory_entry_t file_info;
+	for (uint32_t iterator = 0; iterator <= strlen(path); iterator++) {
+		if (path[iterator] == '\\' || path[iterator] == '\0') {
+			memset(fileNamePart, '\0', 256);
+			memcpy(fileNamePart, path + start, iterator - start);
 
-	// Read cluster data and stop reading when script meets one of stop values with seek
-	static int _cluster_readoff_stop(uint32_t cluster, uint32_t offset, uint8_t* buffer, uint8_t* stop) {
-		assert(cluster >= 2 && cluster < FAT_data.total_clusters);
-		uint32_t start_sect = (cluster - 2) * (uint16_t)FAT_data.sectors_per_cluster + FAT_data.first_data_sector;
-		return ATA_readoff_sectors_stop(start_sect, offset, buffer, FAT_data.sectors_per_cluster, stop);
-	}
+			int result = _directory_search(fileNamePart, active_cluster, &file_info, NULL);
+			if (result != 0) return 0;
 
-//========================================================================================
-//    ____ _    _   _ ____ _____ _____ ____   __        ______  ___ _____ _____ 
-//   / ___| |  | | | / ___|_   _| ____|  _ \  \ \      / /  _ \|_ _|_   _| ____|
-//  | |   | |  | | | \___ \ | | |  _| | |_) |  \ \ /\ / /| |_) || |  | | |  _|  
-//  | |___| |__| |_| |___) || | | |___|  _ <    \ V  V / |  _ < | |  | | | |___ 
-//   \____|_____\___/|____/ |_| |_____|_| \_\    \_/\_/  |_| \_\___| |_| |_____|
-//
-//========================================================================================
-// Deals in absolute clusters
-// contentsToWrite: contains a pointer to the data to be written to disk
-// clusterNum: Specifies the on-disk cluster to write the data to
-
-	static int _cluster_write(const uint8_t* data, uint32_t cluster) {
-		assert(cluster >= 2 && cluster < FAT_data.total_clusters);
-		uint32_t start_sect = (cluster - 2) * (uint16_t)FAT_data.sectors_per_cluster + FAT_data.first_data_sector;
-		return ATA_write_sectors(start_sect, data, FAT_data.sectors_per_cluster);
-	}
-
-	static int _cluster_writeoff(const uint8_t* data, uint32_t cluster, uint32_t offset, uint32_t size) {
-		assert(cluster >= 2 && cluster < FAT_data.total_clusters);
-		uint32_t start_sect = (cluster - 2) * (uint16_t)FAT_data.sectors_per_cluster + FAT_data.first_data_sector;
-		return ATA_writeoff_sectors(start_sect, data, FAT_data.sectors_per_cluster, offset, size);
-	}
-
-//========================================================================================
-//    ____ _    _   _ ____ _____ _____ ____     ____ ___  ______   __
-//   / ___| |  | | | / ___|_   _| ____|  _ \   / ___/ _ \|  _ \ \ / /
-//  | |   | |  | | | \___ \ | | |  _| | |_) | | |  | | | | |_) \ V / 
-//  | |___| |__| |_| |___) || | | |___|  _ <  | |__| |_| |  __/ | |  
-//   \____|_____\___/|____/ |_| |_____|_| \_\  \____\___/|_|    |_|  
-//
-//========================================================================================
-// Copy cluster2cluster
-
-	static int _copy_cluster2cluster(uint32_t source, uint32_t destination) {
-		assert(
-			source >= 2 && source < FAT_data.total_clusters &&
-			destination >= 2 && destination < FAT_data.total_clusters
-		);
-		
-		uint32_t first = (source - 2) * (uint16_t)FAT_data.sectors_per_cluster + FAT_data.first_data_sector;
-		uint32_t second = (destination - 2) * (uint16_t)FAT_data.sectors_per_cluster + FAT_data.first_data_sector;
-		return ATA_copy_sectors2sectors(first, FAT_data.sectors_per_cluster, second);
-	}
-
-//========================================================================================
-//   ____ _    _   _ ____ _____ _____ ____     ___ _____ _   _ _____ ____  
-//  / ___| |  | | | / ___|_   _| ____|  _ \   / _ \_   _| | | | ____|  _ \ 
-// | |   | |  | | | \___ \ | | |  _| | |_) | | | | || | | |_| |  _| | |_) |
-// | |___| |__| |_| |___) || | | |___|  _ <  | |_| || | |  _  | |___|  _ < 
-//  \____|_____\___/|____/ |_| |_____|_| \_\  \___/ |_| |_| |_|_____|_| \_\
-//========================================================================================
-//	Other functions for working with clusters
-
-	// Add allocated cluster to file
-	static void _add_cluster_to_content(int ci) {
-		directory_entry_t content_meta = FAT_get_content_from_table(ci)->meta;
-		uint32_t cluster = GET_CLUSTER_FROM_ENTRY(content_meta, FAT_data.fat_type);
-		while (_is_cluster_end(cluster, FAT_data.fat_type) == 0) {
-			assert(_is_cluster_bad(cluster, FAT_data.fat_type) == 0);
-			assert(cluster != -1);
-			cluster = __read_fat(cluster);
-		}
-
-		if (_is_cluster_end(cluster, FAT_data.fat_type) == 1) {
-			uint32_t newCluster = _cluster_allocate();
-			assert(_is_cluster_bad(newCluster, FAT_data.fat_type) == 0);
-			assert(__write_fat(cluster, newCluster) == 0);
+			start = iterator + 1;
+			active_cluster = GET_CLUSTER_FROM_ENTRY(file_info, FAT_data.fat_type);
 		}
 	}
 
-//========================================================================================
+	return 1;
+}
 
-#pragma endregion
+int FAT_open_content(const char* path) {
+	int fd = _allocate_content_slot();
+	if (fd < 0) return -1;
 
-//========================================================================================
-//   ____ ___ ____  _____ ____ _____ ___  ______   __  _     ____  
-//  |  _ \_ _|  _ \| ____/ ___|_   _/ _ \|  _ \ \ / / | |   / ___| 
-//  | | | | || |_) |  _|| |     | || | | | |_) \ V /  | |   \___ \ 
-//  | |_| | ||  _ <| |__| |___  | || |_| |  _ < | |   | |___ ___) |
-//  |____/___|_| \_\_____\____| |_| \___/|_| \_\|_|   |_____|____/
-//
-//========================================================================================
-// receives the cluster to list, and will list all regular entries and directories, plus whatever attributes are passed in
-// returns: -1 is a general error
+	content_t* fat_content = _content_table[fd];
 
-	int FAT_directory_list(int ci, uint8_t attrs, int exclusive) {
-		uint32_t cluster = GET_CLUSTER_FROM_ENTRY(FAT_get_content_from_table(ci)->meta, FAT_data.fat_type);
-		assert(cluster >= 2 && cluster < FAT_data.total_clusters);
-		
-		Content* content = FAT_create_content();
-		if (!content) return 0;
+	char fileNamePart[256] = { 0 };
+	uint16_t start = 0;
+	uint32_t active_cluster = 0;
 
-		content->directory = _create_directory();
-		if (!content->directory) return 0;
-
-		content->parent_cluster = 0;
-		content->content_type = CONTENT_TYPE_DIRECTORY;
-
-		const uint8_t default_hidden_attributes = (FILE_HIDDEN | FILE_SYSTEM);
-		uint8_t attributes_to_hide = default_hidden_attributes;
-		if (exclusive == 0) attributes_to_hide &= (~attrs);
-		else if (exclusive == 1) attributes_to_hide = (~attrs);
-
-		uint8_t* cluster_data = _fat_cluster_buffer;
-		if (_cluster_read(cluster, cluster_data) != 1) {
-			kprintf("Function FAT_directory_list: _cluster_read encountered an error. Aborting...\n");
-			FAT_unload_content_system(content);
-			return -1;
-		}
-
-		directory_entry_t* file_metadata = (directory_entry_t*)cluster_data;
-		uint32_t meta_pointer_iterator_count = 0;
-		while (1) {
-			if (file_metadata->file_name[0] == ENTRY_END) break;
-			else if (strncmp((char*)file_metadata->file_name, "..", 2) == 0 ||
-					strncmp((char*)file_metadata->file_name, ".", 1) == 0) {
-				file_metadata++;
-				meta_pointer_iterator_count++;
-			}
-			else if (((file_metadata->file_name)[0] == ENTRY_FREE) || ((file_metadata->attributes & FILE_LONG_NAME) == FILE_LONG_NAME)) {	
-				if (meta_pointer_iterator_count < FAT_data.cluster_size / sizeof(directory_entry_t) - 1) {
-					file_metadata++;
-					meta_pointer_iterator_count++;
-				}
-				else {
-					uint32_t next_cluster = __read_fat(cluster);
-					if (_is_cluster_end(next_cluster, FAT_data.fat_type) == 1) break;
-					else if (next_cluster < 0) {
-						kprintf("Function FAT_directory_list: __read_fat encountered an error. Aborting...\n");
-						FAT_unload_content_system(content);
-						return -1;
-					}
-					else {
-						FAT_unload_content_system(content);
-						return FAT_directory_list(next_cluster, attrs, exclusive);
-					}
-				}
-			}
-			else {
-				if ((file_metadata->attributes & FILE_DIRECTORY) != FILE_DIRECTORY) {			
-					File* file = _create_file();
-
-					char name[13] = { 0 };
-					strcpy(name, (const char*)file_metadata->file_name);
-					strncpy(file->name, (const char*)strtok(name, " "), 8);
-					strncpy(file->extension, (const char*)strtok(NULL, " "), 4);
-
-					if (content->directory->files == NULL) content->directory->files = file;
-					else {
-						File* current = content->directory->files;
-						while (current->next != NULL) current = current->next;
-						current->next = file;
-					}
-				}
-				else {
-					if ((file_metadata->attributes & FILE_DIRECTORY) == FILE_DIRECTORY) {
-						Directory* upperDir = _create_directory();
-
-						char name[13] = { 0 };
-						strcpy(name, (char*)file_metadata->file_name);
-						strncpy(upperDir->name, strtok(name, " "), 11);
-						
-						if (content->directory->subDirectory == NULL) content->directory->subDirectory = upperDir;
-						else {
-							Directory* current = content->directory->subDirectory;
-							while (current->next != NULL) current = current->next;
-							current->next = upperDir;
-						}
-					}
-				}
-
-				file_metadata++;
-				meta_pointer_iterator_count++;
-			}
-		}
-
-		int root_ci = _add_content2table(content);
-		if (root_ci == -1) {
-			kprintf("Function FAT_open_content: an error occurred in _add_content2table. Aborting...\n");
-			FAT_unload_content_system(content);
-			return -1;
-		}
-
-		return root_ci;
-	}
-
-//========================================================================================
-//   ____ ___ ____  _____ ____ _____ ___  ______   __  ____  _____    _    ____   ____ _   _ 
-//  |  _ \_ _|  _ \| ____/ ___|_   _/ _ \|  _ \ \ / / / ___|| ____|  / \  |  _ \ / ___| | | |
-//  | | | | || |_) |  _|| |     | || | | | |_) \ V /  \___ \|  _|   / _ \ | |_) | |   | |_| |
-//  | |_| | ||  _ <| |__| |___  | || |_| |  _ < | |    ___) | |___ / ___ \|  _ <| |___|  _  |
-//  |____/___|_| \_\_____\____| |_| \___/|_| \_\|_|   |____/|_____/_/   \_\_| \_\\____|_| |_|
-//
-//========================================================================================
-// receives the cluster to read for a directory and the requested file, and will iterate through the directory's clusters - 
-// returning the entry for the searched file/subfolder, or no file/subfolder
-// return value holds success or failure code, file holds directory entry if file is found
-// entryOffset points to where the directory entry was found in sizeof(directory_entry_t) starting from zero (can be NULL)
-// returns: -1 is a general error, -2 is a "not found" error
-
-	static int _directory_search(const char* filepart, const uint32_t cluster, directory_entry_t* file, uint32_t* entryOffset) {
-		assert(cluster >= 2 && cluster < FAT_data.total_clusters);
-
-		char searchName[13] = { 0 };
-		strcpy(searchName, filepart);
-		if (_name_check(searchName) != 0)
-			_name2fatname(searchName);
-
-		uint8_t* cluster_data = _fat_cluster_buffer;
-		if (_cluster_read(cluster, cluster_data) != 1) {
-			kprintf("Function _directory_search: _cluster_read encountered an error. Aborting...\n");
-			return -1;
-		}
-
-		directory_entry_t* file_metadata = (directory_entry_t*)cluster_data;
-		uint32_t meta_pointer_iterator_count = 0;
-		while (1) {
-			if (file_metadata->file_name[0] == ENTRY_END) break;
-			else if (strncmp((char*)file_metadata->file_name, searchName, 11) != 0) {
-				if (meta_pointer_iterator_count < FAT_data.cluster_size / sizeof(directory_entry_t) - 1) {
-					file_metadata++;
-					meta_pointer_iterator_count++;
-				}
-				else {
-					int next_cluster = __read_fat(cluster);
-					if (_is_cluster_end(next_cluster, FAT_data.fat_type) == 1) break;
-					else if (next_cluster < 0) {
-						kprintf("Function _directory_search: __read_fat encountered an error. Aborting...\n");
-						return -1;
-					} 
-					else {
-						return _directory_search(filepart, next_cluster, file, entryOffset);
-					}
-				}
-			}
-			else {
-				if (file != NULL) memcpy(file, file_metadata, sizeof(directory_entry_t));
-				if (entryOffset != NULL) *entryOffset = meta_pointer_iterator_count;
-
-				return 0;
-			}
-		}
-
+	if (FAT_data.fat_type == 32) active_cluster = FAT_data.ext_root_cluster;
+	else {
+		LOG("Function FAT_open_content: FAT16 and FAT12 are not supported!\n");
+		_release_content_slot(fd);
 		return -2;
 	}
 
-//========================================================================================
-//   ____ ___ ____  _____ ____ _____ ___  ______   __     _    ____  ____  
-//  |  _ \_ _|  _ \| ____/ ___|_   _/ _ \|  _ \ \ / /    / \  |  _ \|  _ \ 
-//  | | | | || |_) |  _|| |     | || | | | |_) \ V /    / _ \ | | | | | | |
-//  | |_| | ||  _ <| |__| |___  | || |_| |  _ < | |    / ___ \| |_| | |_| |
-//  |____/___|_| \_\_____\____| |_| \___/|_| \_\|_|   /_/   \_\____/|____/ 
-//
-//========================================================================================                                                                   
-// pass in the cluster to write the directory to and the directory struct to write.
-// struct should only have a file name, attributes, and size. the rest will be filled in automatically
+	directory_entry_t content_meta;
+	for (uint32_t iterator = 0; iterator <= strlen(path); iterator++) {
+		if (path[iterator] == '\\' || path[iterator] == '\0') {
+			memset(fileNamePart, '\0', 256);
+			memcpy(fileNamePart, path + start, iterator - start);
 
-	static int _directory_add(const uint32_t cluster, directory_entry_t* file_to_add) {
-		uint8_t* cluster_data = _fat_cluster_buffer;
-		if (_cluster_read(cluster, cluster_data) != 1) {
-			kprintf("Function _directory_add: _cluster_read encountered an error. Aborting...\n");
-			return -1;
-		}
-
-		directory_entry_t* file_metadata = (directory_entry_t*)cluster_data;
-		uint32_t meta_pointer_iterator_count = 0;
-		while (1) {
-			if (file_metadata->file_name[0] != ENTRY_FREE && file_metadata->file_name[0] != ENTRY_END) {
-				if (meta_pointer_iterator_count < FAT_data.cluster_size / sizeof(directory_entry_t) - 1) {
-					file_metadata++;
-					meta_pointer_iterator_count++;
-				}
-				else {
-					uint32_t next_cluster = __read_fat(cluster);
-					if (_is_cluster_end(next_cluster, FAT_data.fat_type) == 1) {
-						next_cluster = _cluster_allocate();
-						if (_is_cluster_bad(next_cluster, FAT_data.fat_type) == 1) {
-							kprintf("Function _directory_add: allocation of new cluster failed. Aborting...\n");
-							return -1;
-						}
-
-						if (__write_fat(cluster, next_cluster) != 0) {
-							kprintf("Function _directory_add: extension of the cluster chain with new cluster failed. Aborting...\n");
-							return -1;
-						}
-					}
-
-					return _directory_add(next_cluster, file_to_add);
-				}
+			int result = _directory_search(fileNamePart, active_cluster, &content_meta, NULL);
+			if (result == -2) {
+				_release_content_slot(fd);
+				return -3;
 			}
-			else {
-				file_to_add->creation_date 			= _current_date();
-				file_to_add->creation_time 			= _current_time();
-				file_to_add->creation_time_tenths 	= _current_time();
-				file_to_add->last_accessed 			= file_to_add->creation_date;
-				file_to_add->last_modification_date = file_to_add->creation_date;
-				file_to_add->last_modification_time = file_to_add->creation_time;
-
-				uint32_t new_cluster = _cluster_allocate();
-				if (_is_cluster_bad(new_cluster, FAT_data.fat_type) == 1) {
-					kprintf("Function _directory_add: allocation of new cluster failed. Aborting...\n");
-
-					return -1;
-				}
-				
-				file_to_add->low_bits  = GET_ENTRY_LOW_BITS(new_cluster, FAT_data.fat_type);
-				file_to_add->high_bits = GET_ENTRY_HIGH_BITS(new_cluster, FAT_data.fat_type);
-
-				memcpy(file_metadata, file_to_add, sizeof(directory_entry_t));
-				if (_cluster_write(cluster_data, cluster) != 0) {
-					kprintf("Function _directory_add: Writing new directory entry failed. Aborting...\n");
-					return -1;
-				}
-
-				return 0;
+			else if (result == -1) {
+				LOG("Function FAT_open_content: An error occurred in _directory_search. Aborting...\n");
+				_release_content_slot(fd);
+				return -4;
 			}
-		}
 
-		return -1; //return error.
+			start = iterator + 1;
+			active_cluster = GET_CLUSTER_FROM_ENTRY(content_meta, FAT_data.fat_type);
+			if (path[iterator] != '\0') fat_content->parent_cluster = active_cluster;
+		}
 	}
 
-//========================================================================================
-//   ____ ___ ____  _____ ____ _____ ___  ______   __  _____ ____ ___ _____ 
-//  |  _ \_ _|  _ \| ____/ ___|_   _/ _ \|  _ \ \ / / | ____|  _ \_ _|_   _|
-//  | | | | || |_) |  _|| |     | || | | | |_) \ V /  |  _| | | | | |  | |  
-//  | |_| | ||  _ <| |__| |___  | || |_| |  _ < | |   | |___| |_| | |  | |  
-//  |____/___|_| \_\_____\____| |_| \___/|_| \_\|_|   |_____|____/___| |_| 
-//
-//========================================================================================
-// This function edit names of directory entries in cluster
+	memcpy(&fat_content->meta, &content_meta, sizeof(directory_entry_t));
+	if ((content_meta.attributes & FILE_DIRECTORY) != FILE_DIRECTORY) {
+		fat_content->file = &_file_storage[fd];
 
-	static int _directory_edit(const uint32_t cluster, directory_entry_t* old_meta, const char* new_name) {
-		if (_name_check((char*)old_meta->file_name) != 0) {
-			kprintf("Function _directory_edit: Invalid file name!");
-			return -1;
-		}
+		fat_content->content_type = CONTENT_TYPE_FILE;
+		int content_size = 0;
+		int cluster = GET_CLUSTER_FROM_ENTRY(content_meta, FAT_data.fat_type);
+		fat_content->file->first_cluster = cluster;
 
-		uint8_t* cluster_data = _fat_cluster_buffer;
-		if (_cluster_read(cluster, cluster_data) != 1) {
-			kprintf("Function _directory_edit: _cluster_read encountered an error. Aborting...\n");
-			return -1;
-		}
+		while (cluster < END_CLUSTER_32) {
+			content_size++;
 
-		directory_entry_t* file_metadata = (directory_entry_t*)cluster_data;
-		uint32_t meta_pointer_iterator_count = 0;
-		while (1) {
-			if (strstr((char*)file_metadata->file_name, (char*)old_meta->file_name) == 0) {
-
-				old_meta->last_accessed = _current_date();
-				old_meta->last_modification_date = _current_date();
-				old_meta->last_modification_time = _current_time();
-
-				memset(old_meta->file_name, 0, 11);
-				strncpy((char*)old_meta->file_name, new_name, 11);
-				memcpy(file_metadata, old_meta, sizeof(directory_entry_t));
-				
-				if (_cluster_write(cluster_data, cluster) != 0) {
-					kprintf("Function _directory_edit: Writing updated directory entry failed. Aborting...\n");
-					return -1;
-				}
-
-				return 0;
-			} 
-			
-			else if (meta_pointer_iterator_count < FAT_data.cluster_size / sizeof(directory_entry_t) - 1)  {
-				file_metadata++;
-				meta_pointer_iterator_count++;
-			} 
-			
-			else {
-				uint32_t next_cluster = __read_fat(cluster);
-				if ((next_cluster >= END_CLUSTER_32 && FAT_data.fat_type == 32) || (next_cluster >= END_CLUSTER_16 && FAT_data.fat_type == 16) || (next_cluster >= END_CLUSTER_12 && FAT_data.fat_type == 12)) {
-					kprintf("Function _directory_edit: End of cluster chain reached. File not found. Aborting...\n");
-					return -2;
-				}
-
-				return _directory_edit(next_cluster, old_meta, new_name);
+			cluster = __read_fat(cluster);
+			if (cluster == BAD_CLUSTER_32) {
+				LOG("Function FAT_open_content: the cluster chain is corrupted with a bad cluster. Aborting...\n");
+				_release_content_slot(fd);
+				return -7;
+			}
+			else if (cluster == -1) {
+				LOG("Function FAT_open_content: an error occurred in __read_fat. Aborting...\n");
+				_release_content_slot(fd);
+				return -8;
 			}
 		}
 
+		fat_content->file->data_size = content_size;
+
+		char name[13] = { 0 };
+		strcpy(name, (char*)fat_content->meta.file_name);
+		strncpy(fat_content->file->name, strtok(name, " "), 8);
+		strncpy(fat_content->file->extension, strtok(NULL, " "), 4);
+	}
+	else {
+		fat_content->directory = &_directory_storage[fd];
+
+		fat_content->content_type = CONTENT_TYPE_DIRECTORY;
+		strncpy(fat_content->directory->name, (char*)content_meta.file_name, 10);
+	}
+
+	return fd;
+}
+
+content_t* FAT_get_content_from_table(int ci) {
+	if (!_is_valid_fd(ci)) return NULL;
+	return _content_table[ci];
+}
+
+static int _remove_content_from_table(int index) {
+	if (index < 0 || index >= CONTENT_TABLE_SIZE) return -1;
+	if (!_content_table[index]) return -1;
+	_release_content_slot(index);
+	return 1;
+}
+
+int FAT_close_content(int ci) {
+	return _remove_content_from_table(ci);
+}
+
+int FAT_read_content2buffer(int ci, uint8_t* buffer, uint32_t offset, uint32_t size) {
+	uint32_t data_seek     = offset % (FAT_data.sectors_per_cluster * SECTOR_SIZE);
+	uint32_t cluster_seek  = offset / (FAT_data.sectors_per_cluster * SECTOR_SIZE);
+	uint32_t data_position = 0;
+
+	content_t* data = FAT_get_content_from_table(ci);
+	if (!data) return -1;
+	if (data->content_type != CONTENT_TYPE_FILE || !data->file) return -2;
+
+	int cluster = _content_cluster_at(data, cluster_seek);
+	for (int i = cluster_seek; i < data->file->data_size && data_position < size; i++) {
+		if (cluster < 0) return -1;
+
+		uint32_t copy_size = min(FAT_data.cluster_size - data_seek, size - data_position);
+		if (_cluster_read_range(cluster, data_seek, buffer + data_position, copy_size) != 1) return -1;
+		data_position += copy_size;
+		data_seek = 0;
+		cluster = __read_fat(cluster);
+	}
+
+	return data_position;
+}
+int FAT_read_content2buffer_stop(int ci, uint8_t* buffer, uint32_t offset, uint32_t size, uint8_t* stop) {
+	uint32_t data_seek     = offset % (FAT_data.sectors_per_cluster * SECTOR_SIZE);
+	uint32_t cluster_seek  = offset / (FAT_data.sectors_per_cluster * SECTOR_SIZE);
+	uint32_t data_position = 0;
+
+	content_t* data = FAT_get_content_from_table(ci);
+	if (data == NULL) return -1;
+	if (data->content_type != CONTENT_TYPE_FILE || !data->file) return -2;
+
+	int cluster = _content_cluster_at(data, cluster_seek);
+	for (int i = cluster_seek; i < data->file->data_size && data_position < size; i++) {
+		if (cluster < 0) return -1;
+
+		uint32_t copy_size = min(FAT_data.cluster_size - data_seek, size - data_position);
+		if (_cluster_read_range_stop(cluster, data_seek, buffer + data_position, copy_size, stop) != 1) return -1;
+		data_position += copy_size;
+		data_seek = 0;
+
+		if (stop[0] == STOP_SYMBOL) break;
+		cluster = __read_fat(cluster);
+	}
+
+	return data_position;
+}
+
+int FAT_ELF_execute_content(int ci, int argc, char* argv[], int type) {
+	ELF32_program* program = ELF_read(ci, type);
+	if (!program) return -255;
+
+	int (*programEntry)(int, char* argv[]) = (int (*)(int, char* argv[]))(program->entry_point);
+	if (!programEntry) return -255;
+
+	int result_code = programEntry(argc, argv);
+	ELF_free_program(program, type);
+
+	return result_code;
+}
+int FAT_write_buffer2content(int ci, const uint8_t* buffer, uint32_t offset, uint32_t size) {
+	content_t* data = FAT_get_content_from_table(ci);
+	if (data == NULL) return -1;
+	if (data->file == NULL) return -2;
+
+	uint32_t cluster_seek = offset / (FAT_data.sectors_per_cluster * SECTOR_SIZE);
+	uint32_t data_position = 0;
+	uint32_t cluster_position = 0;
+	uint32_t prev_offset = offset;
+	int cluster = _content_cluster_at(data, cluster_seek);
+	for (cluster_position = cluster_seek; cluster_position < data->file->data_size && data_position < size; cluster_position++) {
+		if (cluster < 0) return -1;
+
+		uint32_t write_size = min(size - data_position, FAT_data.cluster_size - (offset % FAT_data.cluster_size));
+		_cluster_writeoff(buffer + data_position, cluster, offset, write_size);
+
+		offset = 0;
+		data_position += write_size;
+		cluster = __read_fat(cluster);
+	}
+	if (data_position < size) {
+		uint32_t new_offset = prev_offset + data_position;
+		uint32_t new_size   = size - data_position;
+		const uint8_t* new_buffer = buffer + data_position;
+		int add_result = _add_cluster_to_content(ci);
+		if (add_result < 0) return add_result;
+		return FAT_write_buffer2content(ci, new_buffer, new_offset, new_size);
+	}
+
+	return 1;
+}
+int FAT_change_meta(const char* path, const char* new_name) {
+
+	char fileNamePart[256] = { 0 };
+	uint16_t start = 0;
+	uint32_t active_cluster = 0;
+	uint32_t prev_active_cluster = 0;
+
+	if (FAT_data.fat_type == 32) active_cluster = FAT_data.ext_root_cluster;
+	else {
+		kprintf("Function FAT_change_meta: FAT16 and FAT12 are not supported!\n");
 		return -1;
 	}
 
-//========================================================================================
-//   ____ ___ ____  _____ ____ _____ ___  ______   __  ____  _____ __  __  _____     _______ 
-//  |  _ \_ _|  _ \| ____/ ___|_   _/ _ \|  _ \ \ / / |  _ \| ____|  \/  |/ _ \ \   / / ____|
-//  | | | | || |_) |  _|| |     | || | | | |_) \ V /  | |_) |  _| | |\/| | | | \ \ / /|  _|  
-//  | |_| | ||  _ <| |__| |___  | || |_| |  _ < | |   |  _ <| |___| |  | | |_| |\ V / | |___ 
-//  |____/___|_| \_\_____\____| |_| \___/|_| \_\|_|   |_| \_\_____|_|  |_|\___/  \_/  |_____|
-//
-//========================================================================================
-// This function mark data in FAT table as ALC_free and deallocates all clusters
-
-	static int _directory_remove(const uint32_t cluster, const char* fileName) {
-		if (_name_check(fileName) != 0) {
-			kprintf("Function _directory_remove: Invalid file name!");
-			return -1;
-		}
-
-		uint8_t* cluster_data = _fat_cluster_buffer;
-		if (_cluster_read(cluster, cluster_data) != 1) {
-			kprintf("Function _directory_remove: _cluster_read encountered an error. Aborting...\n");
-			return -1;
-		}
-
-		directory_entry_t* file_metadata = (directory_entry_t*)cluster_data;
-		uint32_t meta_pointer_iterator_count = 0;
-		while (1) {
-			if (strstr((char*)file_metadata->file_name, fileName) == 0) {
-				file_metadata->file_name[0] = ENTRY_FREE;
-				if (_cluster_write(cluster_data, cluster) != 0) {
-					kprintf("Function _directory_remove: Writing updated directory entry failed. Aborting...\n");
-					return -1;
-				}
-
-				return 0;
-			} 
-			else if (meta_pointer_iterator_count < FAT_data.cluster_size / sizeof(directory_entry_t) - 1)  {
-				file_metadata++;
-				meta_pointer_iterator_count++;
-			} 
-			else {
-				uint32_t next_cluster = __read_fat(cluster);
-				if ((next_cluster >= END_CLUSTER_32 && FAT_data.fat_type == 32) || (next_cluster >= END_CLUSTER_16 && FAT_data.fat_type == 16) || (next_cluster >= END_CLUSTER_12 && FAT_data.fat_type == 12)) {
-					kprintf("Function _directory_remove: End of cluster chain reached. File not found. Aborting...\n");
-					return -2;
-				}
-
-				return _directory_remove(next_cluster, fileName);
-			}
-		}
-
-		return -1; // Return error
-	}
-
-//========================================================================================
-//    ____ ___  _   _ _____ _____ _   _ _____   _______  _____ ____ _____ 
-//   / ___/ _ \| \ | |_   _| ____| \ | |_   _| | ____\ \/ /_ _/ ___|_   _|
-//  | |  | | | |  \| | | | |  _| |  \| | | |   |  _|  \  / | |\___ \ | |  
-//  | |__| |_| | |\  | | | | |___| |\  | | |   | |___ /  \ | | ___) || |  
-//   \____\___/|_| \_| |_| |_____|_| \_| |_|   |_____/_/\_\___|____/ |_| 
-//
-//========================================================================================
-// Function that checks is content exist
-// returns: 0 if nexist and 1 if exist
-
-	int FAT_content_exists(const char* path) {
-		char fileNamePart[256] = { 0 };
-		uint16_t start = 0;
-		uint32_t active_cluster = 0;
-
-		if (FAT_data.fat_type == 32) active_cluster = FAT_data.ext_root_cluster;
-		else {
-			kprintf("Function FAT_content_exists: FAT16 and FAT12 are not supported!\n");
-			return -1;
-		}
-
-		directory_entry_t file_info;
-		for (uint32_t iterator = 0; iterator <= strlen(path); iterator++) {
-			if (path[iterator] == '\\' || path[iterator] == '\0') {
-				memset(fileNamePart, '\0', 256);
-				memcpy(fileNamePart, path + start, iterator - start);
-
-				int result = _directory_search(fileNamePart, active_cluster, &file_info, NULL);
-				if (result != 0) return 0;
-
-				start = iterator + 1;
-				active_cluster = GET_CLUSTER_FROM_ENTRY(file_info, FAT_data.fat_type);
-			}
-		}
-
-		return 1; // Content exists
-	}
-
-//========================================================================================
-//    ____ ___  _   _ _____ _____ _   _ _____    ____ _____ _____ 
-//   / ___/ _ \| \ | |_   _| ____| \ | |_   _|  / ___| ____|_   _|
-//  | |  | | | |  \| | | | |  _| |  \| | | |   | |  _|  _|   | |  
-//  | |__| |_| | |\  | | | | |___| |\  | | |   | |_| | |___  | |  
-//   \____\___/|_| \_| |_| |_____|_| \_| |_|    \____|_____| |_|  
-//
-//========================================================================================
-// Returns: negative if general error.
-// -1 - FAT_create_content error
-// -2 - Wrong FAT type
-// -3, -4 - Dirsearch error
-// -5 - _create_file error
-// -6 - ALC_realloc error
-// -7, -8 - __read_fat error
-// -9 - ALC_malloc error
-// -10 - _create_directory error
-// -11 - _add_content2table error
-
-	int FAT_open_content(const char* path) {
-		Content* fat_content = FAT_create_content();
-		if (!fat_content) return -1;
-
-		char fileNamePart[256] = { 0 };
-		uint16_t start = 0;
-		uint32_t active_cluster = 0;
-
-		if (FAT_data.fat_type == 32) active_cluster = FAT_data.ext_root_cluster;
-		else {
-			LOG("Function FAT_open_content: FAT16 and FAT12 are not supported!\n");
-			FAT_unload_content_system(fat_content);
-			return -2;
-		}
-		
-		directory_entry_t content_meta;
-		for (uint32_t iterator = 0; iterator <= strlen(path); iterator++) {
-			if (path[iterator] == '\\' || path[iterator] == '\0') {
-				memset(fileNamePart, '\0', 256);
-				memcpy(fileNamePart, path + start, iterator - start);
-
-				int result = _directory_search(fileNamePart, active_cluster, &content_meta, NULL);
-				if (result == -2) {
-					FAT_unload_content_system(fat_content);
-					return -3;
-				}
-				else if (result == -1) {
-					LOG("Function FAT_open_content: An error occurred in _directory_search. Aborting...\n");
-					FAT_unload_content_system(fat_content);
-					return -4;
-				}
-
-				start = iterator + 1;
-				active_cluster = GET_CLUSTER_FROM_ENTRY(content_meta, FAT_data.fat_type);
-				if (path[iterator] != '\0') fat_content->parent_cluster = active_cluster;
-			}
-		}
-		
-		memcpy(&fat_content->meta, &content_meta, sizeof(directory_entry_t));
-		if ((content_meta.attributes & FILE_DIRECTORY) != FILE_DIRECTORY) {
-			fat_content->file = _create_file();
-			if (!fat_content->file) {
-				FAT_unload_content_system(fat_content);
-				return -5;
-			}
-
-			fat_content->content_type = CONTENT_TYPE_FILE;
-			uint32_t* content = NULL;
-			int content_size = 0;
-			
-			int cluster = GET_CLUSTER_FROM_ENTRY(content_meta, FAT_data.fat_type);
-			while (cluster < END_CLUSTER_32) {
-				uint32_t* new_content = (uint32_t*)ALC_realloc(content, (content_size + 1) * sizeof(uint32_t), KERNEL);
-				if (new_content == NULL) {
-					ALC_free(content, KERNEL);
-					FAT_unload_content_system(fat_content);
-					return -6;
-				}
-
-				new_content[content_size] = cluster;
-				content = new_content;
-				content_size++;
-
-				cluster = __read_fat(cluster);
-				if (cluster == BAD_CLUSTER_32) {
-					LOG("Function FAT_open_content: the cluster chain is corrupted with a bad cluster. Aborting...\n");
-					ALC_free(content, KERNEL);
-					FAT_unload_content_system(fat_content);
-					return -7;
-				}
-				else if (cluster == -1) {
-					LOG("Function FAT_open_content: an error occurred in __read_fat. Aborting...\n");
-					ALC_free(content, KERNEL);
-					FAT_unload_content_system(fat_content);
-					return -8;
-				}
-			}
-			
-			fat_content->file->data = (uint32_t*)ALC_malloc(content_size * sizeof(uint32_t), KERNEL);
-			if (!fat_content->file->data) {
-				ALC_free(content, KERNEL);
-				ALC_free(fat_content->file, KERNEL);
-				FAT_unload_content_system(fat_content);
-				return -9;
-			}
-
-			memcpy(fat_content->file->data, content, content_size * sizeof(uint32_t));
-			fat_content->file->data_size = content_size;
-			ALC_free(content, KERNEL);
-
-			char name[13] = { 0 };
-			strcpy(name, (char*)fat_content->meta.file_name);
-			strncpy(fat_content->file->name, strtok(name, " "), 8);
-			strncpy(fat_content->file->extension, strtok(NULL, " "), 4);
+	directory_entry_t file_info;
+	if (strlen(path) == 0) {
+		if (FAT_data.fat_type == 32) {
+			active_cluster 		 = FAT_data.ext_root_cluster;
+			file_info.attributes = FILE_DIRECTORY | FILE_VOLUME_ID;
+			file_info.file_size  = 0;
+			file_info.high_bits  = GET_ENTRY_HIGH_BITS(active_cluster, FAT_data.fat_type);
+			file_info.low_bits 	 = GET_ENTRY_LOW_BITS(active_cluster, FAT_data.fat_type);
 		}
 		else {
-			fat_content->directory = _create_directory();
-			if (!fat_content->directory) {
-				FAT_unload_content_system(fat_content);
-				return -10;
-			}
-
-			fat_content->content_type = CONTENT_TYPE_DIRECTORY;
-			strncpy(fat_content->directory->name, (char*)content_meta.file_name, 10);
-		}
-
-		int ci = _add_content2table(fat_content);
-		if (ci < 0) {
-			LOG("Function FAT_open_content: an error occurred in _add_content2table. Aborting...\n");
-			if (fat_content->file) ALC_free(fat_content->file, KERNEL);
-			else if (fat_content->directory) ALC_free(fat_content->directory, KERNEL);
-			FAT_unload_content_system(fat_content);
-			return -11;
-		}
-
-		return ci;
-	}
-
-	Content* FAT_get_content_from_table(int ci) {
-		return _content_table[ci];
-	}
-
-	int FAT_close_content(int ci) {
-		return _remove_content_from_table(ci);
-	}
-
-	// Function for reading part of file
-	// data - content for reading
-	// buffer - buffer data storage
-	// offset - file seek
-	// size - size of read data
-	int FAT_read_content2buffer(int ci, uint8_t* buffer, uint32_t offset, uint32_t size) {
-		uint32_t data_seek     = offset % (FAT_data.sectors_per_cluster * SECTOR_SIZE);
-		uint32_t cluster_seek  = offset / (FAT_data.sectors_per_cluster * SECTOR_SIZE);
-		uint32_t data_position = 0;
-
-		Content* data = FAT_get_content_from_table(ci);
-		if (!data) return -1;
-
-		for (int i = cluster_seek; i < data->file->data_size && data_position < size; i++) {
-			uint32_t copy_size = min(SECTOR_SIZE * FAT_data.sectors_per_cluster - data_seek, size - data_position);
-			uint8_t* content_part = _fat_content_buffer;
-			if (_cluster_readoff(data->file->data[i], data_seek, content_part) != 1) return -1;
-
-			memcpy(buffer + data_position, content_part, copy_size);
-			data_position += copy_size;
-			data_seek = 0;
-		}
-
-		return data_position;
-	}
-
-	// Function for reading part of file
-	// data - content for reading
-	// buffer - buffer data storage
-	// offset - file seek
-	// size - size of read data
-	// stop - value that will stop reading
-	int FAT_read_content2buffer_stop(int ci, uint8_t* buffer, uint32_t offset, uint32_t size, uint8_t* stop) {
-		uint32_t data_seek     = offset % (FAT_data.sectors_per_cluster * SECTOR_SIZE);
-		uint32_t cluster_seek  = offset / (FAT_data.sectors_per_cluster * SECTOR_SIZE);
-		uint32_t data_position = 0;
-
-		Content* data = FAT_get_content_from_table(ci);
-		if (data == NULL) return -1;
-		
-		for (int i = cluster_seek; i < data->file->data_size && data_position < size; i++) {
-			uint32_t copy_size = min(SECTOR_SIZE * FAT_data.sectors_per_cluster - data_seek, size - data_position);
-			uint8_t* content_part = _fat_content_buffer;
-			if (_cluster_readoff_stop(data->file->data[i], data_seek, content_part, stop) != 1) return -1;
-
-			memcpy(buffer + data_position, content_part, copy_size);
-			
-			data_position += copy_size;
-			data_seek = 0;
-
-			if (stop[0] == STOP_SYMBOL) break;
-		}
-
-		return data_position;
-	}
-
-	int FAT_ELF_execute_content(int ci, int argc, char* argv[], int type) {
-		ELF32_program* program = ELF_read(ci, type);
-		int (*programEntry)(int, char* argv[]) = (int (*)(int, char* argv[]))(program->entry_point);
-		if (!programEntry) return -255;
-
-		int result_code = programEntry(argc, argv);
-		ELF_free_program(program, type);
-
-		return result_code;
-	}
-
-//========================================================================================
-//    ____ ___  _   _ _____ _____ _   _ _____   _____ ____ ___ _____ 
-//   / ___/ _ \| \ | |_   _| ____| \ | |_   _| | ____|  _ \_ _|_   _|
-//  | |  | | | |  \| | | | |  _| |  \| | | |   |  _| | | | | |  | |  
-//  | |__| |_| | |\  | | | | |___| |\  | | |   | |___| |_| | |  | |  
-//   \____\___/|_| \_| |_| |_____|_| \_| |_|   |_____|____/___| |_|  
-//
-//========================================================================================
-// This function edit content in FAT content object
-	
-	// Write data to content with offset from buffer
-	// data - content where data will be placed
-	// buffer - data that will be saved in content
-	// offset - content seek
-	// size - write size
-	int FAT_write_buffer2content(int ci, const uint8_t* buffer, uint32_t offset, uint32_t size) {
-		Content* data = FAT_get_content_from_table(ci);
-		if (data == NULL) return -1;
-		if (data->file == NULL) return -2;
-
-		uint32_t cluster_seek = offset / (FAT_data.sectors_per_cluster * SECTOR_SIZE);
-		uint32_t data_position = 0;
-		uint32_t cluster_position = 0;
-		uint32_t prev_offset = offset;
-
-		// Write to presented clusters
-		for (cluster_position = cluster_seek; cluster_position < data->file->data_size && data_position < size; cluster_position++) {
-			uint32_t write_size = min(size - data_position, FAT_data.sectors_per_cluster * SECTOR_SIZE);
-			_cluster_writeoff(buffer + data_position, data->file->data[cluster_position], offset, write_size);
-
-			offset = 0;
-			data_position += write_size;
-		}
-
-		// Allocate cluster and write
-		if (data_position < size) {
-			// Calculate new variables
-			uint32_t new_offset = prev_offset + data_position;
-			uint32_t new_size   = size - data_position;
-			const uint8_t* new_buffer = buffer + data_position;
-
-			// Allocate cluster
-			_add_cluster_to_content(ci);
-			FAT_write_buffer2content(ci, new_buffer, new_offset, new_size);
-		}
-
-		return 1;
-	}
-
-//========================================================================================
-//    ____ _   _    _    _   _  ____ _____   __  __ _____ _____  _    
-//   / ___| | | |  / \  | \ | |/ ___| ____| |  \/  | ____|_   _|/ \   
-//  | |   | |_| | / _ \ |  \| | |  _|  _|   | |\/| |  _|   | | / _ \  
-//  | |___|  _  |/ ___ \| |\  | |_| | |___  | |  | | |___  | |/ ___ \ 
-//   \____|_| |_/_/   \_\_| \_|\____|_____| |_|  |_|_____| |_/_/   \_\
-//
-//========================================================================================
-// This function finds content in FAT table and change their name
-	int FAT_change_meta(const char* path, const char* new_name) {
-
-		char fileNamePart[256] = { 0 };
-		uint16_t start = 0;
-		uint32_t active_cluster = 0;
-		uint32_t prev_active_cluster = 0;
-
-		//////////////////////
-		//	FAT ACTIVE CLUSTER CHOOSING
-
-			if (FAT_data.fat_type == 32) active_cluster = FAT_data.ext_root_cluster;
-			else {
-				kprintf("Function FAT_change_meta: FAT16 and FAT12 are not supported!\n");
-				return -1;
-			}
-
-		//	FAT ACTIVE CLUSTER CHOOSING
-		//////////////////////
-		//	FINDING DIR BY PATH
-
-			directory_entry_t file_info; //holds found directory info
-			if (strlen(path) == 0) { // Create main dir if it not created (root dir)
-				if (FAT_data.fat_type == 32) {
-					active_cluster 		 = FAT_data.ext_root_cluster;
-					file_info.attributes = FILE_DIRECTORY | FILE_VOLUME_ID;
-					file_info.file_size  = 0;
-					file_info.high_bits  = GET_ENTRY_HIGH_BITS(active_cluster, FAT_data.fat_type);
-					file_info.low_bits 	 = GET_ENTRY_LOW_BITS(active_cluster, FAT_data.fat_type);
-				}
-				else {
-					kprintf("Function FAT_change_meta: FAT16 and FAT12 are not supported!\n");
-					return -1;
-				}
-			}
-			else {
-				for (uint32_t iterator = 0; iterator <= strlen(path); iterator++) 
-					if (path[iterator] == '\\' || path[iterator] == '\0') {
-						prev_active_cluster = active_cluster;
-
-						memset(fileNamePart, '\0', 256);
-						memcpy(fileNamePart, path + start, iterator - start);
-
-						int retVal = _directory_search(fileNamePart, active_cluster, &file_info, NULL);
-						switch (retVal) {
-							case -2:
-								kprintf("Function FAT_change_meta: No matching directory found. Aborting...\n");
-							return -2;
-
-							case -1:
-								kprintf("Function FAT_change_meta: An error occurred in _directory_search. Aborting...\n");
-							return retVal;
-						}
-
-						start = iterator + 1;
-						active_cluster = GET_CLUSTER_FROM_ENTRY(file_info, FAT_data.fat_type); //prep for next search
-					}
-			}
-
-		//	FINDING DIR\FILE BY PATH
-		//////////////////////
-		// EDIT DATA
-
-			if (_directory_edit(prev_active_cluster, &file_info, new_name) != 0) {
-				kprintf("Function FAT_change_meta: _directory_edit encountered an error. Aborting...\n");
-				return -1;
-			}
-		
-		// EDIT DATA
-		//////////////////////
-
-		return 0; // directory or file successfully deleted
-	}
-
-//========================================================================================
-//    ____ ___  _   _ _____ _____ _   _ _____   ____  _   _ _____ 
-//   / ___/ _ \| \ | |_   _| ____| \ | |_   _| |  _ \| | | |_   _|
-//  | |  | | | |  \| | | | |  _| |  \| | | |   | |_) | | | | | |  
-//  | |__| |_| | |\  | | | | |___| |\  | | |   |  __/| |_| | | |  
-//   \____\___/|_| \_| |_| |_____|_| \_| |_|   |_|    \___/  |_| 
-//
-//========================================================================================
-// writes a new file to the file system
-// content: contains the full data of content (meta, name, ext, type)
-// returns: -1 is general error, -2 indicates a bad path/file name, -3 indicates file with same name already exists, -4 indicates file size error
-
-	int FAT_put_content(const char* path, Content* content) {
-		int parent_ci = FAT_open_content(path);
-		if (parent_ci == -1) return -1;
-
-		directory_entry_t file_info = _content_table[parent_ci]->meta;
-		uint32_t active_cluster = GET_CLUSTER_FROM_ENTRY(file_info, FAT_data.fat_type);
-		_remove_content_from_table(parent_ci);
-
-		char output[13] = { 0 };
-		_fatname2name((char*)content->meta.file_name, output);
-		int retVal = _directory_search(output, active_cluster, NULL, NULL);
-		if (retVal == -1) {
-			kprintf("Function putFile: directorySearch encountered an error. Aborting...\n");
+			kprintf("Function FAT_change_meta: FAT16 and FAT12 are not supported!\n");
 			return -1;
 		}
-		else if (retVal != -2) {
-			kprintf("Function putFile: a file matching the name given already exists. Aborting...\n");
-			return -3;
-		}
-
-		if (_directory_add(active_cluster, &content->meta) != 0) {
-			kprintf("Function FAT_put_content: _directory_add encountered an error. Aborting...\n");
-			return -1;
-		}
-
-		return 0; // file successfully written
 	}
+	else {
+		for (uint32_t iterator = 0; iterator <= strlen(path); iterator++)
+		if (path[iterator] == '\\' || path[iterator] == '\0') {
+			prev_active_cluster = active_cluster;
 
-//========================================================================================
-//    ____ ___  _   _ _____ _____ _   _ _____   ____  _____ _     _____ _____ _____ 
-//   / ___/ _ \| \ | |_   _| ____| \ | |_   _| |  _ \| ____| |   | ____|_   _| ____|
-//  | |  | | | |  \| | | | |  _| |  \| | | |   | | | |  _| | |   |  _|   | | |  _|  
-//  | |__| |_| | |\  | | | | |___| |\  | | |   | |_| | |___| |___| |___  | | | |___ 
-//   \____\___/|_| \_| |_| |_____|_| \_| |_|   |____/|_____|_____|_____| |_| |_____|
-//
-//========================================================================================
-// This function delete content from FS
-// path - path where placed content
-// name - name of content (if it file - with extension (if presented), like "test.txt")
+			memset(fileNamePart, '\0', 256);
+			memcpy(fileNamePart, path + start, iterator - start);
 
-	int FAT_delete_content(const char* path) {
-		int ci = FAT_open_content(path);
-		Content* fat_content = FAT_get_content_from_table(ci);
-		if (fat_content == NULL) {
-			kprintf("Function FAT_delete_content: FAT_open_content encountered an error. Aborting...\n");
-			return -1;
-		}
+			int retVal = _directory_search(fileNamePart, active_cluster, &file_info, NULL);
+			switch (retVal) {
+				case -2:
+				kprintf("Function FAT_change_meta: No matching directory found. Aborting...\n");
+				return -2;
 
-		uint32_t data_cluster = GET_CLUSTER_FROM_ENTRY(fat_content->meta, FAT_data.fat_type);
-		uint32_t prev_cluster = 0;
-		
-		while (data_cluster < END_CLUSTER_32) {
-			prev_cluster = __read_fat(data_cluster);
-			if (_cluster_deallocate(data_cluster) != 0) {
-				kprintf("[%s %i] _cluster_deallocate encountered an error. Aborting...\n", __FILE__, __LINE__);
-				_remove_content_from_table(ci);
-				return -1;
+				case -1:
+				kprintf("Function FAT_change_meta: An error occurred in _directory_search. Aborting...\n");
+				return retVal;
 			}
 
-			data_cluster = prev_cluster;
+			start = iterator + 1;
+			active_cluster = GET_CLUSTER_FROM_ENTRY(file_info, FAT_data.fat_type);
+		}
+	}
+
+	if (_directory_edit(prev_active_cluster, &file_info, new_name) != 0) {
+		kprintf("Function FAT_change_meta: _directory_edit encountered an error. Aborting...\n");
+		return -1;
+	}
+
+	return 0;
+}
+
+static void _fatname2name(char* input, char* output) {
+	if (input[0] == '.') {
+		if (input[1] == '.') {
+			strcpy (output, "..");
+			return;
 		}
 
-		if (_directory_remove(fat_content->parent_cluster, (char*)fat_content->meta.file_name) != 0) {
-			kprintf("[%s %i] _directory_remove encountered an error. Aborting...\n", __FILE__, __LINE__);
+		strcpy (output, ".");
+		return;
+	}
+
+	uint16_t counter = 0;
+	for ( counter = 0; counter < 8; counter++) {
+		if (input[counter] == 0x20) {
+			output[counter] = '.';
+			break;
+		}
+
+		output[counter] = input[counter];
+	}
+
+	if (counter == 8)
+	output[counter] = '.';
+
+	uint16_t counter2 = 8;
+	for (counter2 = 8; counter2 < 11; counter2++) {
+		++counter;
+		if (input[counter2] == 0x20 || input[counter2] == 0x20) {
+			if (counter2 == 8)
+			counter -= 2;
+
+			break;
+		}
+
+		output[counter] = input[counter2];
+	}
+
+	++counter;
+	while (counter < 12) {
+		output[counter] = ' ';
+		++counter;
+	}
+
+	output[12] = 0;
+	return;
+}
+
+int FAT_put_content(const char* path, content_t* content) {
+	int parent_ci = FAT_open_content(path);
+	if (parent_ci < 0) return -1;
+
+	directory_entry_t file_info = _content_table[parent_ci]->meta;
+	uint32_t active_cluster = GET_CLUSTER_FROM_ENTRY(file_info, FAT_data.fat_type);
+	_remove_content_from_table(parent_ci);
+
+	char output[13] = { 0 };
+	_fatname2name((char*)content->meta.file_name, (char*)output);
+	int retVal = _directory_search(output, active_cluster, NULL, NULL);
+	if (retVal == -1) {
+		kprintf("Function putFile: directorySearch encountered an error. Aborting...\n");
+		return -1;
+	}
+	else if (retVal != -2) {
+		kprintf("Function putFile: a file matching the name given already exists. Aborting...\n");
+		return -3;
+	}
+
+	if (_directory_add(active_cluster, &content->meta) != 0) {
+		kprintf("Function FAT_put_content: _directory_add encountered an error. Aborting...\n");
+		return -1;
+	}
+
+	return 0;
+}
+
+int FAT_delete_content(const char* path) {
+	int ci = FAT_open_content(path);
+	content_t* fat_content = FAT_get_content_from_table(ci);
+	if (fat_content == NULL) {
+		kprintf("Function FAT_delete_content: FAT_open_content encountered an error. Aborting...\n");
+		return -1;
+	}
+
+	uint32_t data_cluster = GET_CLUSTER_FROM_ENTRY(fat_content->meta, FAT_data.fat_type);
+	uint32_t prev_cluster = 0;
+
+	while (data_cluster < END_CLUSTER_32) {
+		prev_cluster = __read_fat(data_cluster);
+		if (_cluster_deallocate(data_cluster) != 0) {
+			kprintf("[%s %i] _cluster_deallocate encountered an error. Aborting...\n", __FILE__, __LINE__);
 			_remove_content_from_table(ci);
 			return -1;
 		}
 
+		data_cluster = prev_cluster;
+	}
+
+	if (_directory_remove(fat_content->parent_cluster, (char*)fat_content->meta.file_name) != 0) {
+		kprintf("[%s %i] _directory_remove encountered an error. Aborting...\n", __FILE__, __LINE__);
 		_remove_content_from_table(ci);
-		return 0; // directory or file successfully deleted
-	}
-
-//========================================================================================
-//    ____ ___  _   _ _____ _____ _   _ _____    ____ ___  ______   __
-//   / ___/ _ \| \ | |_   _| ____| \ | |_   _|  / ___/ _ \|  _ \ \ / /
-//  | |  | | | |  \| | | | |  _| |  \| | | |   | |  | | | | |_) \ V / 
-//  | |__| |_| | |\  | | | | |___| |\  | | |   | |__| |_| |  __/ | |  
-//   \____\___/|_| \_| |_| |_____|_| \_| |_|    \____\___/|_|    |_|  
-//
-//========================================================================================
-// This function copy content in FS
-// source - path to copy
-// destination - path, where copy will be placed
-// TODO: recurse for dirs
-
-	void FAT_copy_content(char* source, char* destination) {
-		int ci_source = FAT_open_content(source);
-
-		Content* fat_content = FAT_get_content_from_table(ci_source);
-		Content* dst_content = NULL;
-
-		directory_entry_t content_meta;
-		memcpy(&content_meta, &fat_content->meta, sizeof(directory_entry_t));
-
-		if (fat_content->directory != NULL) dst_content = FAT_create_object(fat_content->directory->name, 1, NULL);
-		else if (fat_content->file != NULL) dst_content = FAT_create_object(fat_content->file->name, 0, fat_content->file->extension);
-
-		directory_entry_t dst_meta;		
-		memcpy(&dst_meta, &dst_content->meta, sizeof(directory_entry_t));
-
-		int ci_destination = FAT_put_content(destination, dst_content);
-		uint32_t data_cluster = GET_CLUSTER_FROM_ENTRY(content_meta, FAT_data.fat_type);
-		uint32_t dst_cluster  = GET_CLUSTER_FROM_ENTRY(dst_meta, FAT_data.fat_type);
-
-		while (data_cluster < END_CLUSTER_32) {
-			_add_cluster_to_content(ci_destination);
-			dst_cluster = __read_fat(dst_cluster);
-			_copy_cluster2cluster(data_cluster, dst_cluster);
-			data_cluster = __read_fat(data_cluster);
-		}
-
-		_remove_content_from_table(ci_destination);
-		_remove_content_from_table(ci_source);
-	}
-
-	int FAT_stat_content(int ci, CInfo_t* info) {
-		Content* content = FAT_get_content_from_table(ci);
-		if (!content) {
-			info->type = NOT_PRESENT;
-			return -1;
-		}
-
-		if (content->content_type == CONTENT_TYPE_DIRECTORY) {
-			info->size = 0;
-			strcpy((char*)info->full_name, (char*)content->directory->name);
-			info->type = STAT_DIR;
-		}
-		else if (content->content_type == CONTENT_TYPE_FILE) {
-			info->size = content->file->data_size * FAT_data.sectors_per_cluster * SECTOR_SIZE;
-			strcpy((char*)info->full_name, (char*)content->meta.file_name);
-			strcpy(info->file_name, content->file->name);
-			strcpy(info->file_extension, content->file->extension);
-			info->type = STAT_FILE;
-		}
-		else {
-			return -2;
-		}
-
-		info->creation_date = content->meta.creation_date;
-		info->creation_time = content->meta.creation_time;
-		info->last_accessed = content->meta.last_accessed;
-		info->last_modification_date = content->meta.last_modification_date;
-		info->last_modification_time = content->meta.last_modification_time;
-
-		return 1;
-	}
-
-//========================================================================================
-//    ___ _____ _   _ _____ ____  
-//   / _ \_   _| | | | ____|  _ \ 
-//  | | | || | | |_| |  _| | |_) |
-//  | |_| || | |  _  | |___|  _ < 
-//   \___/ |_| |_| |_|_____|_| \_\
-//
-//========================================================================================
-// Other functions that used here
-
-	int _add_content2table(Content* content) {
-		for (int i = 0; i < CONTENT_TABLE_SIZE; i++) {
-			if (!_content_table[i]) {
-				_content_table[i] = content;
-				return i;
-			}
-		}
-
 		return -1;
 	}
 
-	int _remove_content_from_table(int index) {
-		if (!_content_table[index]) return -1;
-		int result = FAT_unload_content_system(_content_table[index]);
-		_content_table[index] = NULL;
-		return result;
-	}
+	_remove_content_from_table(ci);
+	return 0;
+}
 
-	void _fatname2name(char* input, char* output) {
-		if (input[0] == '.') {
-			if (input[1] == '.') {
-				strcpy (output, "..");
-				return;
-			}
+void FAT_copy_content(char* source, char* destination) {
+	int ci_source = FAT_open_content(source);
 
-			strcpy (output, ".");
-			return;
-		}
+	content_t* fat_content = FAT_get_content_from_table(ci_source);
+	if (!fat_content) return;
+	content_t* dst_content = NULL;
 
-		uint16_t counter = 0;
-		for ( counter = 0; counter < 8; counter++) {
-			if (input[counter] == 0x20) {
-				output[counter] = '.';
-				break;
-			}
+	directory_entry_t content_meta;
+	memcpy(&content_meta, &fat_content->meta, sizeof(directory_entry_t));
 
-			output[counter] = input[counter];
-		}
+	if (fat_content->directory != NULL) dst_content = FAT_create_object(fat_content->directory->name, 1, NULL);
+	else if (fat_content->file != NULL) dst_content = FAT_create_object(fat_content->file->name, 0, fat_content->file->extension);
 
-		if (counter == 8) 
-			output[counter] = '.';
-
-		uint16_t counter2 = 8;
-		for (counter2 = 8; counter2 < 11; counter2++) {
-			++counter;
-			if (input[counter2] == 0x20 || input[counter2] == 0x20) {
-				if (counter2 == 8)
-					counter -= 2;
-
-				break;
-			}
-			
-			output[counter] = input[counter2];		
-		}
-
-		++counter;
-		while (counter < 12) {
-			output[counter] = ' ';
-			++counter;
-		}
-
-		output[12] = '\0';
+	if (FAT_put_content(destination, dst_content) != 0) {
+		FAT_unload_content_system(dst_content);
+		_remove_content_from_table(ci_source);
 		return;
 	}
 
-	char* _name2fatname(char* input) {
-		str2uppercase(input);
-
-		int haveExt = 0;
-		char searchName[13] = { '\0' };
-		uint16_t dotPos = 0;
-		uint32_t counter = 0;
-
-		while (counter <= 8) {
-			if (input[counter] == '.' || input[counter] == '\0') {
-				if (input[counter] == '.') haveExt = 1;
-				dotPos = counter;
-				counter++;
-				break;
-			}
-			else {
-				searchName[counter] = input[counter];
-				counter++;
-			}
-		}
-
-		if (counter > 9) {
-			counter = 8;
-			dotPos = 8;
-		}
-		
-		uint16_t extCount = 8;
-		while (extCount < 11) {
-			if (input[counter] != '\0' && haveExt == 1) searchName[extCount] = input[counter];
-			else searchName[extCount] = ' ';
-
-			counter++;
-			extCount++;
-		}
-
-		counter = dotPos;
-		while (counter < 8) {
-			searchName[counter] = ' ';
-			counter++;
-		}
-
-		strcpy(input, searchName);
-		return input;
+	char dst_path[256] = { 0 };
+	strcpy(dst_path, destination);
+	if (strlen(dst_path) > 0) strcat(dst_path, "\\");
+	strcat(dst_path, fat_content->directory != NULL ? fat_content->directory->name : fat_content->file->name);
+	if (fat_content->file != NULL && strlen(fat_content->file->extension) > 0) {
+		strcat(dst_path, ".");
+		strcat(dst_path, fat_content->file->extension);
 	}
 
-	uint16_t _current_time() {
-		_datetime_read_rtc();
-		return (DTM_datetime.hour << 11) | (DTM_datetime.minute << 5) | (DTM_datetime.second / 2);
+	int ci_destination = FAT_open_content(dst_path);
+	if (ci_destination < 0) {
+		FAT_unload_content_system(dst_content);
+		_remove_content_from_table(ci_source);
+		return;
 	}
 
-	uint16_t _current_date() {
-		_datetime_read_rtc();
+	uint32_t data_cluster = GET_CLUSTER_FROM_ENTRY(content_meta, FAT_data.fat_type);
+	content_t* dst_fd_content = FAT_get_content_from_table(ci_destination);
+	uint32_t dst_cluster  = GET_CLUSTER_FROM_ENTRY(dst_fd_content->meta, FAT_data.fat_type);
 
-		uint16_t reversed_data = 0;
-		reversed_data |= DTM_datetime.day & 0x1F;
-		reversed_data |= (DTM_datetime.month & 0xF) << 5;
-		reversed_data |= ((DTM_datetime.year - 1980) & 0x7F) << 9;
+	while (data_cluster < END_CLUSTER_32) {
+		_copy_cluster2cluster(data_cluster, dst_cluster);
 
-		return reversed_data;
+		uint32_t next_data_cluster = __read_fat(data_cluster);
+		if (_is_cluster_end(next_data_cluster, FAT_data.fat_type) == 1) break;
+
+		uint32_t next_dst_cluster = __read_fat(dst_cluster);
+		if (_is_cluster_end(next_dst_cluster, FAT_data.fat_type) == 1) {
+			next_dst_cluster = _add_cluster_to_content(ci_destination);
+			if ((int)next_dst_cluster < 0) break;
+		}
+
+		data_cluster = next_data_cluster;
+		dst_cluster = next_dst_cluster;
 	}
 
-	int _name_check(const char* input) {
-		short retVal = 0;
-		uint16_t iterator = 0;
-		for (iterator = 0; iterator < 11; iterator++) {
-			if (input[iterator] < 0x20 && input[iterator] != 0x05) {
-				retVal = retVal | BAD_CHARACTER;
+	_remove_content_from_table(ci_destination);
+	_remove_content_from_table(ci_source);
+	FAT_unload_content_system(dst_content);
+}
+
+int FAT_stat_content(int ci, CInfo_t* info) {
+	content_t* content = FAT_get_content_from_table(ci);
+	if (!content) {
+		info->type = NOT_PRESENT;
+		return -1;
+	}
+
+	if (content->content_type == CONTENT_TYPE_DIRECTORY) {
+		info->size = 0;
+		strcpy((char*)info->full_name, (char*)content->directory->name);
+		info->type = STAT_DIR;
+	}
+	else if (content->content_type == CONTENT_TYPE_FILE) {
+		info->size = content->meta.file_size;
+		strcpy((char*)info->full_name, (char*)content->meta.file_name);
+		strcpy(info->file_name, content->file->name);
+		strcpy(info->file_extension, content->file->extension);
+		info->type = STAT_FILE;
+	}
+	else {
+		return -2;
+	}
+
+	info->creation_date = content->meta.creation_date;
+	info->creation_time = content->meta.creation_time;
+	info->last_accessed = content->meta.last_accessed;
+	info->last_modification_date = content->meta.last_modification_date;
+	info->last_modification_time = content->meta.last_modification_time;
+
+	return 1;
+}
+
+int _add_content2table(content_t* content) {
+	if (_is_static_content(content)) {
+		int slot = _content_slot(content);
+		if (slot >= 0) {
+			_content_table[slot] = content;
+			return slot;
+		}
+	}
+
+	for (int i = 0; i < CONTENT_TABLE_SIZE; i++) {
+		if (!_content_table[i]) {
+			memcpy(&_content_storage[i], content, sizeof(content_t));
+			if (content->content_type == CONTENT_TYPE_FILE) {
+				memcpy(&_file_storage[i], content->file, sizeof(file_t));
+				_content_storage[i].file = &_file_storage[i];
 			}
-			
-			switch (input[iterator]) {
-				case 0x2E: {
-					if ((retVal & NOT_CONVERTED_YET) == NOT_CONVERTED_YET) //a previous dot has already triggered this case
-						retVal |= TOO_MANY_DOTS;
-
-					retVal ^= NOT_CONVERTED_YET; //remove NOT_CONVERTED_YET flag if already set
-					break;
-				}
-
-				case 0x22:
-				case 0x2A:
-				case 0x2B:
-				case 0x2C:
-				case 0x2F:
-				case 0x3A:
-				case 0x3B:
-				case 0x3C:
-				case 0x3D:
-				case 0x3E:
-				case 0x3F:
-				case 0x5B:
-				case 0x5C:
-				case 0x5D:
-				case 0x7C:
-					retVal = retVal | BAD_CHARACTER;
+			else if (content->content_type == CONTENT_TYPE_DIRECTORY) {
+				memcpy(&_directory_storage[i], content->directory, sizeof(directory_t));
+				_content_storage[i].directory = &_directory_storage[i];
 			}
 
-			if (input[iterator] >= 'a' && input[iterator] <= 'z') 
-				retVal = retVal | LOWERCASE_ISSUE;
+			_content_table[i] = &_content_storage[i];
+			return i;
 		}
-
-		return retVal;
 	}
 
-	static directory_entry_t* _create_entry(const char* name, const char* ext, int isDir, uint32_t firstCluster, uint32_t filesize) {
-		directory_entry_t* data = (directory_entry_t*)ALC_malloc(sizeof(directory_entry_t), KERNEL);
-		if (!data) {
-			return NULL;
-		}
+	return -1;
+}
 
-		data->reserved0 			 = 0; 
-		data->creation_time_tenths 	 = 0;
-		data->creation_time 		 = 0;
-		data->creation_date 		 = 0;
-		data->last_modification_date = 0;
+static directory_entry_t* _create_entry(const char* name, const char* ext, int isDir, uint32_t firstCluster, uint32_t filesize) {
+	static directory_entry_t data_storage;
+	static char file_name[25];
+	directory_entry_t* data = &data_storage;
+	memset(data, 0, sizeof(directory_entry_t));
+	memset(file_name, 0, sizeof(file_name));
 
-		char* file_name = (char*)ALC_malloc(25, KERNEL);
-		if (!file_name) {
-			ALC_free(data, KERNEL);
-			return NULL;
-		}
-		
-		strcpy(file_name, name);
-		if (ext) {
-			strcat(file_name, ".");
-			strcat(file_name, ext);
-		}
-		
-		data->low_bits 	= firstCluster;
-		data->high_bits = firstCluster >> 16;  
+	data->reserved0 			 = 0;
+	data->creation_time_tenths 	 = 0;
+	data->creation_time 		 = 0;
+	data->creation_date 		 = 0;
+	data->last_modification_date = 0;
 
-		if (isDir == 1) {
-			data->file_size  = 0;
-			data->attributes = FILE_DIRECTORY;
-		} 
-		else {
-			data->file_size  = filesize;
-			data->attributes = FILE_ARCHIVE;
-		}
-
-		data->creation_date = _current_date();
-		data->creation_time = _current_time();
-		data->creation_time_tenths = _current_time();
-
-		if (_name_check(file_name) != 0) _name2fatname(file_name);
-		strncpy((char*)data->file_name, file_name, min(11, strlen(file_name)));
-		ALC_free(file_name, KERNEL);
-
-		return data; 
+	strcpy(file_name, name);
+	if (ext) {
+		strcat(file_name, ".");
+		strcat(file_name, ext);
 	}
 
-	Content* FAT_create_object(char* name, int is_directory, char* extension) {
-		Content* content = FAT_create_content();
-		if (strlen(name) > 11 || strlen(extension) > 4) {
-			kprintf("Uncorrect name or ext lenght.\n");
-			FAT_unload_content_system(content);
-			return NULL;
-		}
-		
-		if (is_directory) {
-			content->content_type = CONTENT_TYPE_DIRECTORY;
-			content->directory = _create_directory();
-			strncpy(content->directory->name, name, 12);
+	data->low_bits 	= firstCluster;
+	data->high_bits = firstCluster >> 16;
 
-			directory_entry_t* meta = _create_entry(name, NULL, 1, _cluster_allocate(), 0);
-			if (meta) memcpy(&content->meta, meta, sizeof(directory_entry_t));
-		}
-		else {
-			content->content_type = CONTENT_TYPE_FILE;
-			content->file = _create_file();
-			strncpy(content->file->name, name, 8);
-			strncpy(content->file->extension, extension, 4);
-			
-			directory_entry_t* meta = _create_entry(name, extension, 0, _cluster_allocate(), 1);
-			if (meta) memcpy(&content->meta, meta, sizeof(directory_entry_t));
-		}
-
-		return content;
+	if (isDir == 1) {
+		data->file_size  = 0;
+		data->attributes = FILE_DIRECTORY;
+	}
+	else {
+		data->file_size  = filesize;
+		data->attributes = FILE_ARCHIVE;
 	}
 
-	Content* FAT_create_content() {
-		Content* content = (Content*)ALC_malloc(sizeof(Content), KERNEL);
-		if (!content) return NULL;
-		content->directory      = NULL;
-		content->file           = NULL;
-		content->parent_cluster = -1;
-		return content;
+	data->creation_date = _current_date();
+	data->creation_time = _current_time();
+	data->creation_time_tenths = _current_time();
+
+	if (_name_check(file_name) != 0) _name2fatname(file_name);
+	strncpy((char*)data->file_name, file_name, min(11, strlen(file_name)));
+
+	return data;
+}
+
+static directory_t* _create_directory() {
+	_reset_directory(&_scratch_directory);
+	return &_scratch_directory;
+}
+
+static file_t* _create_file() {
+	_reset_file(&_scratch_file);
+	return &_scratch_file;
+}
+
+content_t* FAT_create_object(char* name, int is_directory, char* extension) {
+	content_t* content = FAT_create_content();
+	if (strlen(name) > 11 || (extension && strlen(extension) > 4)) {
+		kprintf("Uncorrect name or ext lenght.\n");
+		FAT_unload_content_system(content);
+		return NULL;
 	}
 
-	Directory* _create_directory() {
-		Directory* directory = (Directory*)ALC_malloc(sizeof(Directory), KERNEL);
-		if (!directory) return NULL;
-		directory->files        = NULL;
-		directory->subDirectory = NULL;
-		directory->next         = NULL;
-		return directory;
+	if (is_directory) {
+		content->content_type = CONTENT_TYPE_DIRECTORY;
+		content->directory = _create_directory();
+		strncpy(content->directory->name, name, 12);
+
+		directory_entry_t* meta = _create_entry(name, NULL, 1, _cluster_allocate(), 0);
+		if (meta) memcpy(&content->meta, meta, sizeof(directory_entry_t));
+	}
+	else {
+		content->content_type = CONTENT_TYPE_FILE;
+		content->file = _create_file();
+		strncpy(content->file->name, name, 8);
+		if (extension) strncpy(content->file->extension, extension, 4);
+
+		directory_entry_t* meta = _create_entry(name, extension, 0, _cluster_allocate(), 1);
+		if (meta) memcpy(&content->meta, meta, sizeof(directory_entry_t));
 	}
 
-	File* _create_file() {
-		File* file = (File*)ALC_malloc(sizeof(File), KERNEL);
-		if (!file) return NULL;
-		file->next = NULL;
-		file->data = NULL;
-		return file;
+	return content;
+}
+
+content_t* FAT_create_content() {
+	_reset_content(&_scratch_content);
+	_reset_file(&_scratch_file);
+	_reset_directory(&_scratch_directory);
+	return &_scratch_content;
+}
+
+int FAT_unload_content_system(content_t* content) {
+	if (!content) return -1;
+	if (_is_static_content(content)) {
+		_release_content_slot(_content_slot(content));
+	}
+	else {
+		_reset_content(content);
+		_reset_file(&_scratch_file);
+		_reset_directory(&_scratch_directory);
 	}
 
-	static int _unload_file_system(File* file) {
-		if (!file) return -1;
-		if (file->next) 				_unload_file_system(file->next);
-		if (file->data) 				ALC_free(file->data, KERNEL);
-		ALC_free(file, KERNEL);
-		return 1;
-	}
-
-	static int _unload_directory_system(Directory* directory) {
-		if (!directory) return -1;
-		if (directory->files) 			_unload_file_system(directory->files);
-		if (directory->subDirectory) 	_unload_directory_system(directory->subDirectory);
-		if (directory->next) 			_unload_directory_system(directory->next);
-		ALC_free(directory, KERNEL);
-		return 1;
-	}
-
-	int FAT_unload_content_system(Content* content) {
-		if (!content) return -1;
-		if (content->content_type == CONTENT_TYPE_DIRECTORY) _unload_directory_system(content->directory);
-		else if (content->content_type == CONTENT_TYPE_DIRECTORY) _unload_file_system(content->file);
-		ALC_free(content, KERNEL);
-		return 1;
-	}	
-
-//========================================================================================
+	return 1;
+}

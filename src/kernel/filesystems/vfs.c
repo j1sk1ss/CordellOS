@@ -1,7 +1,23 @@
 #include <vfs.h>
 
+#define VFS_MAX_NODES 8
+
+static vfs_node_t _vfs_nodes[VFS_MAX_NODES] = { 0 };
+static uint8_t _vfs_node_used[VFS_MAX_NODES] = { 0 };
 static vfs_node_t* _vfs_list = NULL;
 vfs_node_t* current_vfs = NULL;
+
+static vfs_node_t* _vfs_alloc_node() {
+    for (int i = 0; i < VFS_MAX_NODES; i++) {
+        if (!_vfs_node_used[i]) {
+            _vfs_node_used[i] = 1;
+            memset(&_vfs_nodes[i], 0, sizeof(vfs_node_t));
+            return &_vfs_nodes[i];
+        }
+    }
+
+    return NULL;
+}
 
 static vfs_node_t* _fat_vfs_setup(vfs_node_t* node) {
     node->read       = FAT_read_content2buffer;
@@ -21,7 +37,10 @@ static vfs_node_t* _fat_vfs_setup(vfs_node_t* node) {
 }
 
 int VFS_initialize(ata_dev_t* dev, uint32_t fs_type) {
-    _vfs_list = (vfs_node_t*)ALC_malloc(sizeof(vfs_node_t), KERNEL);
+    memset(_vfs_nodes, 0, sizeof(_vfs_nodes));
+    memset(_vfs_node_used, 0, sizeof(_vfs_node_used));
+
+    _vfs_list = _vfs_alloc_node();
     if (!_vfs_list) return 0;
     
     _vfs_list->fs_type = fs_type;
@@ -36,7 +55,7 @@ int VFS_initialize(ata_dev_t* dev, uint32_t fs_type) {
 }
 
 int VFS_add_node(ata_dev_t* dev, uint32_t fs_type) {
-    vfs_node_t* new_node = ALC_malloc(sizeof(vfs_node_t), KERNEL);
+    vfs_node_t* new_node = _vfs_alloc_node();
     if (!new_node) return 0;
     
     new_node->fs_type = fs_type;

@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 #include <memory.h>
-#include <stdlib.h>  // Allocators (basic malloc required)
+#include <stdlib.h>
 #include <string.h>
 #include <fslib.h>
 #include <ctype.h>
@@ -74,7 +74,7 @@
 #define GET_ENTRY_HIGH_BITS(x, fat_type)          ((x) >> (fat_type / 2))
 #define CONCAT_ENTRY_HL_BITS(high, low, fat_type) ((high << (fat_type / 2)) | low)
 
-#define CONTENT_TABLE_SIZE	50
+#define CONTENT_TABLE_SIZE	    50
 
 /* Bpb taken from http://wiki.osdev.org/FAT */
 
@@ -130,10 +130,10 @@ typedef struct fat_data {
 } fat_data_t;
 
 typedef struct directory_entry {
-	uint8_t file_name[11];
-	uint8_t attributes;
-	uint8_t reserved0;
-	uint8_t creation_time_tenths;
+	uint8_t  file_name[11];
+	uint8_t  attributes;
+	uint8_t  reserved0;
+	uint8_t  creation_time_tenths;
 	uint16_t creation_time;
 	uint16_t creation_date;
 	uint16_t last_accessed;
@@ -144,96 +144,57 @@ typedef struct directory_entry {
 	uint32_t file_size;
 } __attribute__((packed)) directory_entry_t;
 
-typedef struct FATFile {
-	char name[8];
-	char extension[4];
-	int data_size;
-	uint32_t* data;
-    struct FATFile* next;
-} File;
+typedef struct file {
+	char     name[8];
+	char     extension[4];
+	int      data_size;
+	uint32_t first_cluster;
+    struct file* next;
+} file_t;
 
-typedef struct FATDirectory {
-	char name[11];
-	struct FATDirectory* next;
-    struct FATFile* files;
-    struct FATDirectory* subDirectory;
-} Directory;
+typedef struct directory {
+	char              name[11];
+	struct directory* next;
+    struct file*      files;
+    struct directory* subDirectory;
+} directory_t;
 
 typedef enum {
 	CONTENT_TYPE_FILE,
 	CONTENT_TYPE_DIRECTORY
-} ContentType;
+} content_type_t;
 
 typedef struct FATContent {
 	union {
-		Directory* directory;
-		File* file;
+		directory_t*  directory;
+		file_t*       file;
 	};
 	
-	uint32_t parent_cluster;
+	uint32_t          parent_cluster;
 	directory_entry_t meta;
-	ContentType content_type;
-} Content;
-
+	content_type_t    content_type;
+} content_t;
 
 //Global variables
 extern fat_data_t FAT_data;
 
-//===================================
-//   _____  _    ____  _     _____ 
-//  |_   _|/ \  | __ )| |   | ____|
-//    | | / _ \ |  _ \| |   |  _|  
-//    | |/ ___ \| |_) | |___| |___ 
-//    |_/_/   \_\____/|_____|_____|
-//===================================
-
-	int FAT_initialize(); 
-	int FAT_directory_list(int ci, uint8_t attrs, int exclusive);
-
-//===================================
-//    ____ ___  _   _ _____ _____ _   _ _____ 
-//   / ___/ _ \| \ | |_   _| ____| \ | |_   _|
-//  | |  | | | |  \| | | | |  _| |  \| | | |  
-//  | |__| |_| | |\  | | | | |___| |\  | | |  
-//   \____\___/|_| \_| |_| |_____|_| \_| |_|  
-//===================================
-
-	int FAT_content_exists(const char* path);
-	int FAT_open_content(const char* path);
-	int FAT_close_content(int ci);
-	int FAT_read_content2buffer(int ci, uint8_t* buffer, uint32_t offset, uint32_t size);
-	int FAT_read_content2buffer_stop(int ci, uint8_t* buffer, uint32_t offset, uint32_t size, uint8_t* stop);
-	int FAT_put_content(const char* path, Content* content);
-	int FAT_delete_content(const char* path);
-	int FAT_write_buffer2content(int ci, const uint8_t* buffer, uint32_t offset, uint32_t size);
-	int FAT_ELF_execute_content(int ci, int argc, char* argv[], int type);
-	int FAT_change_meta(const char* path, const char* new_name);
-	int FAT_stat_content(int ci, CInfo_t* info);
-
-//===================================
-//    ___ _____ _   _ _____ ____  
-//   / _ \_   _| | | | ____|  _ \ 
-//  | | | || | | |_| |  _| | |_) |
-//  | |_| || | |  _  | |___|  _ < 
-//   \___/ |_| |_| |_|_____|_| \_\
-//=================================== 
-
-	uint16_t _current_time();
-	uint16_t _current_date();
-	void _fatname2name(char* input, char* output);
-	char* _name2fatname(char* input);
-	int _name_check(const char* input);
-
-	int _add_content2table(Content* content);
-	Content* FAT_get_content_from_table(int ci) ;
-	int _remove_content_from_table(int index);
-
-	Content* FAT_create_object(char* name, int is_directory, char* extension);
-	Content* FAT_create_content();
-	int FAT_unload_content_system(Content* content);
-	Directory* _create_directory();
-	File* _create_file();
-
-//===================================
+int FAT_initialize(); 
+int FAT_directory_list(int ci, uint8_t attrs, int exclusive);
+int FAT_directory_entry_name(int ci, int step, char* name);
+int FAT_content_exists(const char* path);
+int FAT_open_content(const char* path);
+int FAT_close_content(int ci);
+int FAT_read_content2buffer(int ci, uint8_t* buffer, uint32_t offset, uint32_t size);
+int FAT_read_content2buffer_stop(int ci, uint8_t* buffer, uint32_t offset, uint32_t size, uint8_t* stop);
+int FAT_put_content(const char* path, content_t* content);
+int FAT_delete_content(const char* path);
+int FAT_write_buffer2content(int ci, const uint8_t* buffer, uint32_t offset, uint32_t size);
+int FAT_ELF_execute_content(int ci, int argc, char* argv[], int type);
+int FAT_change_meta(const char* path, const char* new_name);
+int FAT_stat_content(int ci, CInfo_t* info);
+content_t* FAT_get_content_from_table(int ci) ;
+content_t* FAT_create_object(char* name, int is_directory, char* extension);
+content_t* FAT_create_content();
+int FAT_unload_content_system(content_t* content);
 
 #endif

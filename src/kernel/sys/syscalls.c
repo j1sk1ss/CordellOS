@@ -67,41 +67,7 @@ void syscall(struct Registers* regs) {
             int root_ci = (int)regs->ebx;
             int step    = (int)regs->edx;
             char* cname = (char*)regs->ecx;
-
-            int local_step     = 0;
-            Content* root_node = FAT_get_content_from_table(root_ci);
-            
-            if (root_node != NULL) {
-                Directory* root_dir = root_node->directory;
-                if (root_dir->subDirectory != NULL) {
-                    Directory* curr_dir = root_dir->subDirectory;
-                    while (curr_dir != NULL) {
-                        if (local_step == step) {
-                            strncpy(cname, curr_dir->name, 11);
-                            goto _ls_end;
-                        }
-
-                        curr_dir = curr_dir->next;
-                        local_step++;
-                    }
-                }
-
-                if (root_dir->files != NULL) {
-                    File* curr_file = root_dir->files;
-                    while (curr_file != NULL) {
-                        if (local_step == step) {
-                            sprintf(cname, 11, "%s.%s", curr_file->name, curr_file->extension);
-                            goto _ls_end;
-                        }
-
-                        curr_file = curr_file->next;
-                        local_step++;
-                    }
-                }
-            }
-_ls_end: {}
-            if (local_step == step) regs->eax = step + 1;
-            else regs->eax = -1;
+            regs->eax = FAT_directory_entry_name(root_ci, step, cname);
             break;
         }
         case SYS_OPEN_CONTENT: regs->eax = current_vfs->openobj((char*)regs->ebx); break;
@@ -114,13 +80,13 @@ _ls_end: {}
         case SYS_CLOSE_CONTENT: current_vfs->closeobj(regs->ebx); break;
         case SYS_CEXISTS: regs->eax = current_vfs->objexist((char*)regs->ebx); break;
         case SYS_FCREATE: {
-            Content* mkfile_content = FAT_create_object((char*)regs->ecx, 0, (char*)regs->edx);
+            content_t* mkfile_content = FAT_create_object((char*)regs->ecx, 0, (char*)regs->edx);
             current_vfs->putobj((char*)regs->ebx, mkfile_content);
             FAT_unload_content_system(mkfile_content);
             break;
         }
         case SYS_DIRCREATE: {
-            Content* mkdir_content = FAT_create_object((char*)regs->ecx, 1, "\0");
+            content_t* mkdir_content = FAT_create_object((char*)regs->ecx, 1, "\0");
             current_vfs->putobj((char*)regs->ebx, mkdir_content);
             FAT_unload_content_system(mkdir_content);
             break;

@@ -3,6 +3,9 @@
 #include <elf.h>
 
 static elf_symbols_t _kernel_elf_symbols = { 0 };
+static ELF32_program _elf_program = { 0 };
+static Elf32_Ehdr _elf_header = { 0 };
+static Elf32_Phdr _elf_program_headers[ELF_MAX_PROGRAM_HEADERS] = { 0 };
 
 int ELF_build_symbols_from_multiboot(uint32_t header_addr, uint32_t header_shndx, uint32_t header_num) {
 	Elf32_Shdr* sh = (Elf32_Shdr*)(header_addr);
@@ -43,10 +46,8 @@ const char* ELF_lookup_function(uint32_t addr) {
 }
 
 ELF32_program* ELF_read(int ci, int type) {
-    ELF32_program* program = ALC_malloc(sizeof(ELF32_program), type);
-    if (!program) {
-        return NULL;
-    }
+    ELF32_program* program = &_elf_program;
+    memset(program, 0, sizeof(ELF32_program));
 
     CInfo_t info;
     current_vfs->objstat(ci, &info);
@@ -55,50 +56,47 @@ ELF32_program* ELF_read(int ci, int type) {
         return NULL;
     }
 
-    Elf32_Ehdr* header = ALC_malloc(sizeof(Elf32_Ehdr), type);
-    if (!header) return NULL;
+    Elf32_Ehdr* header = &_elf_header;
+    memset(header, 0, sizeof(Elf32_Ehdr));
 
     current_vfs->read(ci, (uint8_t*)header, 0, sizeof(Elf32_Ehdr));
     if (header->e_ident[0] != '\x7f' || header->e_ident[1] != 'E') {
         LOG("Error: Not ELF executable!");
-        ALC_free(header, type);
         return NULL;
     }
 
     if (header->e_type != ET_EXEC && header->e_type != ET_DYN) {
         LOG("Error: Program is not an executable or dynamic executable.");
-        ALC_free(header, type);
         return NULL;
     }
 
-    Elf32_Phdr* program_headers = ALC_malloc(sizeof(Elf32_Phdr) * header->e_phnum, type);
-    if (!program_headers) {
-        ALC_free(header, type);
+    if (header->e_phnum > ELF_MAX_PROGRAM_HEADERS) {
+        LOG("Error: Too many ELF program headers.");
         return NULL;
     }
+
+    Elf32_Phdr* program_headers = _elf_program_headers;
+    memset(program_headers, 0, sizeof(_elf_program_headers));
 
     current_vfs->read(ci, (uint8_t*)program_headers, header->e_phoff, sizeof(Elf32_Phdr) * header->e_phnum);
     program->entry_point = (void*)header->e_entry;
     uint32_t header_num  = header->e_phnum;
-    ALC_free(header, type);
 
-    program->pages = ALC_malloc(header_num * sizeof(uint32_t), type);
-    if (!program->pages) {
-        ALC_free(program_headers, type);
-        return NULL;
-    }
-
-    program->pages_count = header_num;
     for (uint32_t i = 0; i < header_num; i++) {
         if (program_headers[i].p_type != PT_LOAD) continue;
 
         uint32_t virtual_address = program_headers[i].p_vaddr & ~(PAGE_SIZE - 1);
         uint32_t segment_offset  = program_headers[i].p_vaddr - virtual_address;
         uint32_t program_pages   = (segment_offset + program_headers[i].p_memsz) / PAGE_SIZE;
-        program->pages[i] = virtual_address;
 
         if ((segment_offset + program_headers[i].p_memsz) % PAGE_SIZE > 0) program_pages++;
-        for (uint32_t i = 0; i < program_pages; i++) {
+        for (uint32_t page = 0; page < program_pages; page++) {
+            if (program->pages_count >= ELF_MAX_PROGRAM_PAGES) {
+                LOG("Error: ELF program uses too many pages.");
+                return NULL;
+            }
+
+            program->pages[program->pages_count++] = virtual_address;
             ALC_mallocp(virtual_address, type);
             virtual_address += PAGE_SIZE;
         }
@@ -107,7 +105,6 @@ ELF32_program* ELF_read(int ci, int type) {
         current_vfs->read(ci, (uint8_t*)program_headers[i].p_vaddr, program_headers[i].p_offset, program_headers[i].p_filesz);
     }
 
-    ALC_free(program_headers, type);
     return program;
 }
 
@@ -116,7 +113,6 @@ int ELF_free_program(ELF32_program* program, uint8_t type) {
         ALC_freep((void*)program->pages[i], type);
     }
 
-    ALC_free(program->pages, type);
-    ALC_free(program, type);
+    memset(program, 0, sizeof(ELF32_program));
     return 1;
 }

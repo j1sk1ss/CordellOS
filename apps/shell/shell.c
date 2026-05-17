@@ -304,7 +304,7 @@ int execute_command(char* command) {
                 Date* creation_date  = FSLIB_get_date(content_info.creation_date, 1);
                 Date* accesed_date   = FSLIB_get_date(content_info.last_modification_date, 1);
 
-                printf("Directory\n");
+                printf("directory_t\n");
                 printf("name:          [%s]\n", content_info.full_name);
                 printf("size:          [NaN]\n");
                 printf("creation date: [%i/%i/%i]\n", creation_date->day, creation_date->mounth, creation_date->year);
@@ -317,7 +317,7 @@ int execute_command(char* command) {
                 Date* creation_date = FSLIB_get_date(content_info.creation_date, 1);
                 Date* accesed_date  = FSLIB_get_date(content_info.last_modification_date, 1);
 
-                printf("File\n");
+                printf("file_t\n");
                 printf("name:          [%s.%s]\n", content_info.file_name, content_info.file_extension);
                 printf("size:          [%iB]\n", content_info.size);
                 printf("creation date: [%i/%i/%i]\n", creation_date->day, creation_date->mounth, creation_date->year);

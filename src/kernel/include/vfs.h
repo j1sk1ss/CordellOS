@@ -5,7 +5,6 @@
 
 #include <ata.h>
 #include <fat.h>
-#include <allocator.h>
 
 #define FAT_FS      0
 #define EXT2_FS     1
@@ -17,21 +16,21 @@ typedef struct vfs_node {
     struct ata_dev*  device;
 
     // Read content to buffer with file seek
-    // Content, buffer, seek, size
+    // content_t, buffer, seek, size
     int              (*read)(int, uint8_t*, uint32_t, uint32_t);
 
     // Read content to buffer with file seek (stop reading when meets stop symbols)
-    // Content, buffer, seek, size, stop
+    // content_t, buffer, seek, size, stop
     int              (*read_stop)(int, uint8_t*, uint32_t, uint32_t, uint8_t*);
 
     // Write data to content with offset (Change FAT table for allocate \ deallocate clusters)
-    // Content, buffer, seek, size
+    // content_t, buffer, seek, size
     int              (*write)(int, const uint8_t*, uint32_t, uint32_t);
 
-    // Return Directory of current cluster
+    // Return directory_t of current cluster
     int              (*lsdir)(int, uint8_t, int);
 
-    // Get Content by path
+    // Get content_t by path
     // Path
     int              (*openobj)(const char*);
     int              (*objstat)(int, CInfo_t*);

@@ -5,7 +5,7 @@ bitmap_t* BMP_create(char* file_path, int screen_x, int screen_y) {
     bitmap_t* ret = (bitmap_t*)clralloc(sizeof(bitmap_t));
     int ci = copen(file_path);
     if (ci < 0) {
-        printf("File not found\n");
+        printf("file_t not found\n");
         BMP_unload(ret);
         return NULL;
     }

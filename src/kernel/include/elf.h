@@ -16,6 +16,8 @@
 #define NULL_ADDRESS     -1
 #define ELF32_ST_TYPE(i) ((i)&0xf)
 #define EI_NIDENT        16
+#define ELF_MAX_PROGRAM_HEADERS 16
+#define ELF_MAX_PROGRAM_PAGES   64
 
 typedef struct {
     uint8_t  e_ident[EI_NIDENT];
@@ -84,7 +86,7 @@ typedef struct {
 } Elf32_Sym;
 
 typedef struct {
-    uint32_t* pages;
+    uint32_t pages[ELF_MAX_PROGRAM_PAGES];
     uint32_t  pages_count;
     void*     entry_point;
 } ELF32_program;
