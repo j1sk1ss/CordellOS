@@ -66,7 +66,7 @@ static int _shell() {
 }
 
 static void _idle() {
-    _tick();
+    DTM_tick();
 }
 
 void kernel_main(struct multiboot_info* mb_info, uint32_t mb_magic, uintptr_t esp) {

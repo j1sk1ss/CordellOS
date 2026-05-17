@@ -26,8 +26,8 @@ enum {
 
 extern datetime_t DTM_datetime;
 
-int _datetime_read_rtc();
-int _tick();
+int DTM_datetime_read_rtc();
+int DTM_tick();
 int DTM_get_ticks();
 
 #endif

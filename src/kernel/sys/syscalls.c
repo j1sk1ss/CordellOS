@@ -33,7 +33,7 @@ void syscall(struct Registers* regs) {
             break;
         }
         case SYS_TIME: {
-            _datetime_read_rtc();
+            DTM_datetime_read_rtc();
             memcpy((datetime_t*)regs->ecx, &DTM_datetime, sizeof(datetime_t));
             break;
         }

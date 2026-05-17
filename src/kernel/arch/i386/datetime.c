@@ -4,17 +4,17 @@ datetime_t DTM_datetime = {
     .year = CURRENT_YEAR
 };
 
-int _get_update_in_progress_flag() {
+static inline int _get_update_in_progress_flag() {
     i386_outb(cmos_address, 0x0A);
     return (i386_inb(cmos_data) & 0x80);
 }
  
-uint8_t _get_RTC_register(int reg) {
+static inline uint8_t _get_RTC_register(int reg) {
       i386_outb(cmos_address, reg);
       return i386_inb(cmos_data);
 }
  
-int _datetime_read_rtc() {
+int DTM_datetime_read_rtc() {
     unsigned char century       = 0;
     unsigned char last_second   = 0;
     unsigned char last_minute   = 0;
@@ -79,21 +79,21 @@ int _datetime_read_rtc() {
     return 1;
 }
 
-static int ticks = 0;
-int _tick() {
+static int _ticks = 0;
+int DTM_tick() {
     int temp_ticks = 0;
     while (1) {
         if (++temp_ticks > TICK_DELAY) {
             temp_ticks = 0;
-            ticks++;
+            _ticks++;
         }
 
-        if (ticks > MAX_TICK) {
-            ticks = 0;
+        if (_ticks > MAX_TICK) {
+            _ticks = 0;
         }
     }
 }
 
 int DTM_get_ticks() {
-    return ticks;
+    return _ticks;
 }

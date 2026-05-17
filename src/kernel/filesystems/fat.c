@@ -657,12 +657,12 @@ static int _directory_search(const char* filepart, const uint32_t cluster, direc
 }
 
 static uint16_t _current_time() {
-	_datetime_read_rtc();
+	DTM_datetime_read_rtc();
 	return (DTM_datetime.hour << 11) | (DTM_datetime.minute << 5) | (DTM_datetime.second / 2);
 }
 
 static uint16_t _current_date() {
-	_datetime_read_rtc();
+	DTM_datetime_read_rtc();
 
 	uint16_t reversed_data = 0;
 	reversed_data |= DTM_datetime.day & 0x1F;

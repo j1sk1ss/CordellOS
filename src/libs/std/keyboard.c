@@ -1,6 +1,5 @@
 #include "../include/keyboard.h"
 
-
 //====================================================================
 //  This function clear last character of keyboard to \15
 static int _flush_keyboard() {

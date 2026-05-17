@@ -49,6 +49,9 @@ def _tool_flags(env: Environment):
     _append_option(args, env.subst('$CPLASOPTION'), env.subst('$AS'))
     _append_option(args, env.subst('$CPLASMFORMATOPTION'), env.subst('$CPLASMFORMAT'))
     _append_option(args, env.subst('$CPLLDOPTION'), env.subst('$LD'))
+    _append_option(args, env.subst('$CPLCODESECTIONOPTION'), env.subst('$CPLCODESECTION'))
+    _append_option(args, env.subst('$CPLROSECTIONOPTION'), env.subst('$CPLROSECTION'))
+    _append_option(args, env.subst('$CPLGLOBSECTIONOPTION'), env.subst('$CPLGLOBSECTION'))
     args.extend(_split(env, env.get('CPLLINKFLAGS', [])))
 
     return args
@@ -101,7 +104,7 @@ def _cpl_emit_asm_action(target, source, env):
         source,
         output_flag='$CPLASMOUTPUTFLAG',
         use_include_flags=False,
-        use_tool_flags=False,
+        use_tool_flags=True,
     )
     subprocess.check_call(command)
     if not os.path.exists(target_path):
@@ -163,6 +166,12 @@ def setup_cpl_builders(env: Environment):
         CPLASMFORMAT='elf32',
         CPLASMFORMATOPTION='--asm-format',
         CPLLDOPTION='--linker',
+        CPLCODESECTION='.text',
+        CPLCODESECTIONOPTION='--code-section',
+        CPLROSECTION='.rodata',
+        CPLROSECTIONOPTION='--ro-section',
+        CPLGLOBSECTION='.data',
+        CPLGLOBSECTIONOPTION='--glob-section',
         CPLASMCOMSTR='CPL -> asm [$SOURCE]',
         CPLOBJCOMSTR='CPL -> obj [$SOURCE]',
         CPLLINKCOMSTR='CPL linking [$TARGET]',
