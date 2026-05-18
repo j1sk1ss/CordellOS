@@ -1,7 +1,5 @@
 #include "../include/keyboard.h"
 
-//====================================================================
-//  This function clear last character of keyboard to \15
 static int _flush_keyboard() {
     __asm__ volatile (
         "movl $46, %%eax\n"
@@ -14,9 +12,6 @@ static int _flush_keyboard() {
     return 1;
 }
 
-//====================================================================
-// Function take a value from keyboard
-// ECX - pointer to character
 char get_char() {
     char key = 0;
     __asm__ volatile(

@@ -9,7 +9,7 @@ TaskManager taskManager = { // Task manager placed in kernel space
 };
 
 void TASK_start_tasking() {
-	if (taskManager.tasksCount <= 0 || taskManager.tasks[0] == NULL || taskManager.tasks[0]->cpuState == NULL) return;
+	if (taskManager.tasksCount <= 0 || !taskManager.tasks[0] || !taskManager.tasks[0]->cpuState) return;
 	i386_disable_interrupts();
 
 	taskManager.currentTask = 0;
@@ -57,16 +57,16 @@ void i386_task_init() {
 
 Task* TASK_create_task(char* pname, uint32_t address, int type, int priority) {
 	// Allocate memory for new task body
-	Task* task     = (Task*)ALC_malloc(sizeof(Task), KERNEL);
-	if (task == NULL) return NULL;
+	Task* task = (Task*)ALC_malloc(sizeof(Task), KERNEL);
+	if (!task) return NULL;
 
 	task->cpuState = (struct Registers*)ALC_malloc(sizeof(struct Registers), KERNEL);
-	if (task->cpuState == NULL) {
+	if (!task->cpuState) {
 		ALC_free(task, KERNEL);
 		return NULL;
 	}
 
-	task->space    = type;
+	task->space = type;
 
 	// Find free PID
 	task->state = PROCESS_STATE_ALIVE;
@@ -96,7 +96,7 @@ Task* TASK_create_task(char* pname, uint32_t address, int type, int priority) {
 
 	// Create empty pd and fill it by tables from kernel pd
 	task->page_directory = VMM_mkpdir();
-	if (task->page_directory == NULL) {
+	if (!task->page_directory) {
 		ALC_free(task->cpuState, KERNEL);
 		ALC_free(task, KERNEL);
 		return NULL;
@@ -113,6 +113,7 @@ Task* TASK_create_task(char* pname, uint32_t address, int type, int priority) {
 		ALC_free(task, KERNEL);
 		return NULL;
 	}
+
 	memset((void*)TASK_VIRT_ADDRESS, 0, PAGE_SIZE);
 	
 	// Set stack pointer to allocated region
@@ -166,15 +167,15 @@ void _destroy_task(Task* task) {
 
 Task* _get_task(int pid) {
 	for (int i = 0; i < TASKS_MAX; i++) {
-		if (taskManager.tasks[i] != NULL && taskManager.tasks[i]->pid == pid) return taskManager.tasks[i];
+		if (taskManager.tasks[i] && taskManager.tasks[i]->pid == pid) return taskManager.tasks[i];
 	}
+	
 	return NULL;
 }
 
 void __kill() { // TODO: complete multitask disabling when tasks == 0
 	if (taskManager.currentTask < 0 || taskManager.currentTask >= taskManager.tasksCount) return;
-	if (taskManager.tasks[taskManager.currentTask] == NULL) return;
-
+	if (!taskManager.tasks[taskManager.currentTask]) return;
 	TASK_stop_tasking();
 	_kill(taskManager.tasks[taskManager.currentTask]->pid);
 	TASK_continue_tasking();
@@ -194,7 +195,6 @@ void _kill(int pid) {
 int _add_task(Task* task) {
 	if (task == NULL || taskManager.tasksCount >= TASKS_MAX) return -1;
 	taskManager.tasks[taskManager.tasksCount++] = task;
-	
 	return task->pid;
 }
 
@@ -203,7 +203,6 @@ int TASK_add_task(Task* task) {
 	TASK_stop_tasking();
 	int pid = _add_task(task);
 	taskManager.tasking = was_tasking;
-
 	return pid;
 }
 
@@ -212,8 +211,7 @@ void TASK_task_switch(struct Registers* regs) {
 	
 	// Get current task
 	Task* task = taskManager.tasks[taskManager.currentTask];
-	if (task == NULL) return;
-	if (task->cpuState == NULL) return;
+	if (!task || !task->cpuState) return;
 
 	i386_disable_interrupts();
 
@@ -236,28 +234,31 @@ void TASK_task_switch(struct Registers* regs) {
 	// If next task finished / broken and something like that, find next
 	Task* new_task = taskManager.tasks[taskManager.currentTask];
 	int scanned_tasks = 0;
-	while ((new_task == NULL || new_task->state != PROCESS_STATE_ALIVE) && scanned_tasks < taskManager.tasksCount) {
+	while ((!new_task || new_task->state != PROCESS_STATE_ALIVE) && scanned_tasks < taskManager.tasksCount) {
 		if (++taskManager.currentTask >= taskManager.tasksCount) taskManager.currentTask = 0;
 		new_task = taskManager.tasks[taskManager.currentTask];
 		scanned_tasks++;
 	}
 
-	if (new_task == NULL || new_task->state != PROCESS_STATE_ALIVE) {
+	if (!new_task || new_task->state != PROCESS_STATE_ALIVE) {
 		taskManager.tasking = 0;
 		i386_enable_interrupts();
 		return;
 	}
 
 	// Load task CPU state and page directory
-	if (new_task->cpuState == NULL) {
+	if (!new_task->cpuState) {
 		taskManager.tasking = 0;
 		i386_enable_interrupts();
 		return;
 	}
+
 	memcpy(regs, new_task->cpuState, sizeof(struct Registers));
-	if (new_task->page_directory != NULL)
-		if (new_task->page_directory != task->page_directory)
+	if (new_task->page_directory != NULL) {
+		if (new_task->page_directory != task->page_directory) {
 			VMM_set_directory(new_task->page_directory);
+		}
+	}
 
 	i386_enable_interrupts();
 }
