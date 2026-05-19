@@ -23,8 +23,9 @@ void i386_ISR_initialize_gates();
 
 void i386_isr_initialize() {
     i386_ISR_initialize_gates();
-    for (int i = 0; i < 256; i++)
+    for (int i = 0; i < 256; i++) {
         i386_idt_enableGate(i);
+    }
 }
 
 void __attribute__((cdecl)) i386_isr_handler(struct Registers* regs) {
@@ -55,9 +56,9 @@ void __attribute__((cdecl)) i386_isr_handler(struct Registers* regs) {
 
 void i386_isr_interrupt_details(uint32_t eip, uint32_t ebp, uint32_t esp) {
     i386_isr_stack_trace_line(eip);
-    uint32_t stack_highest_address = ((uint32_t)&esp + PAGE_SIZE - 4);
-    while (ebp <= stack_highest_address && ebp >= ((uint32_t) &esp)) {
-        eip = ((uint32_t*) ebp)[1];
+    uint32_t stack_highest_address = ((uint32_t)&esp + PAGE_SIZE - sizeof(int));
+    while (ebp <= stack_highest_address && ebp >= ((uint32_t)&esp)) {
+        eip = ((uint32_t*)ebp)[1];
         i386_isr_stack_trace_line(eip);
         ebp = *((uint32_t*)ebp);
     }

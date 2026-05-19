@@ -4,9 +4,10 @@
 #include <stdint.h>
 #include "stdlib.h"
 
+#define ELF_MAX_PROGRAM_PAGES 64
 
 struct ELF_program {
-    uint32_t* pages;
+    uint32_t pages[ELF_MAX_PROGRAM_PAGES];
     uint32_t pages_count;
     void* entry_point;
 };

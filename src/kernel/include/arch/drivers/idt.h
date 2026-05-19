@@ -16,12 +16,12 @@ typedef struct {
     uint8_t  reserved;
     uint8_t  flags;
     uint16_t base_high;
-} __attribute__((packed)) IDTEntry;
+} __attribute__((packed)) idt_entry_t;
 
 typedef struct {
     uint16_t  limit;
-    IDTEntry* ptr;
-} __attribute__((packed)) IDTDescriptor;
+    idt_entry_t* ptr;
+} __attribute__((packed)) idt_descriptor_t;
 
 typedef enum {
     IDT_FLAG_GATE_TASK                      = 0x05,
@@ -41,7 +41,7 @@ typedef enum {
 } IDT_FLAGS;
 
 
-void __attribute__((cdecl)) i386_idt_load(IDTDescriptor* idtDescriptor);
+void __attribute__((cdecl)) i386_idt_load(idt_descriptor_t* idtDescriptor);
 
 void i386_idt_initialize();
 void i386_idt_disableGate(int interrupt);

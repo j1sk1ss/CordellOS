@@ -65,6 +65,7 @@ def _cpl_command(
     output_flag='$CPLOUTPUTFLAG',
     use_include_flags=True,
     use_tool_flags=True,
+    extra_mode_flags=None,
 ):
     cpl = env.subst('$CPL')
     if not os.path.isabs(cpl) and os.path.exists(cpl):
@@ -80,6 +81,10 @@ def _cpl_command(
     mode = env.subst(mode_flag)
     if mode:
         args.extend(_split(env, mode))
+    for extra_mode_flag in _flatten(extra_mode_flags):
+        mode = env.subst(extra_mode_flag)
+        if mode:
+            args.extend(_split(env, mode))
 
     output = env.subst(output_flag)
     if output:
@@ -105,6 +110,7 @@ def _cpl_emit_asm_action(target, source, env):
         output_flag='$CPLASMOUTPUTFLAG',
         use_include_flags=False,
         use_tool_flags=True,
+        extra_mode_flags='$CPLCOMPILEFLAG',
     )
     subprocess.check_call(command)
     if not os.path.exists(target_path):
@@ -156,7 +162,7 @@ def setup_cpl_builders(env: Environment):
         CPLLINKFLAGS=[],
         CPL_OBJECT_MODE='asm',
         CPLEMITASMFLAGS=['--emit-asm', '--no-compile'],
-        CPLCOMPILEFLAG='',
+        CPLCOMPILEFLAG='-O3',
         CPLLINKFLAG='',
         CPLOUTPUTFLAG='--output',
         CPLASMOUTPUTFLAG='--asm-output',

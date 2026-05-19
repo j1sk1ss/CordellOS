@@ -257,8 +257,8 @@ int cclose(int ci) {
 
 int fexec(char* path, int argc, char** argv) {
     struct ELF_program* program = get_entry_point(path);
+    if (!program) return -255;
     int result = execute(program, argc, argv);
     free_program(program);
-
     return result;
 }

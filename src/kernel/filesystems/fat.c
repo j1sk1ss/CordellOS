@@ -22,30 +22,30 @@ static content_t _scratch_content = { 0 };
 static file_t _scratch_file = { 0 };
 static directory_t _scratch_directory = { 0 };
 
-static int _is_static_content(content_t* content) {
+static inline int _is_static_content(content_t* content) {
 	return content >= _content_storage && content < _content_storage + CONTENT_TABLE_SIZE;
 }
 
-static int _content_slot(content_t* content) {
+static inline int _content_slot(content_t* content) {
 	if (!_is_static_content(content)) return -1;
 	return content - _content_storage;
 }
 
-static int _is_valid_fd(int fd) {
+static inline int _is_valid_fd(int fd) {
 	return fd >= 0 && fd < CONTENT_TABLE_SIZE && _content_table[fd] != NULL;
 }
 
-static void _reset_file(file_t* file) {
+static inline void _reset_file(file_t* file) {
 	if (!file) return;
 	memset(file, 0, sizeof(file_t));
 }
 
-static void _reset_directory(directory_t* directory) {
+static inline void _reset_directory(directory_t* directory) {
 	if (!directory) return;
 	memset(directory, 0, sizeof(directory_t));
 }
 
-static void _reset_content(content_t* content) {
+static inline void _reset_content(content_t* content) {
 	if (!content) return;
 	memset(content, 0, sizeof(content_t));
 	content->parent_cluster = (uint32_t)-1;

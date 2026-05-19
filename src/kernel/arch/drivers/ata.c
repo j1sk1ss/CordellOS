@@ -65,13 +65,13 @@ int ATA_initialize() {
     }
 
     if (_current_ata_device == NULL) {
-        kprintf("ATA_initialize: no ATA disk found\n");
+        LOG("ATA_initialize: no ATA disk found\n");
         return 0;
     }
 
     kprintf("ATA VFS INIT...\n");
     if (!VFS_initialize(_current_ata_device, FAT_FS)) {
-        kprintf("ATA_initialize: VFS init failed\n");
+        LOG("ATA_initialize: VFS init failed\n");
         return 0;
     }
 
@@ -109,7 +109,7 @@ int ATA_device_detect(ata_dev_t* dev, int primary) {
 
     uint8_t status = i386_inb(dev->status);
     if (status == 0 || status == 0xFF) {
-        kprintf("ATA_device_detect: device does not exist\n");
+        LOG("ATA_device_detect: device does not exist\n");
         dev->prdt = NULL;
         return 0;
     }
@@ -118,7 +118,7 @@ int ATA_device_detect(ata_dev_t* dev, int primary) {
     uint8_t lba_mid = i386_inb(dev->lba_mid);
     uint8_t lba_high = i386_inb(dev->lba_high);
     if (lba_lo != 0 || lba_mid != 0 || lba_high != 0) {
-        kprintf("ATA_device_detect: not ata device\n");
+        LOG("ATA_device_detect: not ata device\n");
         dev->prdt = NULL;
         return 0;
     }
@@ -127,27 +127,27 @@ int ATA_device_detect(ata_dev_t* dev, int primary) {
     while (status & ATA_SR_BSY) {
         status = i386_inb(dev->status);
         if (--timeout < 0) {
-            kprintf("DRIVE [%i] NOT FOUND / ATTACHED\n");
+            LOG("DRIVE [%i] NOT FOUND / ATTACHED\n");
             dev->prdt = NULL;
             return 0;
         }
     }
 
     if (status & (ATA_STATUS_ERR | ATA_STATUS_DF)) {
-        kprintf("ATA_device_detect: err when polling\n");
+        LOG("ATA_device_detect: err when polling\n");
         dev->prdt = NULL;
         return 0;
     }
 
     if (!(status & ATA_STATUS_DRQ)) {
-        kprintf("ATA_device_detect: DRQ not set\n");
+        LOG("ATA_device_detect: DRQ not set\n");
         dev->prdt = NULL;
         return 0;
     }
 
     for (int i = 0; i < 256; i++) i386_inw(dev->data);
 
-    if (_ata_device.bits != 0) {
+    if (_ata_device.bits) {
         uint32_t pci_command_reg = pci_read(_ata_device, PCI_COMMAND);
         if (!(pci_command_reg & (1 << 2))) {
             pci_command_reg |= (1 << 2);
@@ -156,7 +156,7 @@ int ATA_device_detect(ata_dev_t* dev, int primary) {
     }
 
     dev->present = 1;
-    kprintf("DRIVE [%s] FOUND (DATA PORT: %x)\n", dev->mountpoint, dev->data);
+    LOG("DRIVE [%s] FOUND (DATA PORT: %x)\n", dev->mountpoint, dev->data);
     return 1;
 }
 
@@ -297,10 +297,11 @@ int ATA_read_sector_stopoff(uint32_t lba, uint32_t offset, uint8_t* buffer, uint
 int ATA_read_sectors(uint32_t lba, uint8_t* buffer, uint32_t sector_count) {
     _ata_wait();
     if (!buffer) return -1;
-
     memset(buffer, 0, SECTOR_SIZE * sector_count);
     for (uint32_t i = 0; i < sector_count; i++) {
-        if (ATA_read_sector(lba + i, buffer + i * SECTOR_SIZE) != 1) return -1;
+        if (ATA_read_sector(lba + i, buffer + i * SECTOR_SIZE) != 1) {
+            return -1;
+        }
     }
 
     return 1;

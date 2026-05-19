@@ -59,7 +59,5 @@
 void main(int argc, char* argv[]);
 void shell_start_screen();
 int execute_command(char* command);
-int ulogin(char* login, char* password);
-char* get_path(char* path);
 
 #endif

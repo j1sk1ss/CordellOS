@@ -86,6 +86,7 @@ bool i8259_probe() {
     _set_mask(0x1488);
     return _get_mask() == 0x1488;
 }
+
 static const PICDriver _PICDriver = {
     .Name                   = "8259 PIC",
     .Probe                  = &i8259_probe,

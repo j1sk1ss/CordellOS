@@ -4,6 +4,16 @@ static vars_entry_t _kshell_envars[50];
 static char* _current_path = "HOME";
 static int  _exit = 1;
 
+static char* _get_path(char* path) {
+    if (path[0] == '\\') {
+        char* new_path = (char*)clralloc(strlen(path) + 1);
+        strncpy(new_path, path + 1, strlen(path));
+        return new_path;
+    } 
+
+    return FSLIB_change_path(_current_path, path);
+}
+
 void main(int argc, char* argv[]) {
     load_font("home\\shell.psf");
     clrscr();
@@ -19,7 +29,7 @@ void main(int argc, char* argv[]) {
     while (_exit) {
         printf("\n$%s> ", _current_path);
 
-        char input[COMMAND_LENGHT] = { '\0' };
+        char input[COMMAND_LENGHT] = { 0 };
         char input_data = ' ';
         int pos = 0;
 
@@ -31,14 +41,14 @@ void main(int argc, char* argv[]) {
             }
             else if (input_data == BACKSPACE_BUTTON) {
                 if (pos <= 0) continue;
-                input[pos--] = '\0';
+                input[pos--] = 0;
                 cursor_set32(cursor_get_x32() - _psf_get_width(get_font()), cursor_get_y32());
                 display_char(cursor_get_x32(), cursor_get_y32(), ' ', WHITE, BLACK);
             }
         }
 
         int last_char = max(0, strlen(input) - 1);
-        input[last_char] = '\0';
+        input[last_char] = 0;
         
         execute_command(input);
     }
@@ -54,12 +64,12 @@ void shell_start_screen() {
 }
 
 int execute_command(char* command) {
-    if (command == NULL) return -1;
+    if (!command) return -1;
     if (strlen(command) <= 0) return -2;
 
     char* command_line[100] = { NULL };
-    int tokenCount = 0;
-    char* splitted = strtok(command, " ");
+    int tokenCount          = 0;
+    char* splitted          = strtok(command, " ");
 
     while (splitted && tokenCount < 100) {
         char* token = (char*)clralloc(strlen(splitted) + 1);
@@ -119,12 +129,12 @@ int execute_command(char* command) {
         FSInfo_t info;
         get_fs_info(&info);
         printf("\nKernel disc-stat ver 0.3b\n");
-        printf("dev:                             [%s]\n", info.mount);
-        printf("fs type:                         [%s]\n", info.name);
-        printf("type:                            [%i]\n", info.type);
-        printf("total clusters x32:              [%i]\n", info.clusters);
-        printf("sectors per cluster:             [%i]\n", info.spc);
-        printf("fat size:                        [%i]\n", info.size);
+        printf("dev:                 [%s]\n", info.mount);
+        printf("fs type:             [%s]\n", info.name);
+        printf("type:                [%i]\n", info.type);
+        printf("total clusters x32:  [%i]\n", info.clusters);
+        printf("sectors per cluster: [%i]\n", info.spc);
+        printf("fat size:            [%i]\n", info.size);
     }
     else if (strcmp(command_line[0], COMMAND_TICKS) == 0) {
         printf("\nCurrent tick: %i\n", get_tick());
@@ -195,7 +205,7 @@ int execute_command(char* command) {
     else if (strcmp(command_line[0], COMMAND_MAKE_FILE) == 0) mkfile(_current_path, command_line[1], command_line[2]);
     else if (strcmp(command_line[0], COMMAND_MAKE_DIR) == 0) mkdir(_current_path, command_line[1]);
     else if (strcmp(command_line[0], COMMAND_DELETE_CONTENT) == 0) {
-        char* path = get_path(command_line[1]); 
+        char* path = _get_path(command_line[1]); 
         if (!cexists(path)) {
             printf("\nContent not found.");
             free(path);
@@ -210,9 +220,7 @@ int execute_command(char* command) {
         int dir_ci = copen(_current_path);
         if (dir_ci >= 0) {
             int root_ci = opendir(dir_ci);
-            if (root_ci < 0) {
-                cclose(dir_ci);
-            }
+            if (root_ci < 0) cclose(dir_ci);
             else {    
                 while (step != -1) {
                     char name[11] = { 0 };
@@ -226,7 +234,7 @@ int execute_command(char* command) {
         }
     }
     else if (strcmp(command_line[0], COMMAND_FILE_VIEW) == 0) {
-        char* file_path = get_path(command_line[1]);
+        char* file_path = _get_path(command_line[1]);
         if (!cexists(file_path)) {
             printf("\nFile not found.");
             free(file_path);
@@ -243,11 +251,9 @@ int execute_command(char* command) {
 
             while (data_size < content_info.size) {
                 int copy_size = min(content_info.size - data_size, 128);
-                char* data = (char*)clralloc(copy_size);
-
+                char* data    = (char*)clralloc(copy_size);
                 fread(ci, data_size, (uint8_t*)data, copy_size);
                 printf("%s", data);
-
                 free(data);
                 data_size += copy_size;
             }
@@ -257,7 +263,7 @@ int execute_command(char* command) {
         }
     }
     else if (strcmp(command_line[0], COMMAND_BMP_SHOW) == 0) {
-        char* file_path = get_path(command_line[1]);
+        char* file_path = _get_path(command_line[1]);
         if (!cexists(file_path)) {
             printf("\nFile not found.");
             free(file_path);
@@ -272,12 +278,12 @@ int execute_command(char* command) {
     else if (strcmp(command_line[0], COMMAND_FILE_RUN) == 0) {
         int pos = 2;
         char* exe_argv[COMMAND_BUFFER];
-        while (command_line[pos] != NULL && pos < COMMAND_BUFFER) {
+        while (command_line[pos] && pos < COMMAND_BUFFER) {
             exe_argv[pos - 2] = command_line[pos];
             pos++;
         }
 
-        char* file_path = get_path(command_line[1]);
+        char* file_path = _get_path(command_line[1]);
         if (!cexists(file_path)) {
             printf("\nFile [%s] not found.", file_path);
             return -8;
@@ -287,7 +293,7 @@ int execute_command(char* command) {
         free(file_path);
     }
     else if (strcmp(command_line[0], COMMAND_CINFO) == 0) {
-        char* info_file = get_path(command_line[1]);
+        char* info_file = _get_path(command_line[1]);
         if (!cexists(info_file)) {
             printf("\nContent not found.");
             free(info_file);
@@ -373,50 +379,4 @@ int execute_command(char* command) {
 
     printf("\n");
     return 1;
-}
-
-// 0 - nlogin
-// 1 - login success
-int ulogin(char* login, char* password) {
-    char hashed_login[100] = { 0 };
-    char hashed_passw[100] = { 0 };
-
-    sprintf(hashed_login, 100, "%lu", str2hash(login));
-    sprintf(hashed_passw, 100, "%lu", str2hash(password));
-
-    char* lines[40] = { NULL };
-    int pos = 0;
-    
-    char content_text[512] = { 0 };
-    int ci = copen("boot\\users.txt");
-    if (ci >= 0) {
-        fread(ci, 0, (uint8_t*)content_text, 512);
-        cclose(ci);
-    }
-
-    char* token = strtok(content_text, "\n");
-    while (token) {
-        lines[pos++] = token;
-        token = strtok(NULL, "\n");
-    }
-
-    for (int i = 0; i < pos - 1; i++) {
-        if (compare_hash(hashed_login, lines[i]) == 0 && compare_hash(hashed_passw, lines[i + 1]) == 0) {
-            free(content_text);
-            return 1;
-        }
-    }
-
-    free(content_text);
-    return 0;
-}
-
-char* get_path(char* path) {
-    if (path[0] == '\\') {
-        char* new_path = (char*)clralloc(strlen(path) + 1);
-        strncpy(new_path, path + 1, strlen(path));
-        return new_path;
-    } 
-
-    return FSLIB_change_path(_current_path, path);
 }

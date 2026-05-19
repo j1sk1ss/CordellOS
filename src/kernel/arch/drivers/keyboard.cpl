@@ -13,9 +13,6 @@ extern function i386_irq_registerHandler(i32 irq, ptr i0 handler) -> i0;
 #define KBD_CMD_ENABLE_PORT1    0xAE
 #define KBD_CONFIG_IRQ1         0x01
 #define KBD_CONFIG_PORT1_CLOCK  0x10
-#define HIDDEN_KEYBOARD         0
-#define VISIBLE_KEYBOARD        1
-#define STOP_KEYBOARD           '\1'
 #define DEL_BUTTON              '\2'
 #define LSHIFT_BUTTON           '\3'
 #define RSHIFT_BUTTON           '\4'
@@ -29,7 +26,6 @@ extern function i386_irq_registerHandler(i32 irq, ptr i0 handler) -> i0;
 #define RIGHT_ARROW_BUTTON      '\14'
 #define EMPTY_KEYBOARD          '\15'
 #define ENTER_BUTTON            '\n'
-#define BACKSPACE_BUTTON        '\b'
 #define LSHIFT                  0x2A
 #define RSHIFT                  0x36
 
@@ -49,7 +45,7 @@ glob arr _alphabet[128, u8] = {
     ' ',
     '\5',
     F1_BUTTON,
-    F2_BUTTON,   F3_BUTTON,   F4_BUTTON,   0,   0,   0,   0,   0,
+    F2_BUTTON, F3_BUTTON, F4_BUTTON, 0, 0, 0, 0, 0,
     0,
     0,
     0,
@@ -66,7 +62,7 @@ glob arr _alphabet[128, u8] = {
     0,
     0,
     DEL_BUTTON,
-    0,   0,   0,
+    0, 0, 0,
     0,
     0,
     0
@@ -105,7 +101,7 @@ glob arr _shift_alphabet[128, u8] = {
     0,
     0,
     DEL_BUTTON,
-    0,   0,   0,
+    0, 0, 0,
     0,
     0,
     0
@@ -121,7 +117,7 @@ function _keyboard_wait_input_clear() -> i8 {
         if timeout <= 0; return 0;
     }
 
-    return 1;
+    1;
 }
 
 function _keyboard_wait_output_full() -> i32 {
@@ -131,25 +127,25 @@ function _keyboard_wait_output_full() -> i32 {
         if timeout <= 0; return 0;
     }
 
-    return 1;
+    1;
 }
 
 function _keyboard_write_command(u8 command) -> i32 {
     if not _keyboard_wait_input_clear(); return 0;
     i386_outb(KBD_COMMAND_PORT, command);
-    return 1;
+    1;
 }
 
 function _keyboard_write_data(u8 data) -> i8 {
     if not _keyboard_wait_input_clear(); return 0;
     i386_outb(KBD_DATA_PORT, data);
-    return 1;
+    1;
 }
 
 function _keyboard_read_data(ptr u8 data) -> i8 {
     if not _keyboard_wait_output_full(); return 0;
     dref data = i386_inb(KBD_DATA_PORT);
-    return 1;
+    1;
 }
 
 function _keyboard_flush_output() -> i0 {
@@ -204,7 +200,7 @@ glob function i386_init_keyboard() -> i0 {
         kprintf(ref "PS/2 config byte: %x\n", config);
         config |= KBD_CONFIG_IRQ1;
         config |= 0x40;
-        config &= 0xFF ^ KBD_CONFIG_PORT1_CLOCK;
+        config &= neg KBD_CONFIG_PORT1_CLOCK;
         if _keyboard_write_command(KBD_CMD_WRITE_CONFIG); {
             _keyboard_write_data(config);
         }
@@ -223,5 +219,5 @@ glob function enable_keyboard() -> i0 {
 glob function pop_character() -> i8 {
     i8 character = _curr_char;
     _curr_char = EMPTY_KEYBOARD;
-    return character;
+    character;
 }

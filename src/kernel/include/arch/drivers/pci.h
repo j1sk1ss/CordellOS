@@ -7,7 +7,7 @@
 #include <string.h>
 
 typedef union pci_dev {
-    uint32_t bits;
+    uint32_t     bits;
     struct {
         uint32_t always_zero  : 2;
         uint32_t field_num    : 6;
@@ -60,12 +60,6 @@ typedef union pci_dev {
 
 uint32_t pci_read(pci_dev_t dev, uint32_t field);
 void pci_write(pci_dev_t dev, uint32_t field, uint32_t value);
-uint32_t get_device_type(pci_dev_t dev);
-uint32_t get_secondary_bus(pci_dev_t dev);
-uint32_t pci_reach_end(pci_dev_t dev);
-pci_dev_t pci_scan_function(uint16_t vendor_id, uint16_t device_id, uint32_t bus, uint32_t device, uint32_t function, int device_type);
-pci_dev_t pci_scan_device(uint16_t vendor_id, uint16_t device_id, uint32_t bus, uint32_t device, int device_type);
-pci_dev_t pci_scan_bus(uint16_t vendor_id, uint16_t device_id, uint32_t bus, int device_type);
 pci_dev_t pci_get_device(uint16_t vendor_id, uint16_t device_id, int device_type);
 void i386_pci_init();
 

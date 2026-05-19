@@ -101,7 +101,28 @@ void syscall(struct Registers* regs) {
         case SYS_WRITE_FILE_OFF: current_vfs->write((int)regs->ebx, (uint8_t*)regs->edx, (int)regs->ecx, (int)regs->esi); break;
         case SYS_READ_ELF: {
             int ci = current_vfs->openobj((char*)regs->ebx);
-		    regs->eax = (uint32_t)ELF_read(ci, _syscall_address_space(regs));
+            if (ci < 0) {
+                regs->eax = 0;
+                break;
+            }
+
+            ELF32_program* program = ELF_read(ci, _syscall_address_space(regs));
+            current_vfs->closeobj(ci);
+
+            if (program == NULL) {
+                regs->eax = 0;
+                break;
+            }
+
+            ELF32_program* user_program = ALC_malloc(sizeof(ELF32_program), USER);
+            if (user_program == NULL) {
+                ELF_free_program(program, _syscall_address_space(regs));
+                regs->eax = 0;
+                break;
+            }
+
+            memcpy(user_program, program, sizeof(ELF32_program));
+		    regs->eax = (uint32_t)user_program;
 	        break;
         }
         case SYS_VPUT_PIXEL:       GFX_vdraw_pixel((uint16_t)regs->ebx, (uint16_t)regs->ecx, (uint32_t)regs->edx);    break;
