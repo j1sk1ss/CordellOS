@@ -1,11 +1,4 @@
-#include "../include/string.h"
-
-//   ____ _____ ____  ___ _   _  ____ 
-//  / ___|_   _|  _ \|_ _| \ | |/ ___|
-//  \___ \ | | | |_) || ||  \| | |  _ 
-//   ___) || | |  _ < | || |\  | |_| |
-//  |____/ |_| |_| \_\___|_| \_|\____|
-
+#include <string.h>
 
 const char* strchr(const char* str, char chr) {
     if (str == NULL) return NULL;

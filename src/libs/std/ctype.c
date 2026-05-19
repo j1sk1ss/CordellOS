@@ -1,13 +1,11 @@
-#include "../include/ctype.h"
-
+#include <ctype.h>
 
 int isdigit(int c) {
     return (c >= '0' && c <= '9');
 }
 
 int isspace(int c) {
-    return (c == ' ' || c == '\n' || c == '\r' || c == '\t' || c == '\v' ||
-            c == '\b');
+    return (c == ' ' || c == '\n' || c == '\r' || c == '\t' || c == '\v' || c == '\b');
 }
 
 int islower(int c) {

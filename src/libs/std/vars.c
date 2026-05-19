@@ -1,12 +1,10 @@
-#include "../include/vars.h"
-
+#include <vars.h>
 
 void envar_init_stack(vars_entry_t vars[], size_t count) {
     for (int i = 0; i < count; i++) {
         vars[i].name[0] = '\0';
         vars[i].value[0] = '\0';
     }
-
 #ifdef ENVARS_SAVE
 #endif
 }

@@ -1,9 +1,7 @@
-#include "../include/stdio.h"
-
+#include <stdio.h>
 
 static int _curr_x = 0;
 static int _curr_y = 0;
-
 
 void __scrollback(int lines) {
     int max_h = get_resolution_y();

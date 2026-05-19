@@ -1,11 +1,10 @@
-#include "../include/bitmap.h"
-
+#include <bitmap.h>
 
 bitmap_t* BMP_create(char* file_path, int screen_x, int screen_y) {
     bitmap_t* ret = (bitmap_t*)clralloc(sizeof(bitmap_t));
     int ci = copen(file_path);
     if (ci < 0) {
-        printf("file_t not found\n");
+        printf("File not found\n");
         BMP_unload(ret);
         return NULL;
     }
@@ -88,5 +87,5 @@ void BMP_display(bitmap_t* bmp) {
 
 void BMP_unload(bitmap_t* bitmap) {
     if (bitmap->file >= 0) cclose(bitmap->file);
-    if (bitmap != NULL) free(bitmap);
+    if (bitmap) free(bitmap);
 }

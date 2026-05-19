@@ -1,5 +1,4 @@
-#include "../include/memory.h"
-
+#include <memory.h>
 
 void write(int destination, uint32_t source, size_t size) {
     __asm__ volatile(

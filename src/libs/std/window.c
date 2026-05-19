@@ -1,8 +1,6 @@
-#include "../include/window.h"
-
+#include <window.h>
 
 window_t* windows = NULL;
-
 
 window_t* create_window(char* name, int pid, int x, int y, int height, int width, uint32_t bg_color, GUIobject_t* objects) {
     window_t* window = malloc(sizeof(window_t));

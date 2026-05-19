@@ -1,4 +1,4 @@
-#include "../include/keyboard.h"
+#include <keyboard.h>
 
 static int _flush_keyboard() {
     __asm__ volatile (

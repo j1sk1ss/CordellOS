@@ -1,5 +1,4 @@
-#include "../include/netutils.h"
-
+#include <netutils.h>
 
 uint16_t flip_endian16(uint16_t short_int) {
     uint32_t first_byte  = *((uint8_t*)(&short_int));

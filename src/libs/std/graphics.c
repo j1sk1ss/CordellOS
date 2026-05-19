@@ -1,5 +1,4 @@
-#include "../include/graphics.h"
-
+#include <graphics.h>
 
 //====================================================================
 // Function put pixel by coordinates to virtual memory (slow method)

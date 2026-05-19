@@ -1,5 +1,4 @@
-#include "../include/stdlib.h"
-
+#include <stdlib.h>
 
 void tstart(char* name, uint32_t address, uint32_t delay) {
     __asm__ volatile(

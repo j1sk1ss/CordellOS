@@ -1,9 +1,4 @@
-extern function kprintf(ptr i8 fmt, ...) -> i0;
-extern function i386_gdt_initialize() -> i0;
-extern function i386_idt_initialize() -> i0;
-extern function i386_isr_initialize() -> i0;
-extern function i386_irq_initialize() -> i32;
-extern function TSS_init(u32 idx, u32 kss, u32 kesp) -> i0;
+#include "x86_h.cpl"
 
 glob function HAL_initialize() -> i0 {
     kprintf(ref "HAL: (");

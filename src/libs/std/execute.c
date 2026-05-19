@@ -1,5 +1,4 @@
-#include "../include/execute.h"
-
+#include <execute.h>
 
 struct ELF_program* get_entry_point(char* path) {
     struct ELF_program* program_pointer = NULL;
@@ -26,8 +25,9 @@ int execute(struct ELF_program* program, int argc, char* argv[]) {
 
 void free_program(struct ELF_program* program) {
     if (!program) return;
-    for (uint32_t i = 0; i < program->pages_count; i++) 
+    for (uint32_t i = 0; i < program->pages_count; i++) {
         freep((void*)program->pages[i]);
+    }
 
     free(program);
 }

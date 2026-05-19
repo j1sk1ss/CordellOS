@@ -1,5 +1,4 @@
-#include "../include/psf.h"
-
+#include <psf.h>
 
 uint8_t _psf_get_version(uint8_t* _font_structure) {
    PSF1_Header*_v1_font = (PSF1_Header*)_font_structure;

@@ -1,12 +1,12 @@
-#include "../include/assert.h"
-
+#include <assert.h>
 
 void assert_failed(char* file, int line) {
     char message[512] = { 0 };
-    sprintf(message, 512, 
+    sprintf(
+        message, 512, 
         "ASSERT FAILED\nPROCCESS: %i\nFILE: %s\nLINE: %i",
-        tpid(), file, line);
-
+        tpid(), file, line
+    );
     panic(message);
 }
 

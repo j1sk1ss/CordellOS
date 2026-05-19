@@ -1,5 +1,4 @@
-#include "../include/networking.h"
-
+#include <networking.h>
 
 //====================================================================
 // Function set IP of host machine
