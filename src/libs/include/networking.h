@@ -1,9 +1,7 @@
 #ifndef NETWORKING_H_
 #define NETWORKING_H_
 
-
 #include <stdint.h>
-
 
 void set_ip(uint8_t* ip);
 void get_ip(uint8_t* buffer);

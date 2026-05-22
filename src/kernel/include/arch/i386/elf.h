@@ -13,11 +13,11 @@
 #include <graphics/kstdio.h>
 #include <memory/allocator.h>
 
-#define NULL_ADDRESS     -1
-#define ELF32_ST_TYPE(i) ((i)&0xf)
-#define EI_NIDENT        16
+#define NULL_ADDRESS            -1
+#define ELF32_ST_TYPE(i)        ((i)&0xf)
+#define EI_NIDENT               16
 #define ELF_MAX_PROGRAM_HEADERS 16
-#define ELF_MAX_PROGRAM_PAGES   64
+#define ELF_MAX_PROGRAM_PAGES   512
 
 typedef struct {
     uint8_t  e_ident[EI_NIDENT];

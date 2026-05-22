@@ -2,13 +2,10 @@
 #define IDT_H_
 
 #include <stdint.h>
-
 #include <util/binary.h>
-
 
 #define i386_GDT_CODE_SEGMENT 0x08
 #define i386_GDT_DATA_SEGMENT 0x10
-
 
 typedef struct {
     uint16_t base_low;
@@ -19,7 +16,7 @@ typedef struct {
 } __attribute__((packed)) idt_entry_t;
 
 typedef struct {
-    uint16_t  limit;
+    uint16_t     limit;
     idt_entry_t* ptr;
 } __attribute__((packed)) idt_descriptor_t;
 
@@ -42,11 +39,9 @@ typedef enum {
 
 
 void __attribute__((cdecl)) i386_idt_load(idt_descriptor_t* idtDescriptor);
-
 void i386_idt_initialize();
 void i386_idt_disableGate(int interrupt);
 void i386_idt_enableGate(int interrupt);
-
 void i386_idt_setGate(int interrupt, void* base, uint16_t segmentDescriptor, uint8_t flags);
 
 #endif

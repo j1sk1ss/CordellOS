@@ -16,6 +16,7 @@
 #include <hash.h>
 #include <time.h>
 #include <execute.h>
+#include <math.h>
 
 #define ENVARS
 #define NETWORK

@@ -10,5 +10,5 @@ unsigned long str2hash(const char* str) {
 // 0 - equals
 // != 0 - nequals
 int compare_hash(char* first, char* second) {
-    return strstr(first, second);
+    return strstr(first, second) == NULL;
 }

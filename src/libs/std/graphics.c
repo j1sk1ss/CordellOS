@@ -1,10 +1,5 @@
 #include <graphics.h>
 
-//====================================================================
-// Function put pixel by coordinates to virtual memory (slow method)
-// EBX - x
-// ECX - y
-// EDX - pixel data
 void pput_pixel(int x, int y, int color) {
     __asm__ volatile(
         "movl $28, %%eax\n"
@@ -18,11 +13,6 @@ void pput_pixel(int x, int y, int color) {
     );
 }
 
-//====================================================================
-// Function directly in virtual second buffer memory put pixel by coordinates
-// EBX - x
-// ECX - y
-// EDX - pixel data
 void vput_pixel(int x, int y, int color) {
     __asm__ volatile(
         "movl $37, %%eax\n"
@@ -36,11 +26,6 @@ void vput_pixel(int x, int y, int color) {
     );
 }
 
-//====================================================================
-// Function get pixel from framebuffer by coordinates
-// EBX - x
-// ECX - y
-// EDX - result
 int get_pixel(int x, int y) {
     int result = 0;
     __asm__ volatile(
@@ -57,9 +42,6 @@ int get_pixel(int x, int y) {
     return result;
 }
 
-//====================================================================
-// Function get pixel from framebuffer by coordinates
-// EDX - result
 int get_resolution_x() {
     int result = 0;
     __asm__ volatile(
@@ -74,9 +56,6 @@ int get_resolution_x() {
     return result;
 }
 
-//====================================================================
-// Function get pixel from framebuffer by coordinates
-// EDX - result
 int get_resolution_y() {
     int result = 0;
     __asm__ volatile(
@@ -91,8 +70,6 @@ int get_resolution_y() {
     return result;
 }
 
-//====================================================================
-// Function swipe video buffer with second buffer
 void swipe_buffers() {
     __asm__ volatile(
         "movl $36, %%eax\n"
@@ -103,9 +80,6 @@ void swipe_buffers() {
     );
 }
 
-//====================================================================
-// Function scroll screen buffer by lines of pixels
-// EBX - lines
 void scroll(int lines) {
     __asm__ volatile(
         "movl $47, %%eax\n"
@@ -136,14 +110,14 @@ uint8_t* get_font() {
 }
 
 void unload_font() {
-    if (_cur_font == NULL) return;
+    if (!_cur_font) return;
     free(_cur_font);
     _cur_font = NULL;
 }
 
 void display_str(int x, int y, char* str, uint32_t foreground, uint32_t background) {
     int curr_x = x;
-    int char_w = _psf_get_width(get_font());
+    int char_w = psf_get_width(get_font());
     while (*str) {
         display_char(curr_x, y, *str, foreground, background);
         curr_x += char_w;
@@ -152,11 +126,13 @@ void display_str(int x, int y, char* str, uint32_t foreground, uint32_t backgrou
 }
 
 void display_char(int x, int y, char c, uint32_t foreground, uint32_t background) {
-    int char_w = _psf_get_width(get_font());
+    int char_w = psf_get_width(get_font());
     int char_h = psf_get_height(get_font());
-
+    if (char_w <= 0 || char_h <= 0) return;
+    
     int bytesperline = (char_w + 7) / 8;
     uint8_t* glyph = PSF_get_glyph(_cur_font, c);
+    if (!glyph) return;
 
     /* Finally display pixels according to the bitmap */
     uint32_t mask = 0;
@@ -178,9 +154,11 @@ void display_char(int x, int y, char c, uint32_t foreground, uint32_t background
 
 void display_gui_object(GUIobject_t* object) {
     if (object == NULL) return;
-    for (int y = object->height - 1; y >= 0; y--)
-        for (int x = 0; x < object->width; x++)
+    for (int y = object->height - 1; y >= 0; y--) {
+        for (int x = 0; x < object->width; x++) {
             vput_pixel(x + object->x, y + object->y, object->background_color);
+        }
+    }
 
     for (int i = 0; i < object->children_count; i++) display_gui_object(object->childrens[i]);
     for (int i = 0; i < object->bitmap_count; i++) BMP_display(object->bitmaps[i]);
@@ -190,29 +168,24 @@ void display_gui_object(GUIobject_t* object) {
 }
 
 GUIobject_t* create_gui_object(int x, int y, int height, int width, uint32_t background) {
-    GUIobject_t* newObject = (GUIobject_t*)malloc(sizeof(GUIobject_t));
-    if (newObject != NULL) {
-        newObject->x      = x;
-        newObject->y      = y;
-        newObject->prev_x = x;
-        newObject->prev_y = y;
-
-        newObject->height = height;
-        newObject->width  = width;
-
-        newObject->background_color = background;
-
-        newObject->children_count = 0;
-        newObject->childrens      = NULL;
-
-        newObject->bitmap_count = 0;
-        newObject->bitmaps      = NULL;
-
-        newObject->text_count = 0;
-        newObject->texts      = NULL;
+    GUIobject_t* no = (GUIobject_t*)malloc(sizeof(GUIobject_t));
+    if (no) {
+        no->x                = x;
+        no->y                = y;
+        no->prev_x           = x;
+        no->prev_y           = y;
+        no->height           = height;
+        no->width            = width;
+        no->background_color = background;
+        no->children_count   = 0;
+        no->childrens        = NULL;
+        no->bitmap_count     = 0;
+        no->bitmaps          = NULL;
+        no->text_count       = 0;
+        no->texts            = NULL;
     }
 
-    return newObject;
+    return no;
 }
 
 void object_move(GUIobject_t* object, int rel_x, int rel_y) {

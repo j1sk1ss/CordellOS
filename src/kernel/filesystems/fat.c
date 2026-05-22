@@ -37,7 +37,10 @@ static inline int _is_valid_fd(int fd) {
 
 static inline void _reset_file(file_t* file) {
 	if (!file) return;
+	if (file->cluster_table) free(file->cluster_table);
 	memset(file, 0, sizeof(file_t));
+	file->cached_cluster_index = (uint32_t)-1;
+	file->cached_cluster = (uint32_t)-1;
 }
 
 static inline void _reset_directory(directory_t* directory) {
@@ -404,6 +407,11 @@ static int _add_cluster_to_content(int ci) {
 		assert(__write_fat(cluster, newCluster) == 0);
 
 		content->file->data_size++;
+		if (content->file->cluster_table) {
+			free(content->file->cluster_table);
+			content->file->cluster_table = NULL;
+			content->file->cluster_table_size = 0;
+		}
 		return newCluster;
 	}
 
@@ -413,12 +421,30 @@ static int _add_cluster_to_content(int ci) {
 static int _content_cluster_at(content_t* content, uint32_t cluster_index) {
 	if (!content || content->content_type != CONTENT_TYPE_FILE || !content->file) return -1;
 
+	if (content->file->cluster_table != NULL
+	 && cluster_index < content->file->cluster_table_size) {
+		uint32_t cluster = content->file->cluster_table[cluster_index];
+		content->file->cached_cluster_index = cluster_index;
+		content->file->cached_cluster = cluster;
+		return cluster;
+	}
+
+	uint32_t start_index = 0;
 	uint32_t cluster = content->file->first_cluster;
-	for (uint32_t i = 0; i < cluster_index; i++) {
+
+	if (content->file->cached_cluster_index != (uint32_t)-1
+	 && content->file->cached_cluster_index <= cluster_index) {
+		start_index = content->file->cached_cluster_index;
+		cluster = content->file->cached_cluster;
+	}
+
+	for (uint32_t i = start_index; i < cluster_index; i++) {
 		cluster = __read_fat(cluster);
 		if ((int)cluster < 0 || _is_cluster_end(cluster, FAT_data.fat_type) == 1) return -1;
 	}
 
+	content->file->cached_cluster_index = cluster_index;
+	content->file->cached_cluster = cluster;
 	return cluster;
 }
 
@@ -524,7 +550,7 @@ int FAT_directory_entry_name(int ci, int step, char* name) {
 				else {
 					char* file_name = strtok(raw_name, " ");
 					char* extension = strtok(NULL, " ");
-					if (extension && strlen(extension) > 0) sprintf(name, 11, "%s.%s", file_name, extension);
+					if (extension && strlen(extension) > 0) snprintf(name, 11, "%s.%s", file_name, extension);
 					else strncpy(name, file_name, 11);
 				}
 
@@ -886,6 +912,8 @@ int FAT_open_content(const char* path) {
 		int content_size = 0;
 		int cluster = GET_CLUSTER_FROM_ENTRY(content_meta, FAT_data.fat_type);
 		fat_content->file->first_cluster = cluster;
+		fat_content->file->cached_cluster_index = 0;
+		fat_content->file->cached_cluster = cluster;
 
 		while (cluster < END_CLUSTER_32) {
 			content_size++;
@@ -904,6 +932,19 @@ int FAT_open_content(const char* path) {
 		}
 
 		fat_content->file->data_size = content_size;
+		fat_content->file->cluster_table_size = content_size;
+		fat_content->file->cluster_table = NULL;
+
+		if (content_size > 0) {
+			fat_content->file->cluster_table = malloc(sizeof(uint32_t) * content_size);
+			if (fat_content->file->cluster_table != NULL) {
+				uint32_t table_cluster = fat_content->file->first_cluster;
+				for (int i = 0; i < content_size; i++) {
+					fat_content->file->cluster_table[i] = table_cluster;
+					table_cluster = __read_fat(table_cluster);
+				}
+			}
+		}
 
 		char name[13] = { 0 };
 		strcpy(name, (char*)fat_content->meta.file_name);
@@ -946,9 +987,11 @@ int FAT_read_content2buffer(int ci, uint8_t* buffer, uint32_t offset, uint32_t s
 	if (data->content_type != CONTENT_TYPE_FILE || !data->file) return -2;
 
 	int cluster = _content_cluster_at(data, cluster_seek);
-	for (int i = cluster_seek; i < data->file->data_size && data_position < size; i++) {
+	for (uint32_t i = cluster_seek; i < (uint32_t)data->file->data_size && data_position < size; i++) {
 		if (cluster < 0) return -1;
 
+		data->file->cached_cluster_index = i;
+		data->file->cached_cluster = cluster;
 		uint32_t copy_size = min(FAT_data.cluster_size - data_seek, size - data_position);
 		if (_cluster_read_range(cluster, data_seek, buffer + data_position, copy_size) != 1) return -1;
 		data_position += copy_size;
@@ -968,9 +1011,11 @@ int FAT_read_content2buffer_stop(int ci, uint8_t* buffer, uint32_t offset, uint3
 	if (data->content_type != CONTENT_TYPE_FILE || !data->file) return -2;
 
 	int cluster = _content_cluster_at(data, cluster_seek);
-	for (int i = cluster_seek; i < data->file->data_size && data_position < size; i++) {
+	for (uint32_t i = cluster_seek; i < (uint32_t)data->file->data_size && data_position < size; i++) {
 		if (cluster < 0) return -1;
 
+		data->file->cached_cluster_index = i;
+		data->file->cached_cluster = cluster;
 		uint32_t copy_size = min(FAT_data.cluster_size - data_seek, size - data_position);
 		if (_cluster_read_range_stop(cluster, data_seek, buffer + data_position, copy_size, stop) != 1) return -1;
 		data_position += copy_size;
@@ -1008,6 +1053,8 @@ int FAT_write_buffer2content(int ci, const uint8_t* buffer, uint32_t offset, uin
 	for (cluster_position = cluster_seek; cluster_position < data->file->data_size && data_position < size; cluster_position++) {
 		if (cluster < 0) return -1;
 
+		data->file->cached_cluster_index = cluster_position;
+		data->file->cached_cluster = cluster;
 		uint32_t write_size = min(size - data_position, FAT_data.cluster_size - (offset % FAT_data.cluster_size));
 		_cluster_writeoff(buffer + data_position, cluster, offset, write_size);
 
@@ -1261,14 +1308,18 @@ int FAT_stat_content(int ci, CInfo_t* info) {
 
 	if (content->content_type == CONTENT_TYPE_DIRECTORY) {
 		info->size = 0;
-		strcpy((char*)info->full_name, (char*)content->directory->name);
+		memcpy(info->full_name, content->directory->name, 11);
+		info->full_name[11] = '\0';
 		info->type = STAT_DIR;
 	}
 	else if (content->content_type == CONTENT_TYPE_FILE) {
 		info->size = content->meta.file_size;
-		strcpy((char*)info->full_name, (char*)content->meta.file_name);
-		strcpy(info->file_name, content->file->name);
-		strcpy(info->file_extension, content->file->extension);
+		memcpy(info->full_name, content->meta.file_name, 11);
+		info->full_name[11] = '\0';
+		strncpy(info->file_name, content->file->name, sizeof(info->file_name) - 1);
+		info->file_name[sizeof(info->file_name) - 1] = '\0';
+		strncpy(info->file_extension, content->file->extension, sizeof(info->file_extension) - 1);
+		info->file_extension[sizeof(info->file_extension) - 1] = '\0';
 		info->type = STAT_FILE;
 	}
 	else {
@@ -1298,6 +1349,17 @@ int _add_content2table(content_t* content) {
 			memcpy(&_content_storage[i], content, sizeof(content_t));
 			if (content->content_type == CONTENT_TYPE_FILE) {
 				memcpy(&_file_storage[i], content->file, sizeof(file_t));
+				_file_storage[i].cluster_table = NULL;
+				if (content->file->cluster_table != NULL && content->file->cluster_table_size > 0) {
+					_file_storage[i].cluster_table = malloc(sizeof(uint32_t) * content->file->cluster_table_size);
+					if (_file_storage[i].cluster_table != NULL) {
+						memcpy(
+							_file_storage[i].cluster_table,
+							content->file->cluster_table,
+							sizeof(uint32_t) * content->file->cluster_table_size
+						);
+					}
+				}
 				_content_storage[i].file = &_file_storage[i];
 			}
 			else if (content->content_type == CONTENT_TYPE_DIRECTORY) {

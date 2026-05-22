@@ -1,7 +1,6 @@
 #ifndef MATH_H_
 #define MATH_H_
 
-
 #define min(a,b)    ((a) < (b) ? (a) : (b))
 #define max(a,b)    ((a) > (b) ? (a) : (b))
 
@@ -12,20 +11,14 @@
 #define SIN_CURVE_A 0.0415896
 #define SIN_CURVE_B 0.00129810625032
 
-
 //function to find the absolute value of an integer.
 //#define abs(x) (if(x<0) -x; x)
 int abs(int x);
-
 int sgn(int x);
-
-float sqrt(float number);
-double pow(double base, int exponent);
-
-//function for calculating the cos.
+double sqrt(double number);
+double fabs(double value);
+double pow(double base, double exponent);
 double cos(double x);
-
-//sin calculation function.
 double sin(double x);
 
 #endif

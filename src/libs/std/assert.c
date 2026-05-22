@@ -2,8 +2,8 @@
 
 void assert_failed(char* file, int line) {
     char message[512] = { 0 };
-    sprintf(
-        message, 512, 
+    snprintf(
+        message, 512,
         "ASSERT FAILED\nPROCCESS: %i\nFILE: %s\nLINE: %i",
         tpid(), file, line
     );

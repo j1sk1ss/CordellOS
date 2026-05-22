@@ -149,6 +149,10 @@ typedef struct file {
 	char     extension[4];
 	int      data_size;
 	uint32_t first_cluster;
+	uint32_t cached_cluster_index;
+	uint32_t cached_cluster;
+	uint32_t* cluster_table;
+	uint32_t cluster_table_size;
     struct file* next;
 } file_t;
 

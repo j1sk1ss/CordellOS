@@ -28,7 +28,7 @@ void VESA_newline() {
 }
 
 static void __mem_putc(int x, int y, char c, uint32_t foreground, uint32_t background, uint32_t buffer) {
-    int bytesperline = (_psf_get_width(&_binary_src_kernel_font_psf_start) + 7) / 8;
+    int bytesperline = (psf_get_width(&_binary_src_kernel_font_psf_start) + 7) / 8;
     uint8_t* glyph = PSF_get_glyph(&_binary_src_kernel_font_psf_start, c);
 
     /* Calculate the absolute row based on screen coordinates */
@@ -41,10 +41,10 @@ static void __mem_putc(int x, int y, char c, uint32_t foreground, uint32_t backg
     uint32_t mask = 0;
     for (j = 0; j < psf_get_height(&_binary_src_kernel_font_psf_start); j++) {
         /* Save the starting position of the line */
-        mask = 1 << (_psf_get_width(&_binary_src_kernel_font_psf_start) - 1);
+        mask = 1 << (psf_get_width(&_binary_src_kernel_font_psf_start) - 1);
 
         /* Display a row */
-        for (int i = 0; i < _psf_get_width(&_binary_src_kernel_font_psf_start); i++) {
+        for (int i = 0; i < psf_get_width(&_binary_src_kernel_font_psf_start); i++) {
             uint32_t pixel_color = (*((uint32_t*)glyph) & mask) ? foreground : background;
             abs_row[i] = pixel_color;
 
@@ -68,14 +68,14 @@ static inline void __pmem_putc(int x, int y, char c, uint32_t foreground, uint32
 
 void VESA_putchr(uint8_t x, uint8_t y, char c) {
     __pmem_putc(
-        x * _psf_get_width(&_binary_src_kernel_font_psf_start),
+        x * psf_get_width(&_binary_src_kernel_font_psf_start),
         y * psf_get_height(&_binary_src_kernel_font_psf_start), c, WHITE, BLACK
     );
 }
 
 void VESA_cputchr(uint8_t x, uint8_t y, char c, uint32_t fcolor, uint32_t bcolor) {
     __pmem_putc(
-        x * _psf_get_width(&_binary_src_kernel_font_psf_start),
+        x * psf_get_width(&_binary_src_kernel_font_psf_start),
         y * psf_get_height(&_binary_src_kernel_font_psf_start), c, fcolor, bcolor
     );
 }
@@ -86,17 +86,17 @@ void VESA_putc(char c) {
 
 void VESA_cputc(char c, uint32_t fcolor, uint32_t bcolor) {
     int _tabSize = 4;
-    if (_cursor_x + _psf_get_width(&_binary_src_kernel_font_psf_start) >= VESA_get_max32_x()) VESA_newline();
+    if (_cursor_x + psf_get_width(&_binary_src_kernel_font_psf_start) >= VESA_get_max32_x()) VESA_newline();
     switch (c) {
         case '\n': VESA_newline(); break;
         case '\t': {
-            for (int i = 0; i < _tabSize - ((VESA_get_max32_x()) / _psf_get_width(&_binary_src_kernel_font_psf_start) % _tabSize); i++)
+            for (int i = 0; i < _tabSize - ((VESA_get_max32_x()) / psf_get_width(&_binary_src_kernel_font_psf_start) % _tabSize); i++)
                 VESA_cputc(' ', fcolor, bcolor);
             break;
         }
         default: {
             __pmem_putc(_cursor_x, _cursor_y, c, fcolor, bcolor);
-            _cursor_x += _psf_get_width(&_binary_src_kernel_font_psf_start);
+            _cursor_x += psf_get_width(&_binary_src_kernel_font_psf_start);
             break;
         }
     }
@@ -123,7 +123,7 @@ void VESA_fill(uint32_t color) {
 
 void VESA_set_cursor(uint8_t x, uint8_t y) {
     if (x >= 0 && y >= 0 && x < VESA_get_max_x() && y < VESA_get_max_y()) {
-        _cursor_x = x * _psf_get_width(&_binary_src_kernel_font_psf_start);
+        _cursor_x = x * psf_get_width(&_binary_src_kernel_font_psf_start);
         _cursor_y = y * psf_get_height(&_binary_src_kernel_font_psf_start);
     }
 }
@@ -140,7 +140,7 @@ int VESA_get_cursor32_x() {
 }
 
 uint8_t VESA_get_cursor_x() {
-    return _cursor_x / _psf_get_width(&_binary_src_kernel_font_psf_start);
+    return _cursor_x / psf_get_width(&_binary_src_kernel_font_psf_start);
 }
 
 int VESA_get_cursor32_y() {
@@ -156,7 +156,7 @@ int VESA_get_max32_x() {
 }
 
 uint8_t VESA_get_max_x() {
-    return GFX_data.x_resolution / _psf_get_width(&_binary_src_kernel_font_psf_start);
+    return GFX_data.x_resolution / psf_get_width(&_binary_src_kernel_font_psf_start);
 }
 
 int VESA_get_max32_y() {

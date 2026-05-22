@@ -22,8 +22,8 @@ typedef struct FATDate {
 } Date;
 
 typedef struct {
-	uint8_t full_name[11];
-	char file_name[8];
+	uint8_t full_name[12];
+	char file_name[9];
 	char file_extension[4];
 	int type;
 	int size;

@@ -10,10 +10,10 @@ int sgn(int x) {  //function to find the sign of an integer.
 	return 1;
 }
 
-float sqrt(float number) {  //function to find the square root of a rational number.
+double sqrt(double number) {  //function to find the square root of a rational number.
     int start = 0, end = number;
     int mid;
-    float ans;
+    double ans;
 
     while (start <= end) {
         mid = (start + end) / 2;
@@ -29,7 +29,7 @@ float sqrt(float number) {  //function to find the square root of a rational num
         else end = mid - 1;
     }
 
-    float increment = 0.1;
+    double increment = 0.1;
 	int i;
 
     for (i = 0; i < 5; i++) {
@@ -41,6 +41,10 @@ float sqrt(float number) {  //function to find the square root of a rational num
     }
 
     return ans;
+}
+
+double fabs(double value) {
+    return value < 0 ? -value : value;
 }
 
 //function for calculating the cos.
@@ -84,17 +88,18 @@ double sin(double x) {
     return cos(x - HALF_PI);
 }
 
-double pow(double base, int exponent) {
+double pow(double base, double exponent) {
     double result = 1.0;
+    int whole_exponent = (int)exponent;
 
     // Handle negative exponents
-    if (exponent < 0) {
+    if (whole_exponent < 0) {
         base = 1.0 / base;
-        exponent = -exponent;
+        whole_exponent = -whole_exponent;
     }
 
     // Calculate the power using repeated multiplication
-    for (int i = 0; i < exponent; i++) 
+    for (int i = 0; i < whole_exponent; i++)
         result *= base;
     
     return result;

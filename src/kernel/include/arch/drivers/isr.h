@@ -11,7 +11,6 @@
 #include <arch/i386/x86.h>
 #include <graphics/kstdio.h>
 #include <arch/i386/elf.h>
-
 #include <util/arrays.h>
 
 struct Registers {
@@ -23,7 +22,7 @@ struct Registers {
 
 struct stackframe { 
   struct stackframe* ebp; 
-  uint32_t eip; 
+  uint32_t           eip; 
 }; 
 
 void i386_isr_initialize();
