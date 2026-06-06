@@ -40,7 +40,7 @@ VARS.Add("tool_chain",
          default="../tool_chain")
 VARS.Add("cpl",
          help="Path to CPL compiler binary.",
-         default="build/ccompiler")
+         default="build/cplc")
 VARS.Add("cpl_flags",
          help="Extra flags passed to the CPL compiler.",
          default="--arch i386 --sys-type i386")

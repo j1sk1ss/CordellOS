@@ -1029,7 +1029,7 @@ int FAT_read_content2buffer_stop(int ci, uint8_t* buffer, uint32_t offset, uint3
 }
 
 int FAT_ELF_execute_content(int ci, int argc, char* argv[], int type) {
-	ELF32_program* program = ELF_read(ci, type);
+	elf32_program_t* program = ELF_read(ci, type);
 	if (!program) return -255;
 
 	int (*programEntry)(int, char* argv[]) = (int (*)(int, char* argv[]))(program->entry_point);

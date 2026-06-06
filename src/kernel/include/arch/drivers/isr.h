@@ -7,7 +7,6 @@
 
 #include <arch/drivers/pit.h>
 #include <arch/drivers/idt.h>
-#include <arch/i386/gdt.h>
 #include <arch/i386/x86.h>
 #include <graphics/kstdio.h>
 #include <arch/i386/elf.h>

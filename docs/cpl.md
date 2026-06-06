@@ -7,7 +7,7 @@ CPL is the custom language used by CordellOS experiments. It has an i386 backend
 The current compiler is available in the development environment as:
 
 ```text
-build/ccompiler
+build/cplc
 ```
 
 It reports itself as `ccpl 3.5`. The useful options for CordellOS are:
@@ -38,7 +38,7 @@ scons
 Use assembly as the intermediate output:
 
 ```bash
-scons enable_cpl=1 cpl=build/ccompiler cpl_object_mode=asm
+scons enable_cpl=1 cpl=build/cplc cpl_object_mode=asm
 ```
 
 By default, the build asks CPL for assembly, then lets the normal NASM path assemble it. This keeps CPL integration close to the rest of the kernel build and avoids depending on CPL's own assembler/linker stage for kernel objects.
