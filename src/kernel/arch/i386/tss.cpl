@@ -1,5 +1,6 @@
+#include "gdt_h.cpl"
+
 extern function memset(ptr i0 d, u8 v, u32 n) -> ptr i0;
-extern function GDT_set_entry(i32 index, i32 base, i32 limit, u8 access, u8 flags) -> i0;
 
 @[align(1)]
 container tss_entry {

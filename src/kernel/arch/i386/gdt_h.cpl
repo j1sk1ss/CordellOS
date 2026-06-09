@@ -24,6 +24,29 @@
 #define GDT_FLAG_GRANULARITY_1B          0x00
 #define GDT_FLAG_GRANULARITY_4K          0x80
 
+@[align(1)]
+container gdt_entry {
+    u16 limit_low;
+    u16 base_low;
+    u8  base_middle;
+    u8  access;
+    u8  flags_limit_high;
+    u8  base_high;
+
+    @[self] 
+    @[inline(model)] 
+    function set(ptr gdt_entry self, u32 base, u32 limit, u8 access, u8 flags) -> i0;
+}
+
+@[align(1)]
+container gdt_descriptor {
+    u16           limit;
+    ptr gdt_entry pointer;
+
+    @[self]
+    function init(ptr gdt_descriptor self, ptr ptr gdt_entry entries, u16 count) -> i0;
+}
+
 @[inline(always)]
 function _get_limit_low(u32 limit) -> u16 {
     (limit & 0xFFFF) as u16;

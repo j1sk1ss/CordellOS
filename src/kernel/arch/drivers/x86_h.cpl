@@ -3,6 +3,7 @@
 
 extern function i386_inb(u16 port) -> i8;
 extern function i386_outb(u16 port, u8 data) -> i0;
+@[abi] 
 extern function kprintf(ptr i8 fmt, ...) -> i0;
 extern function i386_irq_registerHandler(i32 irq, ptr i0 handler) -> i0;
 extern function i386_gdt_initialize() -> i0;
