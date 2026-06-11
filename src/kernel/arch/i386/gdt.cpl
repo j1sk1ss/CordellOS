@@ -1,7 +1,6 @@
 #include "gdt_h.cpl"
 
-@[impl(gdt_entry)]
-function set(ptr gdt_entry self, u32 base, u32 limit, u8 access, u8 flags) -> i0 {
+function gdt_entry::set(ptr gdt_entry self, u32 base, u32 limit, u8 access, u8 flags) -> i0 {
     self.limit_low        = _get_limit_low(limit);
     self.base_low         = _get_base_low(base);
     self.base_middle      = _get_base_middle(base);
@@ -10,8 +9,7 @@ function set(ptr gdt_entry self, u32 base, u32 limit, u8 access, u8 flags) -> i0
     self.base_high        = _get_base_high(base);
 }
 
-@[impl(gdt_descriptor)]
-function init(ptr gdt_descriptor self, ptr ptr gdt_entry entries, u16 count) -> i0 {
+function gdt_descriptor::init(ptr gdt_descriptor self, ptr ptr gdt_entry entries, u16 count) -> i0 {
     self.limit   = count - 1;
     self.pointer = entries;
 }
