@@ -1,10 +1,13 @@
 #include <string.h>
+#include <ctype.h>
+#include <math.h>
+#include <stdlib.h>
 
-const char* strchr(const char* str, char chr) {
+char* strchr(const char* str, int chr) {
     if (str == NULL) return NULL;
     while (*str) {
         if (*str == chr)
-            return str;
+            return (char*)str;
 
         ++str;
     }
@@ -21,10 +24,9 @@ char* strrchr(const char *s, int c) {
     return NULL;
 }
 
-int strstr(const char* haystack, const char* needle) {
-    if (*needle == '\0') return 0;
+char* strstr(const char* haystack, const char* needle) {
+    if (*needle == '\0') return (char*)haystack;
     
-    int position = 0;
     while (*haystack) {
         const char* hay_ptr = haystack;
         const char* needle_ptr = needle;
@@ -34,13 +36,12 @@ int strstr(const char* haystack, const char* needle) {
             needle_ptr++;
         }
 
-        if (*needle_ptr == '\0') return position;
+        if (*needle_ptr == '\0') return (char*)haystack;
 
         haystack++;
-        position++;
     }
 
-    return -1;
+    return NULL;
 }
 
 char* strcpy(char* dst, const char* src) {
@@ -56,8 +57,8 @@ char* strcpy(char* dst, const char* src) {
 	return (dst);
 }
 
-unsigned strlen(const char* str) {
-    unsigned len = 0;
+size_t strlen(const char* str) {
+    size_t len = 0;
     while (*str) {
         ++len;
         ++str;
@@ -92,6 +93,19 @@ int strcasecmp(const char *s1, const char *s2) {
     }
 
     return us1 - us2;
+}
+
+int strncasecmp(const char* s1, const char* s2, size_t n) {
+    for (size_t i = 0; i < n; i++) {
+        uint8_t c1 = tolower(s1[i]);
+        uint8_t c2 = tolower(s2[i]);
+
+        if (c1 != c2 || c1 == '\0' || c2 == '\0') {
+            return c1 - c2;
+        }
+    }
+
+    return 0;
 }
 
 int strncmp(const char* str1, const char* str2, size_t n) {
@@ -471,7 +485,7 @@ char* itoa(int n) {
     return str;
 }
 
-char* strncpy(char* dst, const char* src, int n) {
+char* strncpy(char* dst, const char* src, size_t n) {
 	int	i = 0;
 	while (i < n && src[i]) {
 		dst[i] = src[i];

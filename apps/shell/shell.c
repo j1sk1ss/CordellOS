@@ -37,12 +37,12 @@ void main(int argc, char* argv[]) {
             input_data = wait_char();
             if (input_data != BACKSPACE_BUTTON && input_data != LSHIFT_BUTTON && input_data != RSHIFT_BUTTON) {
                 input[pos++] = input_data;
-                putc(input_data, WHITE, BLACK);
+                cputc(input_data, WHITE, BLACK);
             }
             else if (input_data == BACKSPACE_BUTTON) {
                 if (pos <= 0) continue;
                 input[pos--] = 0;
-                cursor_set32(cursor_get_x32() - _psf_get_width(get_font()), cursor_get_y32());
+                cursor_set32(cursor_get_x32() - psf_get_width(get_font()), cursor_get_y32());
                 display_char(cursor_get_x32(), cursor_get_y32(), ' ', WHITE, BLACK);
             }
         }
@@ -278,8 +278,9 @@ int execute_command(char* command) {
     else if (strcmp(command_line[0], COMMAND_FILE_RUN) == 0) {
         int pos = 2;
         char* exe_argv[COMMAND_BUFFER];
+        exe_argv[0] = command_line[1];
         while (command_line[pos] && pos < COMMAND_BUFFER) {
-            exe_argv[pos - 2] = command_line[pos];
+            exe_argv[pos - 1] = command_line[pos];
             pos++;
         }
 
@@ -289,7 +290,7 @@ int execute_command(char* command) {
             return -8;
         }
 
-        printf("\nExit code: [%i]\n", fexec(file_path, pos - 2, exe_argv));
+        printf("\nExit code: [%i]\n", fexec(file_path, pos - 1, exe_argv));
         free(file_path);
     }
     else if (strcmp(command_line[0], COMMAND_CINFO) == 0) {

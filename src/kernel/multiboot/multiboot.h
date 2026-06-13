@@ -182,6 +182,6 @@
 #endif /* ! ASM_FILE */
 
 
-struct Elf32_sectionHeader* MB2_get_elf_section(multiboot_info_t* info, const char* section);
+struct elf_sec_header* MB2_get_elf_section(multiboot_info_t* info, const char* section);
 
 #endif /* ! MULTIBOOT_HEADER */

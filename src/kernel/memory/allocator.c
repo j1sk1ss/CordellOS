@@ -155,13 +155,15 @@ static void* __kmalloc(size_t size, malloc_head_t* head, uint8_t type) {
 	if (size == cur->size) cur->free = 0;
 	else if (cur->size > size + sizeof(malloc_block_t)) __block_split(cur, size);
 	else {
-		uint8_t num_pages = 1;
+		uint32_t num_pages = 1;
 		while (cur->size + num_pages * PAGE_SIZE < size + sizeof(malloc_block_t))
 			num_pages++;
 
 		uint32_t virt = head->virt_address + head->total_pages * PAGE_SIZE; // TODO: new pages to new blocks. Don`t mix them to avoid pagedir errors in contswitch
-		for (uint8_t i = 0; i < num_pages; i++) {
-			__kmallocp(virt, head);
+		for (uint32_t i = 0; i < num_pages; i++) {
+			if (__kmallocp(virt, head) != 1) {
+				return NULL;
+			}
 
 			virt += PAGE_SIZE;
 			cur->size += PAGE_SIZE;

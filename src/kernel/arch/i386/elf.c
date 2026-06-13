@@ -2,13 +2,13 @@
 //            https://github.com/makerimages/SwormOS/tree/master/kernel
 #include <arch/i386/elf.h>
 
-static elf_symbols_t _kernel_elf_symbols = { 0 };
-static ELF32_program _elf_program = { 0 };
-static Elf32_Ehdr _elf_header = { 0 };
-static Elf32_Phdr _elf_program_headers[ELF_MAX_PROGRAM_HEADERS] = { 0 };
+static elf_symbols_t           _kernel_elf_symbols = { 0 };
+static elf32_program_t         _elf_program        = { 0 };
+static elf32_entry_header_t    _elf_header         = { 0 };
+static elf32_program_header_t  _elf_program_headers[ELF_MAX_PROGRAM_HEADERS] = { 0 };
 
 int ELF_build_symbols_from_multiboot(uint32_t header_addr, uint32_t header_shndx, uint32_t header_num) {
-	Elf32_Shdr* sh = (Elf32_Shdr*)(header_addr);
+	elf_sec_header_t* sh = (elf_sec_header_t*)(header_addr);
 	uint32_t shstrtab = sh[header_shndx].sh_addr;
 
 	for (uint32_t i = 0; i < header_num; i++) {
@@ -45,9 +45,9 @@ const char* ELF_lookup_function(uint32_t addr) {
     return _lookup_symbol_function(addr, &_kernel_elf_symbols);
 }
 
-ELF32_program* ELF_read(int ci, int type) {
-    ELF32_program* program = &_elf_program;
-    memset(program, 0, sizeof(ELF32_program));
+elf32_program_t* ELF_read(int ci, int type) {
+    elf32_program_t* program = &_elf_program;
+    memset(program, 0, sizeof(elf32_program_t));
 
     CInfo_t info;
     current_vfs->objstat(ci, &info);
@@ -56,10 +56,10 @@ ELF32_program* ELF_read(int ci, int type) {
         return NULL;
     }
 
-    Elf32_Ehdr* header = &_elf_header;
-    memset(header, 0, sizeof(Elf32_Ehdr));
+    elf32_entry_header_t* header = &_elf_header;
+    memset(header, 0, sizeof(elf32_entry_header_t));
 
-    current_vfs->read(ci, (uint8_t*)header, 0, sizeof(Elf32_Ehdr));
+    current_vfs->read(ci, (uint8_t*)header, 0, sizeof(elf32_entry_header_t));
     if (header->e_ident[0] != '\x7f' || header->e_ident[1] != 'E') {
         LOG("Error: Not ELF executable!");
         return NULL;
@@ -75,10 +75,10 @@ ELF32_program* ELF_read(int ci, int type) {
         return NULL;
     }
 
-    Elf32_Phdr* program_headers = _elf_program_headers;
+    elf32_program_header_t* program_headers = _elf_program_headers;
     memset(program_headers, 0, sizeof(_elf_program_headers));
 
-    current_vfs->read(ci, (uint8_t*)program_headers, header->e_phoff, sizeof(Elf32_Phdr) * header->e_phnum);
+    current_vfs->read(ci, (uint8_t*)program_headers, header->e_phoff, sizeof(elf32_program_header_t) * header->e_phnum);
     program->entry_point = (void*)header->e_entry;
     uint32_t header_num  = header->e_phnum;
 
@@ -108,11 +108,11 @@ ELF32_program* ELF_read(int ci, int type) {
     return program;
 }
 
-int ELF_free_program(ELF32_program* program, uint8_t type) {
+int ELF_free_program(elf32_program_t* program, uint8_t type) {
     for (uint32_t i = 0; i < program->pages_count; i++) {
         ALC_freep((void*)program->pages[i], type);
     }
 
-    memset(program, 0, sizeof(ELF32_program));
+    memset(program, 0, sizeof(elf32_program_t));
     return 1;
 }

@@ -13,7 +13,7 @@ int islower(int c) {
 }
 
 int tolower(int c) {
-	if (!islower(c)) return c | 32;
+	if (c >= 'A' && c <= 'Z') return c - 'A' + 'a';
 	return c;
 }
 
