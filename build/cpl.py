@@ -161,7 +161,7 @@ def setup_cpl_builders(env: Environment):
         CPLPATH=[],
         CPLLINKFLAGS=[],
         CPL_OBJECT_MODE='asm',
-        CPLEMITASMFLAGS=['--emit-asm', '--no-compile'],
+        CPLEMITASMFLAGS=['--emit-asm', '-c'],
         CPLCOMPILEFLAG='-O3',
         CPLLINKFLAG='',
         CPLOUTPUTFLAG='--output',

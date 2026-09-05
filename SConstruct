@@ -49,7 +49,7 @@ VARS.Add("cpl_emit_asm_flag",
          default="--emit-asm")
 VARS.Add("cpl_no_compile_flag",
          help="CPL compiler flag used to stop after assembly generation.",
-         default="--no-compile")
+         default="-c")
 VARS.Add("cpl_asm_output_flag",
          help="CPL compiler flag used to select assembly output path.",
          default="--asm-output")
