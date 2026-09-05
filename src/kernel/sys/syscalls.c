@@ -106,7 +106,7 @@ void syscall(struct Registers* regs) {
                 break;
             }
 
-            ELF32_program* program = ELF_read(ci, _syscall_address_space(regs));
+            elf32_program_t* program = ELF_read(ci, _syscall_address_space(regs));
             current_vfs->closeobj(ci);
 
             if (program == NULL) {
@@ -114,14 +114,14 @@ void syscall(struct Registers* regs) {
                 break;
             }
 
-            ELF32_program* user_program = ALC_malloc(sizeof(ELF32_program), USER);
+            elf32_program_t* user_program = ALC_malloc(sizeof(elf32_program_t), USER);
             if (user_program == NULL) {
                 ELF_free_program(program, _syscall_address_space(regs));
                 regs->eax = 0;
                 break;
             }
 
-            memcpy(user_program, program, sizeof(ELF32_program));
+            memcpy(user_program, program, sizeof(elf32_program_t));
 		    regs->eax = (uint32_t)user_program;
 	        break;
         }

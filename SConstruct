@@ -40,7 +40,7 @@ VARS.Add("tool_chain",
          default="../tool_chain")
 VARS.Add("cpl",
          help="Path to CPL compiler binary.",
-         default="build/ccompiler")
+         default="build/cplc")
 VARS.Add("cpl_flags",
          help="Extra flags passed to the CPL compiler.",
          default="--arch i386 --sys-type i386")
@@ -205,7 +205,7 @@ SConscript('src/libs/SConscript', variant_dir=bootDir + '/libs', duplicate=0)
 
 # Apps
 SConscript('apps/shell/SConscript', variant_dir=homeDir + '/apps/shell', duplicate=0)
-# SConscript('apps/games/doom/SConscript', variant_dir=homeDir + '/apps/games/doom', duplicate=0)
+SConscript('apps/games/doom/SConscript', variant_dir=homeDir + '/apps/games/doom', duplicate=0)
 SConscript('apps/std/calc/SConscript', variant_dir=homeDir + '/apps/std/calc', duplicate=0)
 # SConscript('apps/std/editor/SConscript', variant_dir=homeDir + '/apps/std/editor', duplicate=0)
 

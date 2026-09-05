@@ -126,15 +126,12 @@ typedef struct ata_dev {
 }__attribute__((packed)) ata_dev_t;
 
 int ATA_initialize();
-
 struct Registers;
 void ATA_handler(struct Registers* reg);
 void ATA_device_switch(int device);
-
 void ATA_software_reset(ata_dev_t* dev);
 int ATA_device_detect(ata_dev_t* dev, int primary);
 void ATA_device_init(ata_dev_t* dev, int primary);
-
 int ATA_read_sector(uint32_t lba, uint8_t* buffer);
 int ATA_read_sector_stop(uint32_t lba, uint8_t* buffer, uint8_t* stop);
 int ATA_read_sector_stopoff(uint32_t lba, uint32_t offset, uint8_t* buffer, uint8_t* stop);
@@ -142,7 +139,6 @@ int ATA_read_sectors(uint32_t lba, uint8_t* buffer, uint32_t sector_count);
 int ATA_readoff_sectors(uint32_t lba, uint32_t offset, uint8_t* buffer, uint32_t sector_count);
 int ATA_read_sectors_stop(uint32_t lba, uint8_t* buffer, uint32_t sector_count, uint8_t* stop);
 int ATA_readoff_sectors_stop(uint32_t lba, uint32_t offset, uint8_t* buffer, uint32_t sector_count, uint8_t* stop);
-
 int ATA_write_sector(uint32_t lba, const uint8_t* buffer);
 int ATA_writeoff_sector(uint32_t lba, const uint8_t* buffer, uint32_t offset, uint32_t size);
 int ATA_write_sectors(uint32_t lba, const uint8_t* buffer, uint32_t sector_count);

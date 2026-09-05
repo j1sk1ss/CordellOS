@@ -13,11 +13,11 @@
 #include <graphics/kstdio.h>
 #include <memory/allocator.h>
 
-#define NULL_ADDRESS     -1
-#define ELF32_ST_TYPE(i) ((i)&0xf)
-#define EI_NIDENT        16
+#define NULL_ADDRESS            -1
+#define ELF32_ST_TYPE(i)        ((i)&0xf)
+#define EI_NIDENT               16
 #define ELF_MAX_PROGRAM_HEADERS 16
-#define ELF_MAX_PROGRAM_PAGES   64
+#define ELF_MAX_PROGRAM_PAGES   512
 
 typedef struct {
     uint8_t  e_ident[EI_NIDENT];
@@ -34,7 +34,7 @@ typedef struct {
     uint16_t e_shentsize;
     uint16_t e_shnum;
     uint16_t e_shstrndx;
-} Elf32_Ehdr;
+} elf32_entry_header_t;
 
 // e_type values
 enum {
@@ -54,7 +54,7 @@ typedef struct {
     uint32_t p_memsz;
     uint32_t p_flags;
     uint32_t p_align;
-} Elf32_Phdr;
+} elf32_program_header_t;
 
 // p_type values
 enum {
@@ -63,7 +63,7 @@ enum {
     // ...
 };
 
-typedef struct Elf32_sectionHeader {
+typedef struct elf_sec_header {
 	uint32_t sh_name;
 	uint32_t sh_type;
 	uint32_t sh_flags;
@@ -74,7 +74,7 @@ typedef struct Elf32_sectionHeader {
 	uint32_t sh_info;
 	uint32_t sh_addralign;
 	uint32_t sh_entsize;
-} Elf32_Shdr;
+} elf_sec_header_t;
 
 typedef struct {
     uint32_t st_name;
@@ -83,13 +83,13 @@ typedef struct {
     uint8_t  st_info;
     uint8_t  st_other;
     uint16_t st_shndx;
-} Elf32_Sym;
+} elf32_symbols_t;
 
 typedef struct {
     uint32_t pages[ELF_MAX_PROGRAM_PAGES];
-    uint32_t  pages_count;
-    void*     entry_point;
-} ELF32_program;
+    uint32_t pages_count;
+    void*    entry_point;
+} elf32_program_t;
 
 enum ShT_Types {
 	SHT_NULL	 = 0,   // Null section
@@ -107,30 +107,30 @@ enum ShT_Attributes {
 };
 
 typedef struct {
-  uint32_t name_offset_in_strtab;
-  uint32_t value;
-  uint32_t size;
-  uint8_t  info;
-  uint8_t  other;
-  uint16_t shndx;
+    uint32_t name_offset_in_strtab;
+    uint32_t value;
+    uint32_t size;
+    uint8_t  info;
+    uint8_t  other;
+    uint16_t shndx;
 } __attribute__((packed)) elf_symbol_t;
 
 typedef struct {
-  elf_symbol_t* symtab;
-  uint32_t      symtab_size;
-  const char*   strtab;
-  uint32_t      strtab_size;
+    elf_symbol_t* symtab;
+    uint32_t      symtab_size;
+    const char*   strtab;
+    uint32_t      strtab_size;
 } elf_symbols_t;
 
 typedef struct ELF32_symbols_desctiptor {
     bool       present;
     uint32_t   num_symbols;
-    Elf32_Sym* symbols;
+    elf32_symbols_t* symbols;
     char*      string_table_addr;
 } ELF32_SymDescriptor;
 
-ELF32_program* ELF_read(int ci, int type);
-int ELF_free_program(ELF32_program* program, uint8_t type);
+elf32_program_t* ELF_read(int ci, int type);
+int ELF_free_program(elf32_program_t* program, uint8_t type);
 int ELF_build_symbols_from_multiboot(uint32_t header_addr, uint32_t header_shndx, uint32_t header_num);
 const char* ELF_lookup_function(uint32_t addr);
 

@@ -1,6 +1,7 @@
 #include <psf.h>
 
-uint8_t _psf_get_version(uint8_t* _font_structure) {
+uint8_t psf_get_version(uint8_t* _font_structure) {
+   if (!_font_structure) return 0;
    PSF1_Header*_v1_font = (PSF1_Header*)_font_structure;
    if( _v1_font->magic == PSF1_FONT_MAGIC){
        return VERSION_PSF1;
@@ -15,7 +16,7 @@ uint8_t _psf_get_version(uint8_t* _font_structure) {
 }
 
 uint8_t* PSF_get_glyph(uint8_t* _font_structure, uint8_t symbolnumber) {
-    uint8_t version = _psf_get_version(_font_structure);
+    uint8_t version = psf_get_version(_font_structure);
     if (version == VERSION_PSF1){
         PSF1_Header* loaded_font = (PSF1_Header*)_font_structure;
         return (uint8_t *) loaded_font + sizeof(PSF1_Header) + (symbolnumber * loaded_font->characterSize);
@@ -28,19 +29,16 @@ uint8_t* PSF_get_glyph(uint8_t* _font_structure, uint8_t symbolnumber) {
     return 0;
 }
 
-uint32_t _psf_get_width(uint8_t* _font_structure) {
-    uint8_t version = _psf_get_version(_font_structure);
-    if ( version == VERSION_PSF1) {
-        return 8;
-    }
+uint32_t psf_get_width(uint8_t* _font_structure) {
+    uint8_t version = psf_get_version(_font_structure);
+    if (version == VERSION_PSF1) return 8;
+    if (version != VERSION_PSF2) return 0;
     return ((PSF_font*)_font_structure)->width;
 }
 
 uint32_t psf_get_height(uint8_t* _font_structure) {
-    uint8_t version = _psf_get_version(_font_structure);
-    if ( version == VERSION_PSF1) {
-        return ((PSF1_Header*)_font_structure)->characterSize;
-    }
-
+    uint8_t version = psf_get_version(_font_structure);
+    if ( version == VERSION_PSF1) return ((PSF1_Header*)_font_structure)->characterSize;
+    if (version != VERSION_PSF2) return 0;
     return ((PSF_font*)_font_structure)->height;
 }

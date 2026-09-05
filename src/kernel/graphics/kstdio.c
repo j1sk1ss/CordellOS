@@ -42,46 +42,48 @@ void _kvfprintf(const char* fmt, va_list args) {
 
     while (*fmt) {
         switch (state) {
-            case PRINTF_STATE_NORMAL:
+            case PRINTF_STATE_NORMAL: {
                 switch (*fmt) {
                     case '%': state = PRINTF_STATE_LENGTH; break;
                     default: kputc(*fmt); break;
                 }
 
                 break;
-
-            case PRINTF_STATE_LENGTH:
+            }
+            case PRINTF_STATE_LENGTH: {
                 switch (*fmt) {
-                    case 'h':   
-                        length  = PRINTF_LENGTH_SHORT;  
-                        state   = PRINTF_STATE_LENGTH_SHORT;
-                    break;
-                    case 'l':   
-                        length  = PRINTF_LENGTH_LONG;
-                        state   = PRINTF_STATE_LENGTH_LONG;
-                    break;
+                    case 'h': {
+                        length = PRINTF_LENGTH_SHORT;  
+                        state  = PRINTF_STATE_LENGTH_SHORT;
+                        break;
+                    }
+                    case 'l': {   
+                        length = PRINTF_LENGTH_LONG;
+                        state  = PRINTF_STATE_LENGTH_LONG;
+                        break;
+                    }
                     default: goto PRINTF_STATE_SPEC_;
                 }
 
                 break;
-
-            case PRINTF_STATE_LENGTH_SHORT:
+            }
+            case PRINTF_STATE_LENGTH_SHORT: {
                 if (*fmt == 'h') {
                     length = PRINTF_LENGTH_SHORT_SHORT;
                     state  = PRINTF_STATE_SPEC;
                 }
                 else goto PRINTF_STATE_SPEC_;
                 break;
-
-            case PRINTF_STATE_LENGTH_LONG:
+            }
+            case PRINTF_STATE_LENGTH_LONG: {
                 if (*fmt == 'l') {
-                    length  = PRINTF_LENGTH_LONG_LONG;
-                    state   = PRINTF_STATE_SPEC;
+                    length = PRINTF_LENGTH_LONG_LONG;
+                    state  = PRINTF_STATE_SPEC;
                 }
                 else goto PRINTF_STATE_SPEC_;
                 break;
-
-            case PRINTF_STATE_SPEC:
+            }
+            case PRINTF_STATE_SPEC: {
             PRINTF_STATE_SPEC_:
                 switch (*fmt) {
                     case 'c': kputc((char)va_arg(args, int));   break;
@@ -144,6 +146,7 @@ void _kvfprintf(const char* fmt, va_list args) {
                 sign   = false;
                 number = false;
                 break;
+            }
         }
 
         fmt++;

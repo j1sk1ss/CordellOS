@@ -48,7 +48,7 @@ void get_datetime(DateInfo_t* info) {
     );
 }
 
-void* malloc(uint32_t size) {
+void* malloc(size_t size) {
     void* allocated_memory;
     __asm__ volatile(
         "movl $7, %%eax\n"
@@ -145,4 +145,26 @@ void machine_restart() {
 
 void switch_disk(int index) {
 
+}
+
+int system(const char* command) {
+    (void)command;
+    return -1;
+}
+
+char* getenv(const char* name) {
+    (void)name;
+    return NULL;
+}
+
+int atexit(void (*function)(void)) {
+    (void)function;
+    return 0;
+}
+
+void exit(int status) {
+    (void)status;
+    tkill();
+    while (1) {
+    }
 }

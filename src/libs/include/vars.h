@@ -13,12 +13,12 @@ typedef struct {
     char value[VARS_MAX_SIZE];
 } vars_entry_t;
 
-void envar_init_stack(vars_entry_t vars[], size_t count);
-int envar_exist(char* name, vars_entry_t vars[], size_t count);
+void  envar_init_stack(vars_entry_t vars[], size_t count);
+int   envar_exist(char* name, vars_entry_t vars[], size_t count);
 char* envar_get(char* name, char* buffer, vars_entry_t vars[], size_t count);
-int envar_set(char* name, char* value, vars_entry_t vars[], size_t count);
-int envar_add(char* name, char* value, vars_entry_t vars[], size_t count);
-int envar_delete(char* name, vars_entry_t vars[], size_t count);
-void envar_save(vars_entry_t vars[], size_t count);
+int   envar_set(char* name, char* value, vars_entry_t vars[], size_t count);
+int   envar_add(char* name, char* value, vars_entry_t vars[], size_t count);
+int   envar_delete(char* name, vars_entry_t vars[], size_t count);
+void  envar_save(vars_entry_t vars[], size_t count);
 
 #endif
